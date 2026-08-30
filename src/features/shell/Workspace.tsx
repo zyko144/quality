@@ -10,6 +10,7 @@ import { Sidebar } from './Sidebar';
 import { SidePanel } from './SidePanel';
 import { ChannelHeader } from '@/features/channels/ChannelHeader';
 import { WindowControls } from '@/components/WindowControls';
+import { QualityLogo } from '@/components/QualityLogo';
 import { MessageList } from '@/features/messages/MessageList';
 import { Composer } from '@/features/messages/Composer';
 import { VoiceStage } from '@/features/voice/VoiceStage';
@@ -345,8 +346,11 @@ export function Workspace() {
   if (!ready) {
     return (
       <div className="boot">
+        {/* Le meme logo que l'ecran de demarrage : passer d'une marque a une
+            autre entre deux ecrans d'attente donne l'impression d'avoir change
+            d'application en route. */}
         <span className="boot__mark">
-          <Icon name="compass" size={26} />
+          <QualityLogo size={30} />
         </span>
         <span className="spinner" />
         <p>Chargement de vos espaces…</p>

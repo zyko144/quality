@@ -83,16 +83,20 @@ mod capture;
 /// premiere source dont le nom contient la chaine donnee, et de ne rien
 /// afficher.
 ///
-/// La valeur est VIDE, et c'est voulu.
+/// La valeur est « 1 », et ce chiffre est le seul repere fiable.
 ///
 /// Chromium retient la premiere source dont le nom *contient* la chaine
-/// donnee. Une chaine vide est contenue dans n'importe quel nom : la premiere
-/// source de la liste est donc prise, quel que soit son intitule.
+/// donnee. Restait a trouver une chaine presente dans le nom de l'ecran quelle
+/// que soit la langue.
 ///
-/// C'est le seul critere qui resiste a la traduction. Un premier essai avec
-/// « Entire screen » n'a rien trouve sur un systeme en francais, ou les sources
-/// s'appellent « Ecran 1 » et « Ecran 2 » — et la fenetre s'est rouverte comme
-/// avant.
+/// Deux essais ont echoue avant celui-ci. « Entire screen » ne correspond a
+/// rien sur un systeme en francais, ou les sources s'appellent « Ecran 1 » et
+/// « Ecran 2 ». Une chaine vide paraissait elegante — elle est contenue dans
+/// n'importe quel nom — mais Chromium ignore le drapeau quand sa valeur est
+/// vide, et la fenetre revenait.
+///
+/// Le numero, lui, n'est traduit nulle part : « Ecran 1 », « Screen 1 »,
+/// « Bildschirm 1 » le contiennent tous.
 ///
 /// Deux consequences a assumer :
 ///
@@ -111,7 +115,7 @@ fn desactiver_selecteur_webview() {
     // 2021 il ne l'est pas, et l'appel a lieu avant tout fil supplementaire.
     std::env::set_var(
         "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-        "--auto-select-desktop-capture-source=",
+        "--auto-select-desktop-capture-source=1",
     );
 }
 
