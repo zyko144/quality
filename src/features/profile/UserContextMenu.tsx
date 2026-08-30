@@ -6,6 +6,7 @@ import { useFriends } from '@/store/friends';
 import { useSession } from '@/store/session';
 import { useUI } from '@/store/ui';
 import { useUserAudio } from '@/store/userAudio';
+import { useVoice } from '@/features/voice/useVoice';
 import type { UUID } from '@/types/db';
 
 /**
@@ -75,6 +76,16 @@ export function UserContextMenu({
   const retirer = useFriends((state) => state.remove);
 
   const openModal = useUI((state) => state.openModal);
+  const deconnecter = useVoice((state) => state.deconnecter);
+  const salonVocal = useVoice((state) => state.channelId);
+  const participants = useVoice((state) =>
+    salonVocal ? state.participantsByChannel[salonVocal] : undefined,
+  );
+
+  // Presente dans MON salon vocal : c'est la seule situation ou la demande a
+  // une chance d'aboutir.
+  const dansMonVocal =
+    userId !== me?.id && (participants ?? []).some((p) => p.user_id === userId);
   const selectChannel = useUI((state) => state.selectChannel);
   const showDirectMessages = useUI((state) => state.showDirectMessages);
   const openSettings = useUI((state) => state.openSettings);
@@ -151,6 +162,24 @@ export function UserContextMenu({
 
   // ── Section amis / blocage ──
   if (!estMoi) {
+    /*
+     * Deconnecter du vocal.
+     *
+     * N'apparait que si la personne est effectivement dans le salon ou l'on se
+     * trouve : proposer l'action ailleurs reviendrait a promettre un effet qui
+     * n'aurait lieu nulle part.
+     */
+    if (dansMonVocal) {
+      entrees.push({ id: 'sep-vocal', separator: true });
+      entrees.push({
+        id: 'deconnecter',
+        label: 'Deconnecter du vocal',
+        icon: <Icon name="phone-off" size={15} />,
+        danger: true,
+        onSelect: () => deconnecter(userId),
+      });
+    }
+
     entrees.push({ id: 'sep-amis', separator: true });
 
     if (estBloque) {

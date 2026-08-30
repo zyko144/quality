@@ -344,6 +344,7 @@ export function Workspace() {
   /* ---------------------------------------------------------------- Rendu */
 
   const channel = channels.find((item) => item.id === activeChannelId) ?? null;
+  const voiceChannelId = useVoice((state) => state.channelId);
 
   if (!ready) {
     return (
@@ -410,7 +411,14 @@ export function Workspace() {
           <>
             <ChannelHeader channel={channel} />
 
-            {channel.kind === 'voice' ? (
+            {/*
+              Un appel prive occupe la place de la conversation.
+              La scene vocale n'a rien de propre aux salons vocaux : elle prend
+              un salon et en montre les participants. Une conversation privee en
+              est un — sans espace — donc l'appel marche sans rien reecrire, et
+              les messages reviennent des qu'on raccroche.
+            */}
+            {channel.kind === 'voice' || voiceChannelId === channel.id ? (
               <VoiceStage channel={channel} />
             ) : (
               <>

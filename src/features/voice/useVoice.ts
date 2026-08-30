@@ -31,7 +31,27 @@ interface StreamInfo {
   purpose: StreamPurpose;
 }
 
-type VoiceMessage = VoiceSignal | StreamInfo;
+/**
+ * Demande de deconnexion, envoyee par la moderation.
+ *
+ * RESERVE, et elle est entiere : c'est une demande, pas une contrainte. Le
+ * client de la personne visee la recoit et quitte le salon de lui-meme. Un
+ * client modifie pourrait l'ignorer et rester.
+ *
+ * L'imposer demanderait que le serveur tienne la liste des presents et refuse
+ * la connexion — or la presence de Realtime est declarative, chaque client
+ * annonce la sienne. Ce serait un autre transport, pas un correctif.
+ *
+ * Cela suffit pour ce a quoi cela sert : sortir quelqu'un d'un salon ou il
+ * gene, entre gens qui utilisent le meme logiciel.
+ */
+interface Deconnexion {
+  kind: 'deconnexion';
+  from: UUID;
+  to: UUID;
+}
+
+type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion;
 
 /**
  * Salons vocaux en WebRTC maille.
@@ -145,6 +165,8 @@ interface VoiceState {
   toggleScreenShare: (sourceId?: string) => Promise<void>;
   toggleCamera: () => Promise<void>;
   focusShare: (userId: UUID | null) => void;
+  /** Demande a quelqu'un de quitter le salon. Voir `Deconnexion`. */
+  deconnecter: (userId: UUID) => void;
   /** Ouvre ou ferme le partage de quelqu'un. Ferme, il n'est plus decode. */
   toggleWatch: (userId: UUID) => void;
 }
@@ -708,6 +730,11 @@ export const useVoice = create<VoiceState>((set, get) => {
     const localStream = get().localStream;
     if (!localStream) return;
 
+    // La deconnexion est traitee a la reception, avant d'arriver ici : la voir
+    // dans le type sert seulement a ce que le compilateur nous rappelle de la
+    // couvrir si un nouveau chemin l'oublie.
+    if ('kind' in signal && signal.kind === 'deconnexion') return;
+
     // Annonce du role d'un flux : on l'enregistre, puis on reclasse la piste
     // si elle etait deja arrivee.
     if (signal.kind === 'stream-info') {
@@ -856,9 +883,16 @@ export const useVoice = create<VoiceState>((set, get) => {
 
       room
         .on('broadcast', { event: 'voice-signal' }, ({ payload }) => {
-          const signal = payload as VoiceSignal;
-          if (signal.to !== userId) return;
-          void handleSignal(signal);
+          const message = payload as VoiceMessage;
+          if (message.to !== userId) return;
+
+          if ('kind' in message && message.kind === 'deconnexion') {
+            set({ error: 'Vous avez ete deconnecte du salon vocal.' });
+            void get().leave();
+            return;
+          }
+
+          void handleSignal(message as VoiceSignal);
         })
         .on('presence', { event: 'sync' }, () => {
           if (!room) return;
@@ -1235,6 +1269,20 @@ export const useVoice = create<VoiceState>((set, get) => {
     },
 
     focusShare: (userId) => set({ focusedShare: userId }),
+
+    /*
+     * Demande a quelqu'un de quitter le salon vocal.
+     *
+     * Le message passe par le meme canal que la negociation : tout le monde y
+     * est deja, et il n'y a rien a ouvrir de plus. Voir `Deconnexion` pour ce
+     * que cette demande garantit — et surtout ce qu'elle ne garantit pas.
+     */
+    deconnecter: (userId) => {
+      const moi = get().userId;
+      if (!moi || userId === moi) return;
+
+      send({ kind: 'deconnexion', from: moi, to: userId });
+    },
 
     /*
      * Regarder, ou ne pas regarder.

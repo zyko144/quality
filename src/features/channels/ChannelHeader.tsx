@@ -24,6 +24,7 @@ export function ChannelHeader({ channel }: { channel: Channel }) {
   const voiceChannelId = useVoice((state) => state.channelId);
   const joinVoice = useVoice((state) => state.join);
   const connecting = useVoice((state) => state.connecting);
+  const leaveVoice = useVoice((state) => state.leave);
 
   const openThreadCount = Object.values(threads).filter(
     (thread) => thread.channel_id === channel.id && !thread.resolved,
@@ -83,6 +84,33 @@ export function ChannelHeader({ channel }: { channel: Channel }) {
         « Quitter » : le repeter dans l'en-tete donnait deux boutons rouges a
         l'ecran pour une seule action.
       */}
+      {/*
+        Appeler, depuis une conversation privee.
+        La scene vocale prend n'importe quel salon : une conversation privee en
+        est un. Rien de particulier a ecrire — seulement de quoi la demarrer.
+      */}
+      {isDirect ? (
+        <button
+          type="button"
+          className={'icon-btn channel-header__action' + (inThisVoice ? ' is-active' : '')}
+          onClick={() => {
+            if (!profile) return;
+            if (inThisVoice) void leaveVoice();
+            else void joinVoice(channel.id, profile.id);
+          }}
+          disabled={connecting || !profile}
+          title={inThisVoice ? 'Raccrocher' : 'Appeler'}
+          aria-pressed={inThisVoice}
+        >
+          {connecting ? (
+            <span className="spinner" />
+          ) : (
+            <Icon name={inThisVoice ? 'phone-off' : 'volume'} size={17} />
+          )}
+          <span className="visually-hidden">{inThisVoice ? 'Raccrocher' : 'Appeler'}</span>
+        </button>
+      ) : null}
+
       {channel.kind === 'voice' && !inThisVoice ? (
         <button
           type="button"
