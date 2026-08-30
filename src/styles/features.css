@@ -1263,3 +1263,10 @@ a.attachment:hover {
     padding-bottom: var(--space-4);
   }
 }
+
+/* L'erreur traverse les deux colonnes : elle concerne la page entiere, pas la
+   liste ni le detail. */
+.roles__erreur {
+  grid-column: 1 / -1;
+  margin: 0;
+}

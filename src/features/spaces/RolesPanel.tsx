@@ -41,6 +41,7 @@ export function RolesPanel({ spaceId }: { spaceId: UUID }) {
   const updateRole = useRoles((state) => state.updateRole);
   const deleteRole = useRoles((state) => state.deleteRole);
 
+  const erreur = useRoles((state) => state.error);
   const [choisi, setChoisi] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,6 +65,19 @@ export function RolesPanel({ spaceId }: { spaceId: UUID }) {
 
   return (
     <div className="roles">
+      {/*
+        Un echec doit s'annoncer.
+        « Nouveau role » ne faisait rien du tout quand le serveur refusait —
+        tables absentes, droits manquants — et rien n'indiquait ou chercher. On
+        cliquait trois fois avant de conclure que le bouton etait casse.
+      */}
+      {erreur ? (
+        <p className="mod-error roles__erreur" role="alert">
+          <Icon name="x" size={14} />
+          {erreur}
+        </p>
+      ) : null}
+
       <aside className="roles__liste">
         <button
           type="button"

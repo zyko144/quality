@@ -9,6 +9,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { hueFor } from '@/constants';
 import { ROLE_LABEL, type Profile, type ProfileStats, type SpaceRole, type UUID } from '@/types/db';
 import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
+import { MemberRoles } from './MemberRoles';
 
 /**
  * Carte de profil.
@@ -35,6 +36,8 @@ export function ProfileCard({ userId }: { userId: UUID }) {
   const closeModal = useUI((state) => state.closeModal);
   const selectChannel = useUI((state) => state.selectChannel);
   const selectSpace = useUI((state) => state.selectSpace);
+  const activeSpaceId = useUI((state) => state.activeSpaceId);
+  const members = useChat((state) => state.members);
   const showDirectMessages = useUI((state) => state.showDirectMessages);
   const [opening, setOpening] = useState(false);
 
@@ -97,6 +100,17 @@ export function ProfileCard({ userId }: { userId: UUID }) {
   const links = profile.links ?? [];
 
   const espaces = stats?.mutual_spaces ?? [];
+
+  /*
+   * Les roles appartiennent a un espace, pas a une personne : la meme fiche
+   * ouverte depuis deux serveurs montre deux listes differentes. On prend donc
+   * l'espace ou l'on se trouve.
+   */
+  const espaceCourant = activeSpaceId;
+  const monRang = members.find(
+    (membre) => membre.space_id === espaceCourant && membre.user_id === me?.id,
+  )?.role;
+  const peutGererRoles = monRang === 'owner' || monRang === 'admin';
   const amis = stats?.mutual_friends ?? [];
 
   /*
@@ -279,6 +293,20 @@ export function ProfileCard({ userId }: { userId: UUID }) {
             <div className="profile__panel">
               {onglet === 'apropos' ? (
                 <>
+                  {/*
+                    Les roles se donnent ici : c'est en regardant quelqu'un
+                    qu'on decide de lui confier quelque chose. Passer par les
+                    reglages de l'espace obligerait a quitter la fiche, le
+                    retrouver dans une seconde liste, et revenir.
+                  */}
+                  {espaceCourant && !isMe ? (
+                    <MemberRoles
+                      spaceId={espaceCourant}
+                      userId={profile.id}
+                      peutModifier={peutGererRoles}
+                    />
+                  ) : null}
+
                   {profile.bio ? (
                     <p className="profile__bio">{profile.bio}</p>
                   ) : (
