@@ -71,7 +71,10 @@ jobs:
           # signee et l'application refusera de l'installer — c'est ce qui
           # empeche n'importe qui de pousser du code sur les postes.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+          # Non vide : une chaine vide supprime la variable au lieu de la
+          # vider, et Tauri ouvre alors une invite de saisie qui bloque la
+          # construction sans rien afficher.
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # Les cles de l'environnement sont necessaires a la compilation :
           # Vite les inscrit dans le paquet. Elles sont publiques par
           # construction — la cle « publishable » de Supabase est faite pour

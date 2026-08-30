@@ -42,3 +42,4 @@ src-tauri/quality.key
 # L'imbriquer ici ferait un sous-module que personne n'a demande, et ses clones
 # arriveraient vides.
 site/
+src-tauri/quality.key.password
