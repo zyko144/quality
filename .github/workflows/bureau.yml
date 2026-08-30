@@ -127,6 +127,18 @@ jobs:
             exit 1
           fi
 
+          # ------------------------------------------------------------------
+          # La cle passe par la VARIABLE, pas par un chemin.
+          #
+          # `TAURI_SIGNING_PRIVATE_KEY_PATH` existe et est documente, mais Tauri
+          # lit d'abord la variable et s'arrete si elle manque : « A public key
+          # has been found, but no private key ». Le meme piege s'etait tendu en
+          # local.
+          #
+          # Les deux valeurs sont identiques aux secrets une fois les blancs
+          # retires, donc GitHub continue de les masquer dans les journaux.
+          # ------------------------------------------------------------------
+          echo "CLE_PROPRE=$(cat cle_signature.txt)" >> "$GITHUB_ENV"
           echo "MDP_PROPRE=$(cat mdp_signature.txt)" >> "$GITHUB_ENV"
           echo "Cle de signature valide."
 
@@ -142,9 +154,9 @@ jobs:
           # Signature des mises a jour. Sans elle, l'archive produite n'est pas
           # signee et l'application refusera de l'installer — c'est ce qui
           # empeche n'importe qui de pousser du code sur les postes.
-          # Le fichier remis en forme a l'etape de verification, plutot que le
-          # secret brut : c'est lui qui a ete valide.
-          TAURI_SIGNING_PRIVATE_KEY_PATH: cle_signature.txt
+          # Les valeurs remises en forme a l'etape de verification, plutot que
+          # les secrets bruts : ce sont elles qui ont ete validees.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.CLE_PROPRE }}
           # Non vide : une chaine vide supprime la variable au lieu de la
           # vider, et Tauri ouvre alors une invite de saisie qui bloque la
           # construction sans rien afficher.
