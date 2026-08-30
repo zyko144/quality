@@ -58,6 +58,38 @@ jobs:
         with:
           workspaces: src-tauri
 
+      # ----------------------------------------------------------------------
+      # Les secrets sont verifies AVANT de compiler.
+      #
+      # Sans eux, la construction echoue au bout de dix minutes sur un « exit
+      # code 1 » qui ne dit rien : le message de Tauri se perd dans des milliers
+      # de lignes de compilation Rust. Autant s'arreter tout de suite, en
+      # nommant ce qui manque.
+      #
+      # Aucune valeur n'est affichee — seulement leur presence.
+      # ----------------------------------------------------------------------
+      - name: Verifier les secrets
+        shell: bash
+        env:
+          CLE: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          MDP: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          URL: ${{ secrets.VITE_SUPABASE_URL }}
+          PUB: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          manquants=()
+          [ -n "$CLE" ] || manquants+=("TAURI_SIGNING_PRIVATE_KEY")
+          [ -n "$MDP" ] || manquants+=("TAURI_SIGNING_PRIVATE_KEY_PASSWORD")
+          [ -n "$URL" ] || manquants+=("VITE_SUPABASE_URL")
+          [ -n "$PUB" ] || manquants+=("VITE_SUPABASE_PUBLISHABLE_KEY")
+
+          if [ ${#manquants[@]} -ne 0 ]; then
+            echo "::error::Secrets absents ou vides : ${manquants[*]}"
+            echo "Ajoutez-les dans Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          echo "Les quatre secrets sont presents."
+
       - run: npm ci
 
       # L'interface est verifiee avant d'etre empaquetee : livrer une
