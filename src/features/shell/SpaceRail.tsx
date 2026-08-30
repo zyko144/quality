@@ -53,11 +53,17 @@ export function SpaceRail() {
   const rangDans = (spaceId: UUID) =>
     members.find((membre) => membre.space_id === spaceId && membre.user_id === moi?.id)?.role;
 
-  // Non-lus cumules de toutes les conversations privees, affiches sur le
-  // bouton d'accueil.
+  /*
+   * Messages prives non lus, tous confondus.
+   *
+   * Le compteur ne retenait que les mentions. Dans une conversation privee,
+   * chaque message s'adresse deja a soi : ne compter que les mentions revenait
+   * a n'annoncer presque rien, et l'on decouvrait ses messages en ouvrant la
+   * page par hasard.
+   */
   const directUnread = channels
     .filter((channel) => channel.space_id === null)
-    .reduce((total, channel) => total + (readStates[channel.id]?.mention_count ?? 0), 0);
+    .reduce((total, channel) => total + (readStates[channel.id]?.unread_count ?? 0), 0);
 
   return (
     <nav className="rail" aria-label="Navigation principale">
@@ -119,7 +125,10 @@ export function SpaceRail() {
         </button>
 
         {directUnread > 0 ? (
-          <span className="rail__badge badge" aria-label={`${directUnread} mentions privees`}>
+          <span
+            className="rail__badge rail__badge--messages"
+            aria-label={`${directUnread} messages prives non lus`}
+          >
             {directUnread > 99 ? '99+' : directUnread}
           </span>
         ) : null}

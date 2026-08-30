@@ -1957,3 +1957,29 @@ button.userbar__voice-info:hover {
     flex-wrap: wrap;
   }
 }
+
+/*
+ * Le compteur des messages prives est vert, pas rouge.
+ *
+ * Le rouge dit « quelque chose ne va pas » ; ici il ne s'agit que de messages
+ * qui attendent. Le vert de la presence est la teinte que l'oeil associe deja a
+ * « quelqu'un est la », ce qui est exactement le cas.
+ */
+.rail__badge--messages {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--bg-app);
+  border-radius: var(--radius-full);
+  background: var(--success);
+  color: #06210f;
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}

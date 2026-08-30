@@ -1003,9 +1003,18 @@ export const useChat = create<ChatState>((set, get) => ({
        */
       const preferences = useSession.getState().preferences;
 
-      if (mentioned && preferences.mentionSound) playCue('mention');
+      /*
+       * Une note pour ce qui s'adresse a soi.
+       *
+       * Une mention dans un salon, ou n'importe quel message en prive : dans
+       * une conversation a deux, chaque message est deja une interpellation, et
+       * attendre une mention explicite reviendrait a ne jamais sonner.
+       */
+      const enPrive = state.channels.find((item) => item.id === raw.channel_id)?.space_id === null;
 
-      if (mentioned || preferences.notifyEveryMessage) {
+      if ((mentioned || enPrive) && preferences.mentionSound) playCue('mention');
+
+      if (mentioned || enPrive || preferences.notifyEveryMessage) {
         const author = state.profiles[raw.author_id];
         const channel = state.channels.find((item) => item.id === raw.channel_id);
         void notify({
