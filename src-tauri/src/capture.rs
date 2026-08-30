@@ -382,3 +382,63 @@ pub fn zone_source(id: String) -> Zone {
         visible: true,
     }
 }
+
+/// Masque la barre « … partage votre ecran » du moteur.
+///
+/// Chromium pose une petite fenetre flottante pendant toute la duree d'un
+/// partage, avec un bouton « Arreter le partage ». Aucune API ne permet de la
+/// retirer : ni Tauri, ni WebView2, ni un drapeau de ligne de commande. Elle
+/// annonce en plus l'adresse interne de l'application, `http://tauri.localhost`,
+/// qui ne veut rien dire pour qui utilise le logiciel.
+///
+/// Notre propre interface dit deja qu'un partage est en cours et propose de
+/// l'arreter — sur la tuile, dans la barre de commandes, et jusque dans la
+/// barre laterale. Cette seconde annonce ne fait que dupliquer, moins bien.
+///
+/// La reconnaissance porte sur l'adresse contenue dans le titre : c'est le seul
+/// element qui ne change pas d'une langue a l'autre, la phrase qui l'entoure
+/// etant traduite.
+///
+/// La barre n'apparait pas immediatement : la fenetre est cherchee plusieurs
+/// fois pendant deux secondes, puis on abandonne. Ne pas la trouver n'est pas
+/// une erreur — une version future du moteur pourrait ne plus la poser.
+#[tauri::command]
+pub fn masquer_barre_partage() {
+    use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
+
+    unsafe extern "system" fn chercher(fenetre: HWND, contexte: LPARAM) -> BOOL {
+        let trouvee = &mut *(contexte.0 as *mut bool);
+
+        if !IsWindowVisible(fenetre).as_bool() {
+            return TRUE;
+        }
+
+        let nom = titre(fenetre);
+
+        // Notre propre fenetre s'appelle « Quality » : seule celle du moteur
+        // affiche l'adresse interne.
+        if nom.contains("tauri.localhost") {
+            let _ = ShowWindow(fenetre, SW_HIDE);
+            *trouvee = true;
+            return windows::Win32::Foundation::FALSE;
+        }
+
+        TRUE
+    }
+
+    std::thread::spawn(|| {
+        for _ in 0..20 {
+            let mut trouvee = false;
+            let contexte = LPARAM(&mut trouvee as *mut bool as isize);
+            unsafe {
+                let _ = EnumWindows(Some(chercher), contexte);
+            }
+
+            if trouvee {
+                return;
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+    });
+}

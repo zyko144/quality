@@ -44,3 +44,8 @@ pub fn zone_source(_id: String) -> Zone {
         visible: false,
     }
 }
+
+/// Rien a masquer hors de Windows : la barre est propre au moteur de Chromium
+/// tel qu'il est integre par WebView2.
+#[tauri::command]
+pub fn masquer_barre_partage() {}

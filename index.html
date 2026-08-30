@@ -34,7 +34,7 @@
     -->
     <div id="splash" role="status" aria-live="polite">
       <div class="splash__mark" aria-hidden="true">
-        <img src="/quality_logo.png" alt="Quality" width="48" height="48" style="object-fit: contain; display: block;" />
+        <img src="/quality_logo.png" alt="Quality" width="132" height="132" />
       </div>
       <p class="splash__name">Quality</p>
       <div class="splash__bar" aria-hidden="true"><span></span></div>
@@ -74,15 +74,31 @@
         pointer-events: none;
       }
 
+      /*
+       * Le logo, en grand et sans fond.
+       *
+       * Aucune pastille derriere lui : l'image porte deja sa forme, et
+       * l'enfermer dans un carre colore revenait a lui en ajouter une seconde.
+       */
       .splash__mark {
-        width: 56px;
-        height: 56px;
-        color: #5865f2;
+        width: 132px;
+        height: 132px;
       }
 
-      .splash__mark svg {
+      .splash__mark img {
         width: 100%;
         height: 100%;
+        display: block;
+        object-fit: contain;
+        /* Une rotation lente et reguliere : assez pour dire que quelque chose
+           travaille, assez lente pour ne pas donner le tournis a qui attend
+           quinze secondes sur une liaison lente. */
+        animation: splash-tourne 2.8s linear infinite;
+      }
+
+      @keyframes splash-tourne {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
       }
 
       .splash__name {
@@ -124,6 +140,7 @@
 
       @media (prefers-reduced-motion: reduce) {
         .splash__bar span { animation: none; width: 100%; }
+        .splash__mark img { animation: none; }
         #splash { transition: none; }
       }
     </style>

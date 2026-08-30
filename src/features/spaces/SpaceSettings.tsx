@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { Icon } from '@/components/Icon';
+import { RolesPanel } from './RolesPanel';
 import { supabase, errorMessage } from '@/lib/supabase';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { LIMITS } from '@/constants';
 import type { UUID } from '@/types/db';
 
-type Tab = 'general' | 'categories' | 'danger';
+type Tab = 'general' | 'categories' | 'roles' | 'danger';
 
 /**
  * Parametres d'un espace.
@@ -164,6 +165,7 @@ export function SpaceSettings({
           [
             ['general', 'General', 'settings'],
             ['categories', 'Categories', 'hash'],
+            ['roles', 'Roles', 'shield'],
             ['danger', 'Zone sensible', 'trash'],
           ] as const
         ).map(([id, label, icon]) => (
@@ -315,6 +317,8 @@ export function SpaceSettings({
           </div>
         </>
       ) : null}
+
+      {tab === 'roles' && spaceId ? <RolesPanel spaceId={spaceId} /> : null}
 
       {tab === 'danger' ? (
         <div className="danger-zone">

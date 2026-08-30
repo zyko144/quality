@@ -1,217 +1,86 @@
 import { create } from 'zustand';
+import { supabase, errorMessage } from '@/lib/supabase';
 import type { UUID } from '@/types/db';
+
+/**
+ * Roles d'espace : couleurs, rangs, permissions.
+ *
+ * Le premier jet gardait tout dans le stockage du navigateur. Un role n'a
+ * pourtant de sens que partage : celui qui l'attribue et celui qui le porte ne
+ * sont pas sur la meme machine, et une permission qui ne vaut que chez soi n'en
+ * est pas une. Tout passe donc par la base, avec les memes politiques que le
+ * reste.
+ *
+ * Le rang historique de `space_members` — proprietaire, administrateur,
+ * moderateur, membre — n'est pas remplace : il porte encore la securite en
+ * base. Ces roles-ci s'ajoutent par-dessus pour decrire finement qui fait quoi.
+ */
 
 export interface PermissionItem {
   id: string;
   name: string;
   description: string;
-  category: 'general' | 'membership' | 'text' | 'voice' | 'admin';
+  category: 'admin' | 'general' | 'membership' | 'text' | 'voice';
+  /** Rouge dans l'interface : ce que l'on n'accorde pas a la legere. */
   danger?: boolean;
 }
 
+export const PERMISSION_CATEGORIES: { id: PermissionItem['category']; label: string }[] = [
+  { id: 'admin', label: 'Administration' },
+  { id: 'general', label: 'General' },
+  { id: 'membership', label: 'Membres' },
+  { id: 'text', label: 'Salons textuels' },
+  { id: 'voice', label: 'Salons vocaux' },
+];
+
 export const ALL_PERMISSIONS: PermissionItem[] = [
-  // ── Administration (Danger) ──
   {
     id: 'administrator',
     name: 'Administrateur',
-    description: 'Accorde toutes les permissions et contourne les restrictions de salon. Très dangereux.',
+    description:
+      'Accorde toutes les permissions et contourne toute restriction de salon. A ne donner qu’a quelqu’un en qui vous avez une confiance entiere.',
     category: 'admin',
     danger: true,
   },
 
-  // ── Général ──
-  {
-    id: 'view_channels',
-    name: 'Voir les salons',
-    description: 'Permet aux membres de voir les salons par défaut.',
-    category: 'general',
-  },
-  {
-    id: 'manage_channels',
-    name: 'Gérer les salons',
-    description: 'Créer, modifier ou supprimer des salons et des catégories.',
-    category: 'general',
-  },
-  {
-    id: 'manage_roles',
-    name: 'Gérer les rôles',
-    description: 'Créer de nouveaux rôles et modifier/supprimer les rôles inférieurs.',
-    category: 'general',
-  },
-  {
-    id: 'manage_emojis',
-    name: 'Gérer les émojis & stickers',
-    description: 'Ajouter ou supprimer des émojis personnalisés.',
-    category: 'general',
-  },
-  {
-    id: 'view_audit_log',
-    name: 'Voir le journal de modération',
-    description: 'Consulter l’historique des actions de modération du serveur.',
-    category: 'general',
-  },
-  {
-    id: 'manage_server',
-    name: 'Gérer le serveur',
-    description: 'Modifier le nom, la photo de profil et la bannière du serveur.',
-    category: 'general',
-  },
+  { id: 'view_channels', name: 'Voir les salons', description: 'Acces aux salons publics de l’espace.', category: 'general' },
+  { id: 'manage_channels', name: 'Gerer les salons', description: 'Creer, renommer, deplacer et supprimer salons et categories.', category: 'general' },
+  { id: 'manage_roles', name: 'Gerer les roles', description: 'Creer des roles et modifier ceux places en dessous du sien.', category: 'general' },
+  { id: 'manage_space', name: 'Gerer l’espace', description: 'Nom, icone, banniere et reglages generaux.', category: 'general' },
+  { id: 'manage_emojis', name: 'Gerer les emojis', description: 'Ajouter ou retirer des emojis personnalises.', category: 'general' },
+  { id: 'view_audit_log', name: 'Voir le journal', description: 'Consulter l’historique des actions de moderation.', category: 'general' },
+  { id: 'manage_webhooks', name: 'Gerer les integrations', description: 'Connecter des services exterieurs a l’espace.', category: 'general' },
 
-  // ── Gestion des membres ──
-  {
-    id: 'create_invite',
-    name: 'Créer des invitations',
-    description: 'Permet d’inviter de nouvelles personnes sur le serveur.',
-    category: 'membership',
-  },
-  {
-    id: 'change_nickname',
-    name: 'Changer de pseudo',
-    description: 'Permet de modifier son propre surnom sur le serveur.',
-    category: 'membership',
-  },
-  {
-    id: 'manage_nicknames',
-    name: 'Gérer les pseudos',
-    description: 'Modifier le surnom des autres membres.',
-    category: 'membership',
-  },
-  {
-    id: 'kick_members',
-    name: 'Expulser des membres',
-    description: 'Retirer des membres du serveur.',
-    category: 'membership',
-  },
-  {
-    id: 'ban_members',
-    name: 'Bannir des membres',
-    description: 'Bannir définitivement des membres du serveur.',
-    category: 'membership',
-  },
-  {
-    id: 'timeout_members',
-    name: 'Exclure temporairement',
-    description: 'Empêcher temporairement un membre de parler ou réagir.',
-    category: 'membership',
-  },
+  { id: 'create_invite', name: 'Creer une invitation', description: 'Inviter de nouvelles personnes dans l’espace.', category: 'membership' },
+  { id: 'change_nickname', name: 'Changer son surnom', description: 'Modifier le nom qu’on affiche dans cet espace.', category: 'membership' },
+  { id: 'manage_nicknames', name: 'Gerer les surnoms', description: 'Modifier le surnom des autres membres.', category: 'membership' },
+  { id: 'kick_members', name: 'Expulser des membres', description: 'Retirer quelqu’un de l’espace. Il peut revenir sur invitation.', category: 'membership', danger: true },
+  { id: 'ban_members', name: 'Bannir des membres', description: 'Retirer quelqu’un et l’empecher de revenir.', category: 'membership', danger: true },
+  { id: 'timeout_members', name: 'Rendre muet temporairement', description: 'Empecher quelqu’un d’ecrire et de parler pour une duree.', category: 'membership' },
 
-  // ── Salons Textuels ──
-  {
-    id: 'send_messages',
-    name: 'Envoyer des messages',
-    description: 'Écrire dans les salons textuels.',
-    category: 'text',
-  },
-  {
-    id: 'send_thread_messages',
-    name: 'Envoyer des messages dans les fils',
-    description: 'Participer aux fils de discussion.',
-    category: 'text',
-  },
-  {
-    id: 'create_threads',
-    name: 'Créer des fils de discussion',
-    description: 'Ouvrir de nouveaux fils publics ou privés.',
-    category: 'text',
-  },
-  {
-    id: 'embed_links',
-    name: 'Intégrer des liens',
-    description: 'Affiche un aperçu riche pour les liens partagés.',
-    category: 'text',
-  },
-  {
-    id: 'attach_files',
-    name: 'Joindre des fichiers',
-    description: 'Envoyer des images, vidéos ou documents.',
-    category: 'text',
-  },
-  {
-    id: 'add_reactions',
-    name: 'Ajouter des réactions',
-    description: 'Réagir aux messages avec des émojis.',
-    category: 'text',
-  },
-  {
-    id: 'use_external_emojis',
-    name: 'Utiliser des émojis externes',
-    description: 'Employer des émojis d’autres serveurs.',
-    category: 'text',
-  },
-  {
-    id: 'mention_everyone',
-    name: 'Mentionner @everyone & @here',
-    description: 'Alerter tous les membres du salon en une seule mention.',
-    category: 'text',
-  },
-  {
-    id: 'manage_messages',
-    name: 'Gérer les messages',
-    description: 'Supprimer ou épingler les messages des autres membres.',
-    category: 'text',
-  },
-  {
-    id: 'read_message_history',
-    name: 'Lire l’historique des messages',
-    description: 'Voir les anciens messages envoyés avant de rejoindre.',
-    category: 'text',
-  },
-  {
-    id: 'send_polls',
-    name: 'Créer des sondages',
-    description: 'Lancer des sondages interactifs dans les salons.',
-    category: 'text',
-  },
+  { id: 'send_messages', name: 'Envoyer des messages', description: 'Ecrire dans les salons textuels.', category: 'text' },
+  { id: 'send_thread_messages', name: 'Ecrire dans les fils', description: 'Repondre dans un fil de discussion.', category: 'text' },
+  { id: 'create_threads', name: 'Ouvrir des fils', description: 'Demarrer un fil depuis un message.', category: 'text' },
+  { id: 'embed_links', name: 'Deplier les liens', description: 'Les adresses partagees affichent leur apercu.', category: 'text' },
+  { id: 'attach_files', name: 'Joindre des fichiers', description: 'Envoyer images et documents.', category: 'text' },
+  { id: 'add_reactions', name: 'Ajouter des reactions', description: 'Reagir aux messages avec un emoji.', category: 'text' },
+  { id: 'use_external_emojis', name: 'Emojis d’ailleurs', description: 'Utiliser les emojis d’autres espaces.', category: 'text' },
+  { id: 'mention_everyone', name: 'Mentionner tout le monde', description: 'Utiliser @everyone et @here.', category: 'text', danger: true },
+  { id: 'manage_messages', name: 'Gerer les messages', description: 'Supprimer et epingler les messages des autres.', category: 'text', danger: true },
+  { id: 'read_history', name: 'Lire l’historique', description: 'Voir les messages ecrits avant son arrivee.', category: 'text' },
+  { id: 'send_polls', name: 'Creer des sondages', description: 'Poser une question a choix multiples.', category: 'text' },
+  { id: 'send_voice_messages', name: 'Messages vocaux', description: 'Envoyer un enregistrement audio.', category: 'text' },
 
-  // ── Salons Vocaux ──
-  {
-    id: 'voice_connect',
-    name: 'Se connecter',
-    description: 'Rejoindre les salons vocaux pour écouter.',
-    category: 'voice',
-  },
-  {
-    id: 'voice_speak',
-    name: 'Parler',
-    description: 'Prendre la parole dans les salons vocaux.',
-    category: 'voice',
-  },
-  {
-    id: 'voice_video',
-    name: 'Vidéo & Partage d’écran',
-    description: 'Allumer sa caméra ou partager son écran dans les salons vocaux.',
-    category: 'voice',
-  },
-  {
-    id: 'voice_activity',
-    name: 'Détection de la voix',
-    description: 'Parler sans obligation d’utiliser le Push-to-Talk.',
-    category: 'voice',
-  },
-  {
-    id: 'voice_priority',
-    name: 'Priorité de parole',
-    description: 'Baisse le volume des autres quand vous parlez.',
-    category: 'voice',
-  },
-  {
-    id: 'voice_mute_members',
-    name: 'Couper le micro de membres',
-    description: 'Muter d’autres membres pour tout le monde.',
-    category: 'voice',
-  },
-  {
-    id: 'voice_deafen_members',
-    name: 'Mettre en sourdine des membres',
-    description: 'Couper l’écoute d’autres membres pour tout le monde.',
-    category: 'voice',
-  },
-  {
-    id: 'voice_move_members',
-    name: 'Déplacer & Déconnecter des membres',
-    description: 'Déplacer un membre vers un autre salon vocal ou le déconnecter.',
-    category: 'voice',
-  },
+  { id: 'voice_connect', name: 'Se connecter', description: 'Rejoindre les salons vocaux.', category: 'voice' },
+  { id: 'voice_speak', name: 'Parler', description: 'Transmettre sa voix.', category: 'voice' },
+  { id: 'voice_video', name: 'Camera', description: 'Activer sa camera.', category: 'voice' },
+  { id: 'voice_share', name: 'Partager son ecran', description: 'Diffuser un ecran ou une fenetre.', category: 'voice' },
+  { id: 'voice_priority', name: 'Voix prioritaire', description: 'Baisser le volume des autres quand on parle.', category: 'voice' },
+  { id: 'voice_mute_members', name: 'Couper le micro des autres', description: 'Rendre muet dans le salon vocal.', category: 'voice', danger: true },
+  { id: 'voice_deafen_members', name: 'Rendre sourd', description: 'Couper le son pour quelqu’un d’autre.', category: 'voice', danger: true },
+  { id: 'voice_move_members', name: 'Deplacer les membres', description: 'Changer quelqu’un de salon vocal, ou l’en deconnecter.', category: 'voice', danger: true },
+  { id: 'voice_activity', name: 'Detection de la voix', description: 'Parler sans maintenir une touche.', category: 'voice' },
+  { id: 'voice_soundboard', name: 'Sons', description: 'Jouer des sons dans le salon vocal.', category: 'voice' },
 ];
 
 export interface CustomRole {
@@ -221,198 +90,227 @@ export interface CustomRole {
   color: string;
   position: number;
   permissions: string[];
-  hoist: boolean; // afficher séparément dans la liste des membres
+  /** Afficher les porteurs a part dans la liste des membres. */
+  hoist: boolean;
+}
+
+interface LigneRole {
+  id: string;
+  space_id: UUID;
+  name: string;
+  color: string;
+  position: number;
+  permissions: string[];
+  hoist: boolean;
 }
 
 interface RolesState {
-  roles: Record<UUID, CustomRole[]>; // spaceId -> roles
-  memberRoles: Record<string, string[]>; // `${spaceId}:${userId}` -> roleIds
+  roles: Record<UUID, CustomRole[]>;
+  /** `${spaceId}:${userId}` vers les identifiants de roles portes. */
+  memberRoles: Record<string, string[]>;
+  loading: Record<UUID, boolean>;
+  error: string | null;
 
+  /** Charge roles et attributions d'un espace. Sans effet si deja charge. */
+  loadSpace: (spaceId: UUID) => Promise<void>;
   getSpaceRoles: (spaceId: UUID) => CustomRole[];
   getMemberRoleIds: (spaceId: UUID, userId: UUID) => string[];
-  createRole: (spaceId: UUID, name?: string, color?: string) => CustomRole;
-  updateRole: (spaceId: UUID, roleId: string, patch: Partial<CustomRole>) => void;
-  deleteRole: (spaceId: UUID, roleId: string) => void;
-  reorderRoles: (spaceId: UUID, roleIds: string[]) => void;
-  toggleMemberRole: (spaceId: UUID, userId: UUID, roleId: string) => void;
-  hasPermission: (spaceId: UUID, userId: UUID, permissionId: string, isOwner?: boolean) => boolean;
+  /** Role le mieux place parmi ceux portes : c'est lui qui donne la couleur. */
+  topRole: (spaceId: UUID, userId: UUID) => CustomRole | undefined;
+
+  createRole: (spaceId: UUID, name?: string, color?: string) => Promise<CustomRole | null>;
+  updateRole: (spaceId: UUID, roleId: string, patch: Partial<CustomRole>) => Promise<void>;
+  deleteRole: (spaceId: UUID, roleId: string) => Promise<void>;
+  toggleMemberRole: (spaceId: UUID, userId: UUID, roleId: string) => Promise<void>;
+
+  /** Permission effective. Le proprietaire passe avant tout. */
+  hasPermission: (
+    spaceId: UUID,
+    userId: UUID,
+    permissionId: string,
+    isOwner?: boolean,
+  ) => boolean;
 }
 
-const STORAGE_KEY = 'quality:roles_v1';
-
-function loadStorage(): {
-  roles: Record<UUID, CustomRole[]>;
-  memberRoles: Record<string, string[]>;
-} {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { roles: {}, memberRoles: {} };
-    return JSON.parse(raw);
-  } catch {
-    return { roles: {}, memberRoles: {} };
-  }
-}
-
-function saveStorage(data: {
-  roles: Record<UUID, CustomRole[]>;
-  memberRoles: Record<string, string[]>;
-}) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // ignore
-  }
-}
-
-export const useRoles = create<RolesState>((set, get) => {
-  const initial = loadStorage();
-
+function versRole(ligne: LigneRole): CustomRole {
   return {
-    roles: initial.roles,
-    memberRoles: initial.memberRoles,
+    id: ligne.id,
+    spaceId: ligne.space_id,
+    name: ligne.name,
+    color: ligne.color,
+    position: ligne.position,
+    permissions: ligne.permissions ?? [],
+    hoist: ligne.hoist,
+  };
+}
 
-    getSpaceRoles: (spaceId: UUID) => {
-      const list = get().roles[spaceId];
-      if (list && list.length > 0) return list;
+export const useRoles = create<RolesState>((set, get) => ({
+  roles: {},
+  memberRoles: {},
+  loading: {},
+  error: null,
 
-      // Rôles par défaut si non configurés
-      const defaultRoles: CustomRole[] = [
-        {
-          id: 'role-admin',
-          spaceId,
-          name: 'Administrateur',
-          color: '#ef4444',
-          position: 1,
-          permissions: ['administrator'],
-          hoist: true,
-        },
-        {
-          id: 'role-mod',
-          spaceId,
-          name: 'Modérateur',
-          color: '#3b82f6',
-          position: 2,
-          permissions: [
-            'view_channels',
-            'manage_messages',
-            'kick_members',
-            'timeout_members',
-            'voice_mute_members',
-            'voice_move_members',
-          ],
-          hoist: true,
-        },
-        {
-          id: 'role-member',
-          spaceId,
-          name: 'Membre',
-          color: '#94a3b8',
-          position: 3,
-          permissions: [
-            'view_channels',
-            'send_messages',
-            'send_thread_messages',
-            'embed_links',
-            'attach_files',
-            'add_reactions',
-            'voice_connect',
-            'voice_speak',
-            'voice_video',
-            'change_nickname',
-          ],
-          hoist: false,
-        },
-      ];
-      return defaultRoles;
-    },
+  loadSpace: async (spaceId) => {
+    if (get().roles[spaceId] || get().loading[spaceId]) return;
 
-    getMemberRoleIds: (spaceId: UUID, userId: UUID) => {
-      const key = `${spaceId}:${userId}`;
-      return get().memberRoles[key] ?? [];
-    },
+    set((state) => ({ loading: { ...state.loading, [spaceId]: true } }));
 
-    createRole: (spaceId: UUID, name = 'Nouveau Rôle', color = '#38bdf8') => {
-      const currentRoles = get().getSpaceRoles(spaceId);
-      const newRole: CustomRole = {
-        id: 'role_' + Math.random().toString(36).substring(2, 9),
-        spaceId,
+    const [roles, attributions] = await Promise.all([
+      supabase.from('roles').select('*').eq('space_id', spaceId).order('position', { ascending: false }),
+      supabase.from('member_roles').select('user_id, role_id').eq('space_id', spaceId),
+    ]);
+
+    if (roles.error) {
+      set((state) => ({
+        loading: { ...state.loading, [spaceId]: false },
+        error: errorMessage(roles.error),
+      }));
+      return;
+    }
+
+    const parMembre: Record<string, string[]> = {};
+    for (const ligne of attributions.data ?? []) {
+      const cle = `${spaceId}:${ligne.user_id}`;
+      (parMembre[cle] ??= []).push(ligne.role_id);
+    }
+
+    set((state) => ({
+      roles: { ...state.roles, [spaceId]: (roles.data ?? []).map(versRole) },
+      memberRoles: { ...state.memberRoles, ...parMembre },
+      loading: { ...state.loading, [spaceId]: false },
+    }));
+  },
+
+  getSpaceRoles: (spaceId) => get().roles[spaceId] ?? [],
+
+  getMemberRoleIds: (spaceId, userId) => get().memberRoles[`${spaceId}:${userId}`] ?? [],
+
+  topRole: (spaceId, userId) => {
+    const portes = new Set(get().getMemberRoleIds(spaceId, userId));
+    return get()
+      .getSpaceRoles(spaceId)
+      .filter((role) => portes.has(role.id))
+      .sort((a, b) => b.position - a.position)[0];
+  },
+
+  createRole: async (spaceId, name = 'Nouveau role', color = '#38bdf8') => {
+    const existants = get().getSpaceRoles(spaceId);
+    const position = existants.reduce((haut, role) => Math.max(haut, role.position), 0) + 1;
+
+    const { data, error } = await supabase
+      .from('roles')
+      .insert({
+        space_id: spaceId,
         name,
         color,
-        position: currentRoles.length + 1,
+        position,
+        // Le minimum pour qu'un nouveau role ne soit pas une coquille vide :
+        // voir, ecrire, rejoindre le vocal et y parler.
         permissions: ['view_channels', 'send_messages', 'voice_connect', 'voice_speak'],
-        hoist: true,
-      };
+      })
+      .select()
+      .single();
 
-      const updated = [newRole, ...currentRoles];
-      set((state) => {
-        const nextRoles = { ...state.roles, [spaceId]: updated };
-        saveStorage({ roles: nextRoles, memberRoles: state.memberRoles });
-        return { roles: nextRoles };
-      });
+    if (error || !data) {
+      set({ error: errorMessage(error) });
+      return null;
+    }
 
-      return newRole;
-    },
+    const role = versRole(data as LigneRole);
+    set((state) => ({
+      roles: { ...state.roles, [spaceId]: [role, ...(state.roles[spaceId] ?? [])] },
+    }));
 
-    updateRole: (spaceId: UUID, roleId: string, patch: Partial<CustomRole>) => {
-      const currentRoles = get().getSpaceRoles(spaceId);
-      const updated = currentRoles.map((r) => (r.id === roleId ? { ...r, ...patch } : r));
+    return role;
+  },
 
-      set((state) => {
-        const nextRoles = { ...state.roles, [spaceId]: updated };
-        saveStorage({ roles: nextRoles, memberRoles: state.memberRoles });
-        return { roles: nextRoles };
-      });
-    },
+  updateRole: async (spaceId, roleId, patch) => {
+    const avant = get().getSpaceRoles(spaceId);
 
-    deleteRole: (spaceId: UUID, roleId: string) => {
-      const currentRoles = get().getSpaceRoles(spaceId);
-      const updated = currentRoles.filter((r) => r.id !== roleId);
+    // Applique tout de suite : cocher une permission doit repondre au clic, et
+    // non a l'aller-retour reseau.
+    set((state) => ({
+      roles: {
+        ...state.roles,
+        [spaceId]: avant.map((role) => (role.id === roleId ? { ...role, ...patch } : role)),
+      },
+    }));
 
-      set((state) => {
-        const nextRoles = { ...state.roles, [spaceId]: updated };
-        saveStorage({ roles: nextRoles, memberRoles: state.memberRoles });
-        return { roles: nextRoles };
-      });
-    },
+    const { error } = await supabase
+      .from('roles')
+      .update({
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.color !== undefined ? { color: patch.color } : {}),
+        ...(patch.position !== undefined ? { position: patch.position } : {}),
+        ...(patch.permissions !== undefined ? { permissions: patch.permissions } : {}),
+        ...(patch.hoist !== undefined ? { hoist: patch.hoist } : {}),
+      })
+      .eq('id', roleId);
 
-    reorderRoles: (spaceId: UUID, roleIds: string[]) => {
-      const currentRoles = get().getSpaceRoles(spaceId);
-      const map = new Map(currentRoles.map((r) => [r.id, r]));
-      const updated = roleIds.map((id, index) => {
-        const r = map.get(id)!;
-        return { ...r, position: index + 1 };
-      });
+    if (error) {
+      set((state) => ({ roles: { ...state.roles, [spaceId]: avant }, error: errorMessage(error) }));
+    }
+  },
 
-      set((state) => {
-        const nextRoles = { ...state.roles, [spaceId]: updated };
-        saveStorage({ roles: nextRoles, memberRoles: state.memberRoles });
-        return { roles: nextRoles };
-      });
-    },
+  deleteRole: async (spaceId, roleId) => {
+    const avant = get().getSpaceRoles(spaceId);
 
-    toggleMemberRole: (spaceId: UUID, userId: UUID, roleId: string) => {
-      const key = `${spaceId}:${userId}`;
-      const current = get().memberRoles[key] ?? [];
-      const has = current.includes(roleId);
-      const next = has ? current.filter((id) => id !== roleId) : [...current, roleId];
+    set((state) => ({
+      roles: { ...state.roles, [spaceId]: avant.filter((role) => role.id !== roleId) },
+    }));
 
-      set((state) => {
-        const nextMemberRoles = { ...state.memberRoles, [key]: next };
-        saveStorage({ roles: state.roles, memberRoles: nextMemberRoles });
-        return { memberRoles: nextMemberRoles };
-      });
-    },
+    const { error } = await supabase.from('roles').delete().eq('id', roleId);
+    if (error) {
+      set((state) => ({ roles: { ...state.roles, [spaceId]: avant }, error: errorMessage(error) }));
+    }
+  },
 
-    hasPermission: (spaceId: UUID, userId: UUID, permissionId: string, isOwner = false) => {
-      if (isOwner) return true;
-      const roleIds = get().getMemberRoleIds(spaceId, userId);
-      const roles = get().getSpaceRoles(spaceId).filter((r) => roleIds.includes(r.id));
+  toggleMemberRole: async (spaceId, userId, roleId) => {
+    const cle = `${spaceId}:${userId}`;
+    const avant = get().memberRoles[cle] ?? [];
+    const porte = avant.includes(roleId);
+    const apres = porte ? avant.filter((id) => id !== roleId) : [...avant, roleId];
 
-      for (const role of roles) {
-        if (role.permissions.includes('administrator')) return true;
-        if (role.permissions.includes(permissionId)) return true;
-      }
-      return false;
-    },
-  };
-});
+    set((state) => ({ memberRoles: { ...state.memberRoles, [cle]: apres } }));
+
+    const { error } = porte
+      ? await supabase
+          .from('member_roles')
+          .delete()
+          .eq('space_id', spaceId)
+          .eq('user_id', userId)
+          .eq('role_id', roleId)
+      : await supabase
+          .from('member_roles')
+          .insert({ space_id: spaceId, user_id: userId, role_id: roleId });
+
+    if (error) {
+      set((state) => ({
+        memberRoles: { ...state.memberRoles, [cle]: avant },
+        error: errorMessage(error),
+      }));
+    }
+  },
+
+  hasPermission: (spaceId, userId, permissionId, isOwner = false) => {
+    /*
+     * Le proprietaire passe avant tout.
+     *
+     * Sans cette regle, il pourrait se retirer lui-meme l'acces a son propre
+     * espace en decochant une case, et n'aurait plus aucun moyen d'y revenir.
+     * La meme regle existe cote base, dans `has_space_permission`.
+     */
+    if (isOwner) return true;
+
+    const portes = new Set(get().getMemberRoleIds(spaceId, userId));
+
+    return get()
+      .getSpaceRoles(spaceId)
+      .some(
+        (role) =>
+          portes.has(role.id) &&
+          (role.permissions.includes('administrator') ||
+            role.permissions.includes(permissionId)),
+      );
+  },
+}));

@@ -201,6 +201,9 @@ let etatEnAttente = false;
 let publicationEnVol = false;
 let instantArrivee = 0;
 
+/** Le pont natif n'existe que dans l'application de bureau. */
+const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
 /** Etat du micro avant la sourdine, pour le retablir en sortant. */
 let mutedBeforeDeafen = false;
 
@@ -1071,6 +1074,24 @@ export const useVoice = create<VoiceState>((set, get) => {
       }
 
       if (!videoTrack) return;
+
+      /*
+       * La barre du moteur est masquee.
+       *
+       * Chromium pose une fenetre flottante « http://tauri.localhost partage
+       * votre ecran » pendant toute la duree du partage. Aucune API ne la
+       * retire, et elle annonce une adresse interne qui ne veut rien dire.
+       * Notre interface annonce deja le partage et propose de l'arreter, a
+       * trois endroits.
+       *
+       * Sans attendre : la fenetre met un instant a paraitre, et la commande
+       * la guette d'elle-meme pendant deux secondes.
+       */
+      if (DANS_TAURI) {
+        void import('@tauri-apps/api/core')
+          .then(({ invoke }) => invoke('masquer_barre_partage'))
+          .catch(() => undefined);
+      }
 
       // L'indice de contenu oriente l'encodeur avant meme la negociation :
       // « motion » lui dit de sacrifier la nettete plutot que la fluidite.
