@@ -90,6 +90,34 @@ jobs:
 
           echo "Les quatre secrets sont presents."
 
+          # ------------------------------------------------------------------
+          # La cle est remise en forme avant usage.
+          #
+          # C'est une seule longue ligne de base64. Collee dans un champ de
+          # formulaire, elle en ressort parfois coupee par des retours a la
+          # ligne — que l'oeil ne voit pas et que le decodage, lui, refuse :
+          # « Missing comment in secret key ».
+          #
+          # On retire donc tout ce qui n'est pas de l'alphabet base64, puis on
+          # verifie que le resultat se decode bien sur le commentaire attendu.
+          # Mieux vaut s'arreter ici, avec une phrase claire, qu'apres dix
+          # minutes de compilation.
+          # ------------------------------------------------------------------
+          printf '%s' "$CLE" | tr -d '[:space:]' > cle_signature.txt
+
+          # Le mot de passe subit le meme sort : un retour a la ligne colle avec
+          # lui donnerait « Wrong password » pour une chaine qui parait
+          # identique a l'oeil.
+          printf '%s' "$MDP" | tr -d '[:space:]' > mdp_signature.txt
+
+          if ! base64 -d cle_signature.txt 2>/dev/null | head -1 | grep -q 'untrusted comment'; then
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY est illisible. Recollez le contenu de src-tauri/quality.key en une seule ligne, sans espace ni retour a la ligne."
+            exit 1
+          fi
+
+          echo "MDP_PROPRE=$(cat mdp_signature.txt)" >> "$GITHUB_ENV"
+          echo "Cle de signature valide."
+
       - run: npm ci
 
       # L'interface est verifiee avant d'etre empaquetee : livrer une
@@ -102,11 +130,13 @@ jobs:
           # Signature des mises a jour. Sans elle, l'archive produite n'est pas
           # signee et l'application refusera de l'installer — c'est ce qui
           # empeche n'importe qui de pousser du code sur les postes.
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Le fichier remis en forme a l'etape de verification, plutot que le
+          # secret brut : c'est lui qui a ete valide.
+          TAURI_SIGNING_PRIVATE_KEY_PATH: cle_signature.txt
           # Non vide : une chaine vide supprime la variable au lieu de la
           # vider, et Tauri ouvre alors une invite de saisie qui bloque la
           # construction sans rien afficher.
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ env.MDP_PROPRE }}
           # Les cles de l'environnement sont necessaires a la compilation :
           # Vite les inscrit dans le paquet. Elles sont publiques par
           # construction — la cle « publishable » de Supabase est faite pour
