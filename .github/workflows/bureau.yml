@@ -76,6 +76,18 @@ jobs:
           URL: ${{ secrets.VITE_SUPABASE_URL }}
           PUB: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
+          # Le depot ou l'on cherche, dit a voix haute.
+          #
+          # Quatre secrets vides d'un coup ne sont pas quatre erreurs de copie :
+          # c'est qu'ils ont ete poses ailleurs. Le plus souvent dans l'autre
+          # depot, ou sous l'onglet « Dependabot » voisin, ou en secrets
+          # d'environnement — que ce workflow ne lit pas.
+          echo "Depot : $GITHUB_REPOSITORY"
+          echo "Les secrets doivent etre poses la, sous Settings >"
+          echo "Secrets and variables > Actions > onglet Secrets,"
+          echo "section « Repository secrets »."
+          echo
+
           manquants=()
           [ -n "$CLE" ] || manquants+=("TAURI_SIGNING_PRIVATE_KEY")
           [ -n "$MDP" ] || manquants+=("TAURI_SIGNING_PRIVATE_KEY_PASSWORD")
