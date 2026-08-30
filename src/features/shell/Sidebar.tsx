@@ -8,6 +8,7 @@ import { Avatar } from '@/components/Avatar';
 import { formatRelative } from '@/lib/time';
 import { DirectMessageList } from '@/features/dm/DirectMessageList';
 import { ChannelContextMenu } from '@/features/channels/ChannelContextMenu';
+import { ListeContextMenu } from '@/features/channels/ListeContextMenu';
 import { UserContextMenu } from '@/features/profile/UserContextMenu';
 import { useContextMenu } from '@/components/ContextMenu';
 import { Modal } from '@/components/Modal';
@@ -31,6 +32,7 @@ export function Sidebar() {
   // Le rang decide des outils affiches. La base revalide de toute facon chaque
   // action : ce test ne sert qu'a ne pas montrer un bouton qui echouerait.
   const myRank = activeSpaceId ? (ranks[activeSpaceId] ?? 0) : 0;
+  const [menuListe, setMenuListe] = useState<{ x: number; y: number } | null>(null);
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [threadsOpen, setThreadsOpen] = useState(true);
@@ -144,7 +146,34 @@ export function Sidebar() {
         ) : null}
       </header>
 
-      <div className="sidebar__scroll scroll">
+      {/*
+        Le clic droit dans le vide de la liste.
+        Viser le « + » d'une categorie demande de la survoler d'abord ; le fond
+        de la colonne, lui, fait plusieurs centaines de pixels et ne servait a
+        rien. On ne l'ouvre qu'a qui peut administrer : quatre entrees grisees
+        informent moins que pas de menu du tout.
+      */}
+      <div
+        className="sidebar__scroll scroll"
+        onContextMenu={(event) => {
+          if (myRank < 2 || !activeSpaceId) return;
+
+          // Seulement le fond : un clic droit sur un salon ou un membre parle
+          // d'eux, et leur propre menu s'en charge.
+          if ((event.target as HTMLElement).closest('li, button')) return;
+
+          event.preventDefault();
+          setMenuListe({ x: event.clientX, y: event.clientY });
+        }}
+      >
+        {menuListe && activeSpaceId ? (
+          <ListeContextMenu
+            spaceId={activeSpaceId}
+            position={menuListe}
+            onClose={() => setMenuListe(null)}
+          />
+        ) : null}
+
         {openThreads.length > 0 ? (
           <section className="sidebar__section">
             <button

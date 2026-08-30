@@ -1358,3 +1358,35 @@ a.attachment:hover {
   margin-top: calc(var(--space-6) * -1);
   margin-bottom: var(--space-6);
 }
+
+/*
+ * Ni ombre ni contour sur l'icone et la banniere.
+ *
+ * Les boutons ordinaires se soulevent au survol et posent une ombre douce : sur
+ * une image, ce halo se lit comme un liseré parasite plutot que comme du
+ * relief. L'anneau de focus, lui, reste — mais seulement au clavier, ou il est
+ * le seul repere.
+ */
+.espace-images__changer,
+.espace-images__icone-btn {
+  box-shadow: none;
+}
+
+.espace-images__changer:not(:disabled):hover,
+.espace-images__icone-btn:not(:disabled):hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.espace-images__changer:focus:not(:focus-visible),
+.espace-images__icone-btn:focus:not(:focus-visible),
+.espace-images__banniere:focus,
+.espace-images__icone:focus {
+  outline: none;
+}
+
+/* L'image elle-meme n'est pas une cible : elle ne doit pas reagir au survol. */
+.espace-images__banniere img,
+.espace-images__icone img {
+  pointer-events: none;
+}

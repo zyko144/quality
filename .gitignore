@@ -29,3 +29,11 @@ vue-*.png
 # Compilation du client natif.
 native/target/
 natif-apercu.png
+
+# Cle privee de signature des mises a jour.
+#
+# Elle seule permet de fabriquer une mise a jour que l'application acceptera :
+# la publier reviendrait a laisser n'importe qui pousser du code sur les postes
+# de tout le monde. La cle publique, elle, est dans `tauri.conf.json` et doit y
+# rester — c'est ce qui permet de verifier la signature.
+src-tauri/quality.key

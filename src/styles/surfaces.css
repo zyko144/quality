@@ -1402,3 +1402,20 @@
   height: 9px;
   border-radius: var(--radius-full);
 }
+
+/*
+ * Meme chose pour la photo de profil.
+ *
+ * `.avatar` porte un liseré interieur d'un pixel, discret sur une pastille de
+ * trente pixels mais nettement visible sur les grands formats de la fiche et de
+ * l'editeur — ou il dessine un cercle clair autour du visage.
+ */
+.profile__avatar .avatar,
+.editor-preview__avatar .avatar,
+.account__head .avatar {
+  box-shadow: var(--shadow-md);
+}
+
+.profile__avatar-edit:focus:not(:focus-visible) {
+  outline: none;
+}

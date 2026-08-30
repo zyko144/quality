@@ -11,6 +11,7 @@ import { SidePanel } from './SidePanel';
 import { ChannelHeader } from '@/features/channels/ChannelHeader';
 import { WindowControls } from '@/components/WindowControls';
 import { QualityLogo } from '@/components/QualityLogo';
+import { MiseAJour } from './MiseAJour';
 import { MessageList } from '@/features/messages/MessageList';
 import { Composer } from '@/features/messages/Composer';
 import { VoiceStage } from '@/features/voice/VoiceStage';
@@ -372,6 +373,10 @@ export function Workspace() {
           et en position fixe : elles doivent rester atteignables quelle que
           soit la vue, y compris quand aucun salon n'est ouvert. */}
       <WindowControls />
+
+      {/* La bannière de mise a jour flotte au-dessus de tout, sans deplacer
+          quoi que ce soit : elle propose, elle n'interrompt pas. */}
+      <MiseAJour />
 
       {/* Sur petit ecran, la navigation recouvre la conversation : il faut un
           voile pour la refermer, et l'ecarter des lecteurs d'ecran quand elle

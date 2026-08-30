@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useChat } from '@/store/chat';
+import { useVoice } from '@/features/voice/useVoice';
+import { Avatar } from '@/components/Avatar';
 import { useSession } from '@/store/session';
 import { SpaceContextMenu } from '@/features/spaces/SpaceContextMenu';
 import { Modal } from '@/components/Modal';
@@ -20,6 +22,8 @@ export function SpaceRail() {
   const spaces = useChat((state) => state.spaces);
   const channels = useChat((state) => state.channels);
   const readStates = useChat((state) => state.readStates);
+  const profiles = useChat((state) => state.profiles);
+  const participantsParSalon = useVoice((state) => state.participantsByChannel);
 
   const activeSpaceId = useUI((state) => state.activeSpaceId);
   const selectSpace = useUI((state) => state.selectSpace);
@@ -129,6 +133,18 @@ export function SpaceRail() {
             (channel) => channel.space_id === space.id && channel.kind === 'text',
           );
 
+          /*
+           * Les participants de tous les salons vocaux de cet espace.
+           *
+           * La presence n'est connue que des salons ou l'on est soi-meme
+           * connecte : ailleurs la liste reste vide et la pastille ne parait
+           * pas. C'est une limite du transport — la presence vit dans le canal
+           * du salon, qu'on ne rejoint qu'en y entrant — et non un oubli.
+           */
+          const enVocal = channels
+            .filter((channel) => channel.space_id === space.id && channel.kind === 'voice')
+            .flatMap((channel) => participantsParSalon[channel.id] ?? []);
+
           let unread = 0;
           let mentions = 0;
           for (const channel of spaceChannels) {
@@ -180,6 +196,41 @@ export function SpaceRail() {
                 )}
                 <span className="visually-hidden">{space.name}</span>
               </button>
+
+              {/*
+                Qui parle, dans cet espace, en ce moment.
+                La pastille se voit de loin et sans rien survoler ; la liste
+                complete n'apparait qu'a la demande, sinon le rail deviendrait
+                un panneau.
+              */}
+              {enVocal.length > 0 ? (
+                <span className="rail__vocal" title={`${enVocal.length} en vocal`}>
+                  <span className="rail__vocal-point" aria-hidden="true" />
+                  {enVocal.length}
+                  <span className="visually-hidden">personnes en vocal</span>
+                </span>
+              ) : null}
+
+              {enVocal.length > 0 ? (
+                <div className="rail__vocal-liste" role="tooltip">
+                  <p className="rail__vocal-titre">En vocal</p>
+                  <ul>
+                    {enVocal.slice(0, 8).map((participant) => (
+                      <li key={participant.user_id}>
+                        <Avatar profile={profiles[participant.user_id]} size={20} />
+                        <span className="truncate">
+                          {profiles[participant.user_id]?.display_name ?? 'Quelqu’un'}
+                        </span>
+                        {participant.muted ? <Icon name="mic-off" size={11} /> : null}
+                        {participant.sharing ? <Icon name="screen" size={11} /> : null}
+                      </li>
+                    ))}
+                  </ul>
+                  {enVocal.length > 8 ? (
+                    <p className="rail__vocal-reste">et {enVocal.length - 8} de plus</p>
+                  ) : null}
+                </div>
+              ) : null}
 
               {mentions > 0 ? (
                 <span className="rail__badge badge" aria-label={`${mentions} mentions`}>

@@ -67,6 +67,11 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signature des mises a jour. Sans elle, l'archive produite n'est pas
+          # signee et l'application refusera de l'installer — c'est ce qui
+          # empeche n'importe qui de pousser du code sur les postes.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
           # Les cles de l'environnement sont necessaires a la compilation :
           # Vite les inscrit dans le paquet. Elles sont publiques par
           # construction — la cle « publishable » de Supabase est faite pour
@@ -76,6 +81,12 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
         with:
           args: --target ${{ matrix.cible }}
+          # Une publication par version : `tauri-action` y depose les paquets
+          # et le `latest.json` que l'application interroge au demarrage.
+          tagName: v__VERSION__
+          releaseName: Quality v__VERSION__
+          releaseDraft: false
+          prerelease: false
 
       - uses: actions/upload-artifact@v4
         with:

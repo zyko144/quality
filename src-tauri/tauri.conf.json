@@ -49,13 +49,24 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["French", "English"]
+        "languages": [
+          "French",
+          "English"
+        ]
       }
-    }
+    },
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "updater": {
-      "active": false
+      "active": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI0QzE3MkQ2NjI4RDA4MgpSV1NDMENobUxSZE1BbVNicjl2NE1TZ2MyNW4yVlRvdVhEK2ZJTFdCaEtWTFZCcEREWFF4MDl5TQo=",
+      "endpoints": [
+        "https://github.com/vercelgits/quality-/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

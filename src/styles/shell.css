@@ -1785,3 +1785,175 @@ button.userbar__voice-info:hover {
   background: linear-gradient(transparent, var(--bg-sidebar));
   pointer-events: none;
 }
+
+/* --------------------------------------------------------------------------
+   Presence vocale sur la pastille d'un espace
+   -------------------------------------------------------------------------- */
+
+.rail__vocal {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border: 2px solid var(--bg-app);
+  border-radius: var(--radius-full);
+  background: var(--success);
+  color: #06210f;
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.rail__vocal-point {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+/*
+ * La liste complete n'apparait qu'au survol.
+ *
+ * Affichee en permanence, elle transformerait le rail en panneau. Le nombre,
+ * lui, reste visible sans rien faire : c'est l'information qu'on cherche du
+ * coin de l'oeil.
+ */
+.rail__vocal-liste {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 0;
+  z-index: 60;
+  min-width: 190px;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lg), var(--edge-light);
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--spring);
+}
+
+.rail__item:hover .rail__vocal-liste,
+.rail__item:focus-within .rail__vocal-liste {
+  opacity: 1;
+  transform: none;
+}
+
+.rail__vocal-titre {
+  margin: 0 0 var(--space-2);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.rail__vocal-liste ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rail__vocal-liste li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.rail__vocal-reste {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
+[data-motion='reduced'] .rail__vocal-liste {
+  transition: none;
+  transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   Bannière de mise a jour
+   -------------------------------------------------------------------------- */
+
+.maj {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 440px;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lg), var(--edge-light);
+  animation: maj-entre var(--duration-normal) var(--spring);
+}
+
+@keyframes maj-entre {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.maj__marque {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.maj__corps { min-width: 0; flex: 1; }
+
+.maj__titre {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.maj__note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}
+
+.maj__liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+}
+
+[data-motion='reduced'] .maj { animation: none; }
+
+@media (max-width: 620px) {
+  .maj {
+    left: var(--space-4);
+    right: var(--space-4);
+    max-width: none;
+    flex-wrap: wrap;
+  }
+}
