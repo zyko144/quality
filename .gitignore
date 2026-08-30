@@ -37,3 +37,8 @@ natif-apercu.png
 # de tout le monde. La cle publique, elle, est dans `tauri.conf.json` et doit y
 # rester — c'est ce qui permet de verifier la signature.
 src-tauri/quality.key
+
+# Le site de presentation est un depot a part, avec son propre remote.
+# L'imbriquer ici ferait un sous-module que personne n'a demande, et ses clones
+# arriveraient vides.
+site/
