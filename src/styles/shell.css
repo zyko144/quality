@@ -1983,3 +1983,32 @@ button.userbar__voice-info:hover {
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
 }
+
+/* --------------------------------------------------------------------------
+   Glisser un salon pour le ranger
+   -------------------------------------------------------------------------- */
+
+/* Le trait marque ou le salon se posera, pas ce qu'on survole : un fond colore
+   laisserait croire qu'on va le remplacer. */
+.sidebar__channels li.is-drop-target {
+  position: relative;
+}
+
+.sidebar__channels li.is-drop-target::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -3px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.sidebar__channels li[draggable='true'] .channel {
+  cursor: grab;
+}
+
+.sidebar__channels li[draggable='true']:active .channel {
+  cursor: grabbing;
+}

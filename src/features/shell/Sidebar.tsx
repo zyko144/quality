@@ -34,6 +34,45 @@ export function Sidebar() {
   const myRank = activeSpaceId ? (ranks[activeSpaceId] ?? 0) : 0;
   const [menuListe, setMenuListe] = useState<{ x: number; y: number } | null>(null);
 
+  /*
+   * Le salon en cours de deplacement, et celui qu'il survole.
+   *
+   * Deux etats plutot qu'un : le premier survit au passage d'une categorie a
+   * l'autre, le second change a chaque ligne franchie. Les melanger ferait
+   * perdre la piste des qu'on sort de la liste et qu'on y revient.
+   */
+  const [deplace, setDeplace] = useState<UUID | null>(null);
+  const [survole, setSurvole] = useState<UUID | null>(null);
+
+  const reorderChannels = useChat((state) => state.reorderChannels);
+
+  /*
+   * Range le salon deplace juste avant celui qu'on relache.
+   *
+   * L'ordre transmis porte sur TOUS les salons de l'espace, pas seulement sur
+   * la categorie visee : les positions sont un entier unique par espace, et
+   * renumeroter une seule categorie decalerait les autres sans qu'on l'ait
+   * demande.
+   */
+  const relacher = (idDeplace: string, cible: UUID) => {
+    setDeplace(null);
+    setSurvole(null);
+    if (!idDeplace || idDeplace === cible || !activeSpaceId) return;
+
+    const ordre = channels
+      .filter((canal) => canal.space_id === activeSpaceId)
+      .map((canal) => canal.id);
+
+    const depuis = ordre.indexOf(idDeplace as UUID);
+    const vers = ordre.indexOf(cible);
+    if (depuis === -1 || vers === -1) return;
+
+    ordre.splice(depuis, 1);
+    ordre.splice(vers, 0, idDeplace as UUID);
+
+    void reorderChannels(activeSpaceId, ordre);
+  };
+
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [threadsOpen, setThreadsOpen] = useState(true);
 
@@ -225,6 +264,14 @@ export function Sidebar() {
                   key={channel.id}
                   channel={channel}
                   active={channel.id === activeChannelId}
+                  survole={survole === channel.id && deplace !== null}
+                  onDragStart={setDeplace}
+                  onDragOver={setSurvole}
+                  onDrop={relacher}
+                  onDragEnd={() => {
+                    setDeplace(null);
+                    setSurvole(null);
+                  }}
                   unread={readStates[channel.id]?.unread_count ?? 0}
                   mentions={readStates[channel.id]?.mention_count ?? 0}
                   onSelect={selectChannel}
@@ -298,6 +345,11 @@ function ChannelItem({
   onSelect,
   profiles,
   canManage,
+  survole,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   channel: Channel;
   active: boolean;
@@ -307,6 +359,12 @@ function ChannelItem({
   profiles: Record<UUID, import('@/types/db').Profile>;
   /** Rang dans l'espace : les reglages n'ont de sens qu'a partir d'admin. */
   canManage: boolean;
+  /** Vrai quand un salon deplace survole celui-ci. */
+  survole?: boolean;
+  onDragStart?: (id: UUID) => void;
+  onDragOver?: (id: UUID) => void;
+  onDrop?: (deplace: string, cible: UUID) => void;
+  onDragEnd?: () => void;
 }) {
   const participants = useVoice((state) =>
     channel.kind === 'voice' ? state.participantsByChannel[channel.id] : undefined,
@@ -322,7 +380,38 @@ function ChannelItem({
   const hasUnread = unread > 0 && !active;
 
   return (
-    <li onContextMenu={menu.open}>
+    <li
+      onContextMenu={menu.open}
+      /*
+       * Glisser un salon pour le ranger.
+       *
+       * Reserve a qui peut administrer : pour les autres, un salon qui suit le
+       * curseur donnerait l'illusion d'un pouvoir qu'ils n'ont pas, et le
+       * serveur refuserait l'ecriture au relachement.
+       */
+      draggable={canManage}
+      onDragStart={(event) => {
+        if (!canManage) return;
+        event.dataTransfer.setData('text/plain', channel.id);
+        event.dataTransfer.effectAllowed = 'move';
+        onDragStart?.(channel.id);
+      }}
+      onDragOver={(event) => {
+        if (!canManage) return;
+        // Sans `preventDefault`, le navigateur refuse le depot : c'est lui qui
+        // decide, et son defaut est de tout refuser.
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        onDragOver?.(channel.id);
+      }}
+      onDrop={(event) => {
+        if (!canManage) return;
+        event.preventDefault();
+        onDrop?.(event.dataTransfer.getData('text/plain'), channel.id);
+      }}
+      onDragEnd={() => onDragEnd?.()}
+      className={survole ? 'is-drop-target' : undefined}
+    >
       {menu.position ? (
         <ChannelContextMenu
           channel={channel}

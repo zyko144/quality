@@ -76,14 +76,21 @@ const DEFAULTS: MediaPreferences = {
   videoQuality: '720p',
   screenQuality: '1080p',
   screenFrameRate: 60,
-  // La nettete plutot que la fluidite.
-  //
-  // Avec « fluidite », la couche de congestion tient les images par seconde et
-  // sacrifie la definition : au premier a-coup de liaison, un 1080p tombe a
-  // 640 de large et le texte devient illisible. On voit un flou permanent, sans
-  // comprendre pourquoi. L'inverse garde les pixels et laisse tomber quelques
-  // images — bien moins genant sur ce qu'on partage d'ordinaire.
-  screenPriority: 'detail',
+  /*
+   * La fluidite, par defaut.
+   *
+   * Les deux reglages sacrifient quelque chose, et il faut choisir lequel :
+   * « nettete » tient la definition et laisse tomber des images, « fluidite »
+   * fait l'inverse. Le premier a ete essaye et se paie cash — un partage annonce
+   * a soixante images en rend visiblement trente, ce qui saute aux yeux sur un
+   * jeu ou une video, c'est-a-dire sur l'essentiel de ce qu'on partage.
+   *
+   * Le flou que « nettete » evitait tenait surtout a un plafond de debit trop
+   * bas ; il est passe a douze megabits, ce qui laisse de quoi tenir les deux
+   * la plupart du temps. Reste le choix dans le selecteur, pour partager un
+   * document plein de texte.
+   */
+  screenPriority: 'motion',
   cueVolume: 0.6,
   shareSystemAudio: true,
 };

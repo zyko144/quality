@@ -219,7 +219,7 @@ export function SourcePicker({
           </div>
 
           <div className="picker__reglage">
-            <span className="picker__etiquette">Fluidite</span>
+            <span className="picker__etiquette">Images</span>
             <div className="picker__choix">
               {([30, 60] as const).map((valeur) => (
                 <button
@@ -231,6 +231,37 @@ export function SourcePicker({
                   onClick={() => setMedia('screenFrameRate', valeur)}
                 >
                   {valeur} i/s
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/*
+            Ce qu'on sacrifie quand la liaison ne suit pas.
+            A debit egal on ne peut pas tout garder : soit les pixels, soit les
+            images. Le dire ici evite de decouvrir le choix apres coup, en
+            regardant un partage qui parait a trente images alors qu'on en a
+            demande soixante.
+          */}
+          <div className="picker__reglage">
+            <span className="picker__etiquette">Si ca coince</span>
+            <div className="picker__choix">
+              {(
+                [
+                  { valeur: 'motion', label: 'Garder la fluidite' },
+                  { valeur: 'detail', label: 'Garder la nettete' },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.valeur}
+                  type="button"
+                  className={
+                    'picker__pastille' +
+                    (media.screenPriority === option.valeur ? ' is-active' : '')
+                  }
+                  onClick={() => setMedia('screenPriority', option.valeur)}
+                >
+                  {option.label}
                 </button>
               ))}
             </div>
