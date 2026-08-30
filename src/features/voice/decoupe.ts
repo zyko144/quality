@@ -36,6 +36,9 @@ export interface Decoupe {
   /** Vrai quand la fenetre choisie n'etait pas sur l'ecran principal : c'est
    *  alors l'ecran entier qui part, et il faut le dire. */
   horsEcranPrincipal?: boolean;
+  /** Vrai quand l'ecran demande n'est pas celui que le moteur a capture : on
+   *  n'emet alors rien du tout, plutot que le mauvais ecran. */
+  mauvaisEcran?: boolean;
 }
 
 /**
@@ -52,12 +55,33 @@ export async function decouperSource(
   images: number,
 ): Promise<Decoupe> {
   const [pisteEcran] = ecran.getVideoTracks();
-
-  if (!pisteEcran || sourceId.startsWith('ecran:')) {
-    return { piste: pisteEcran, arreter: () => {} };
-  }
+  if (!pisteEcran) return { piste: undefined, arreter: () => {} };
 
   const { invoke } = await import('@tauri-apps/api/core');
+
+  /*
+   * Un ecran choisi doit etre CELUI qu'on capture.
+   *
+   * La selection automatique du moteur vise toujours la premiere source, soit
+   * l'ecran principal. Choisir « Ecran 2 » dans notre selecteur diffuserait
+   * donc l'ecran 1 sans le dire — exactement le genre de silence qui fait
+   * montrer a une reunion ce qu'on croyait garder pour soi.
+   *
+   * On compare l'origine de l'ecran demande a celle du bureau : le moniteur
+   * principal commence a (0, 0) sous Windows, les autres non. Une difference
+   * signifie qu'on n'a pas ce qu'on a demande, et l'on prefere ne rien
+   * diffuser plutot que de diffuser autre chose.
+   */
+  if (sourceId.startsWith('ecran:')) {
+    const cible = await invoke<Zone>('zone_source', { id: sourceId });
+
+    if (cible.visible && (cible.x !== 0 || cible.y !== 0)) {
+      pisteEcran.stop();
+      return { piste: undefined, arreter: () => {}, mauvaisEcran: true };
+    }
+
+    return { piste: pisteEcran, arreter: () => {} };
+  }
 
   let zone = await invoke<Zone>('zone_source', { id: sourceId });
   if (!zone.visible || zone.largeur <= 0) {

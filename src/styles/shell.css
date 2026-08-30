@@ -1757,3 +1757,31 @@ button.userbar__voice-info:hover {
 .rail__actions > * + * {
   margin-top: var(--space-3);
 }
+
+/* --------------------------------------------------------------------------
+   Banniere de l'espace
+   -------------------------------------------------------------------------- */
+
+.sidebar__banniere {
+  position: relative;
+  height: 120px;
+  overflow: hidden;
+  flex: none;
+}
+
+.sidebar__banniere img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Un degrade vers le bas : le nom de l'espace se pose juste dessous, et sans
+   cette transition il flotte sur une arete franche. */
+.sidebar__banniere::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 48px;
+  background: linear-gradient(transparent, var(--bg-sidebar));
+  pointer-events: none;
+}

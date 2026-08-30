@@ -1270,3 +1270,91 @@ a.attachment:hover {
   grid-column: 1 / -1;
   margin: 0;
 }
+
+/* ==========================================================================
+   Icone et banniere d'un espace
+   ========================================================================== */
+
+.espace-images {
+  position: relative;
+  margin-bottom: var(--space-8);
+}
+
+.espace-images__banniere {
+  position: relative;
+  height: 140px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.espace-images__banniere img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.espace-images__vide {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-aurora);
+}
+
+.espace-images__changer {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+}
+
+/* L'icone chevauche la banniere, comme elle chevauchera le rail : la meme
+   relation d'echelle des les reglages evite la surprise. */
+.espace-images__icone {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin: -34px 0 0 var(--space-5);
+  border-radius: var(--radius-xl);
+  border: 4px solid var(--bg-raised);
+  background: var(--bg-app);
+  overflow: visible;
+}
+
+.espace-images__icone img {
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--radius-xl) - 4px);
+  object-fit: cover;
+}
+
+.espace-images__initiales {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--radius-xl) - 4px);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.espace-images__icone-btn {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--bg-raised);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.espace-images__note {
+  margin-top: calc(var(--space-6) * -1);
+  margin-bottom: var(--space-6);
+}

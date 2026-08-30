@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { Icon } from '@/components/Icon';
 import { RolesPanel } from './RolesPanel';
@@ -6,6 +6,8 @@ import { supabase, errorMessage } from '@/lib/supabase';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { LIMITS } from '@/constants';
+import { uploadSpaceImage } from '@/lib/upload';
+import { useSession } from '@/store/session';
 import type { UUID } from '@/types/db';
 
 type Tab = 'general' | 'categories' | 'roles' | 'danger';
@@ -33,7 +35,14 @@ export function SpaceSettings({
   const bootstrap = useChat((state) => state.bootstrap);
   const selectSpace = useUI((state) => state.selectSpace);
 
+  const moi = useSession((state) => state.profile);
   const [tab, setTab] = useState<Tab>('general');
+  const [icone, setIcone] = useState<string | null>(null);
+  const [banniere, setBanniere] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState<'icon' | 'banner' | null>(null);
+
+  const champIcone = useRef<HTMLInputElement>(null);
+  const champBanniere = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [newCategory, setNewCategory] = useState('');
@@ -57,10 +66,53 @@ export function SpaceSettings({
     setDescription(space.description ?? '');
     setNewCategory('');
     setConfirmName('');
+    setIcone(space?.icon_url ?? null);
+    setBanniere(space?.banner_url ?? null);
+    setEnvoi(null);
     setError(null);
   }, [open, space]);
 
   if (!space || !spaceId) return null;
+
+  /*
+   * L'image part tout de suite, sans attendre « Enregistrer ».
+   *
+   * Choisir un fichier EST la validation : personne ne s'attend a devoir
+   * confirmer une seconde fois, et le nom et la description, eux, gardent leur
+   * bouton parce qu'on les tape lettre par lettre.
+   */
+  const envoyerImage = async (fichier: File, genre: 'icon' | 'banner') => {
+    if (!moi) return;
+
+    setEnvoi(genre);
+    setError(null);
+
+    const resultat = await uploadSpaceImage(fichier, moi.id, genre);
+
+    if ('error' in resultat) {
+      setEnvoi(null);
+      setError(resultat.error);
+      return;
+    }
+
+    const colonne = genre === 'icon' ? 'icon_url' : 'banner_url';
+    const { error: refus } = await supabase
+      .from('spaces')
+      .update({ [colonne]: resultat.url })
+      .eq('id', spaceId);
+
+    setEnvoi(null);
+
+    if (refus) {
+      setError(errorMessage(refus));
+      return;
+    }
+
+    if (genre === 'icon') setIcone(resultat.url);
+    else setBanniere(resultat.url);
+
+    await bootstrap();
+  };
 
   const dirty = name.trim() !== space.name || description.trim() !== (space.description ?? '');
 
@@ -192,6 +244,85 @@ export function SpaceSettings({
 
       {tab === 'general' ? (
         <>
+          {/*
+            L'icone et la banniere ouvrent l'onglet.
+            Ce sont elles qu'on vient changer le plus souvent, et les chercher
+            sous le nom et la description obligeait a faire defiler une page
+            pour un geste de deux secondes.
+          */}
+          <div className="espace-images">
+            <div className="espace-images__banniere">
+              {banniere ? (
+                <img src={banniere} alt="" />
+              ) : (
+                <span className="espace-images__vide" aria-hidden="true" />
+              )}
+
+              <button
+                type="button"
+                className="btn btn--sm espace-images__changer"
+                onClick={() => champBanniere.current?.click()}
+                disabled={envoi !== null}
+              >
+                {envoi === 'banner' ? (
+                  <span className="spinner" />
+                ) : (
+                  <Icon name="image" size={14} />
+                )}
+                Banniere
+              </button>
+            </div>
+
+            <div className="espace-images__icone">
+              {icone ? (
+                <img src={icone} alt="" />
+              ) : (
+                <span className="espace-images__initiales" aria-hidden="true">
+                  {space.name.slice(0, 2).toUpperCase()}
+                </span>
+              )}
+
+              <button
+                type="button"
+                className="espace-images__icone-btn"
+                onClick={() => champIcone.current?.click()}
+                disabled={envoi !== null}
+                aria-label="Changer l'icone de l'espace"
+              >
+                {envoi === 'icon' ? <span className="spinner" /> : <Icon name="camera" size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <p className="field__hint espace-images__note">
+            L&rsquo;icone est la pastille du rail, a gauche. La banniere coiffe la
+            liste des salons — c&rsquo;est elle qui donne son caractere a
+            l&rsquo;espace une fois qu&rsquo;on est dedans.
+          </p>
+
+          <input
+            ref={champIcone}
+            type="file"
+            accept="image/*"
+            className="visually-hidden"
+            onChange={(event) => {
+              const fichier = event.target.files?.[0];
+              if (fichier) void envoyerImage(fichier, 'icon');
+              event.target.value = '';
+            }}
+          />
+          <input
+            ref={champBanniere}
+            type="file"
+            accept="image/*"
+            className="visually-hidden"
+            onChange={(event) => {
+              const fichier = event.target.files?.[0];
+              if (fichier) void envoyerImage(fichier, 'banner');
+              event.target.value = '';
+            }}
+          />
+
           <div className="field">
             <label className="field__label" htmlFor="space-settings-name">
               Nom de l’espace

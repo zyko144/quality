@@ -35,6 +35,11 @@ pub struct Source {
     pub genre: &'static str,
     pub largeur: i32,
     pub hauteur: i32,
+    /// Coin haut-gauche a l'ecran. L'interface s'en sert pour savoir si une
+    /// source se trouve sur le moniteur principal, seul que l'on sache
+    /// capturer sans ouvrir la fenetre du moteur.
+    pub x: i32,
+    pub y: i32,
     /// Vignette PNG en `data:` — vide si la capture a echoue.
     pub vignette: String,
 }
@@ -245,6 +250,8 @@ unsafe extern "system" fn collecter(fenetre: HWND, contexte: LPARAM) -> BOOL {
         genre: "fenetre",
         largeur: cadre.right - cadre.left,
         hauteur: cadre.bottom - cadre.top,
+        x: cadre.left,
+        y: cadre.top,
         vignette: vignette_de(cadre).unwrap_or_default(),
     });
 
@@ -280,6 +287,8 @@ unsafe extern "system" fn collecter_ecran(
         genre: "ecran",
         largeur: cadre.right - cadre.left,
         hauteur: cadre.bottom - cadre.top,
+        x: cadre.left,
+        y: cadre.top,
         vignette: vignette_de(cadre).unwrap_or_default(),
     });
 

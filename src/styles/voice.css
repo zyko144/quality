@@ -926,3 +926,14 @@ button.voice-tile__name:hover {
 [data-motion='reduced'] .picker__source:hover {
   transform: none;
 }
+
+/* Une source qu'on ne sait pas capturer reste visible mais inerte : la retirer
+   ferait croire qu'elle n'existe pas. */
+.picker__source.is-indisponible {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.picker__source.is-indisponible:hover {
+  transform: none;
+}

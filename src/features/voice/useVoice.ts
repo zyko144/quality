@@ -210,6 +210,18 @@ let mutedBeforeDeafen = false;
 /** Arret de la decoupe en cours, s'il y en a une. */
 let arreterDecoupe: (() => void) | null = null;
 
+/**
+ * Vrai pendant qu'un partage demarre ou s'arrete.
+ *
+ * L'operation dure plusieurs secondes : ouvrir la capture, negocier avec chaque
+ * pair, installer la decoupe. Rien n'empechait un second clic de partir pendant
+ * ce temps. Deux captures se retrouvaient alors en vol, la seconde ecrasait
+ * l'arret de la premiere — dont le canevas continuait de tourner dans le vide —
+ * et les emetteurs poses par l'une remplacaient ceux de l'autre sans les
+ * retirer. Le partage se disait actif, et plus personne ne recevait rien.
+ */
+let basculePartageEnCours = false;
+
 /** Plage couverte par `getByteFrequencyData`, de l'octet 0 a l'octet 255. */
 export const ANALYSER_FLOOR = -100;
 export const ANALYSER_CEILING = -20;
@@ -981,170 +993,179 @@ export const useVoice = create<VoiceState>((set, get) => {
     },
 
     toggleScreenShare: async (sourceId) => {
-      const { sharing, localScreen } = get();
+      // Un clic de plus pendant l’installation ne fait rien : le premier
+      // ira au bout, et l’etat sera coherent pour le suivant.
+      if (basculePartageEnCours) return;
+      basculePartageEnCours = true;
 
-      if (sharing) {
-        for (const peer of peers.values()) {
-          if (peer.screenSender) {
-            // `removeTrack` declenche `onnegotiationneeded` : la renegociation
-            // part toute seule, sans offre construite a la main.
-            peer.connection.removeTrack(peer.screenSender);
-            peer.screenSender = null;
-          }
-        }
-        for (const track of localScreen?.getTracks() ?? []) track.stop();
-
-        // La decoupe tient un canevas, une balise video et deux minuteurs :
-        // les laisser tourner apres l'arret consommerait un coeur pour dessiner
-        // dans le vide.
-        arreterDecoupe?.();
-        arreterDecoupe = null;
-
-        set({ sharing: false, localScreen: null });
-        stopStats();
-        playCue('share-stop');
-        publishState();
-        return;
-      }
-
-      let display: MediaStream;
       try {
-        display = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            ...screenConstraints(useDevices.getState().media),
-            // Le selecteur s'ouvre sur l'ecran entier, ce qu'on partage le
-            // plus souvent.
-            displaySurface: 'monitor',
-          },
+        const { sharing, localScreen } = get();
 
-          // Le son de ce qui est partage part avec l'image. Sans lui, montrer
-          // une video ou un jeu revient a mimer. Les traitements du micro sont
-          // desactives : ils sont faits pour une voix, et ils ecraseraient de
-          // la musique.
-          audio: useDevices.getState().media.shareSystemAudio
-            ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-            : false,
+        if (sharing) {
+          for (const peer of peers.values()) {
+            if (peer.screenSender) {
+              // `removeTrack` declenche `onnegotiationneeded` : la renegociation
+              // part toute seule, sans offre construite a la main.
+              peer.connection.removeTrack(peer.screenSender);
+              peer.screenSender = null;
+            }
+          }
+          for (const track of localScreen?.getTracks() ?? []) track.stop();
 
-          // Notre propre fenetre est retiree de la liste : la partager
-          // afficherait le partage a l'interieur de lui-meme, en miroir sans
-          // fin. C'est une erreur qu'on ne fait qu'une fois, mais qu'on fait.
-          selfBrowserSurface: 'exclude',
+          // La decoupe tient un canevas, une balise video et deux minuteurs :
+          // les laisser tourner apres l'arret consommerait un coeur pour dessiner
+          // dans le vide.
+          arreterDecoupe?.();
+          arreterDecoupe = null;
 
-          // On peut changer de source sans couper : sinon il faut arreter,
-          // rouvrir le selecteur, et tout le monde voit l'ecran disparaitre.
-          surfaceSwitching: 'include',
-        } as DisplayMediaStreamOptions);
-      } catch {
-        // Selecteur de fenetre annule : rien a signaler.
-        return;
-      }
+          set({ sharing: false, localScreen: null });
+          stopStats();
+          playCue('share-stop');
+          publishState();
+          return;
+        }
 
-      /*
-       * Decoupe, quand une fenetre precise a ete choisie.
-       *
-       * Sur le bureau, la selection du moteur web est court-circuitee : il
-       * prend toujours l'ecran entier. Choisir une fenetre dans notre
-       * selecteur revient donc a n'emettre que la portion correspondante —
-       * sans quoi on diffuserait tout l'ecran en croyant l'inverse.
-       */
-      let videoTrack = display.getVideoTracks()[0];
-
-      if (sourceId && sourceId.startsWith('fenetre:')) {
+        let display: MediaStream;
         try {
-          const { decouperSource } = await import('./decoupe');
-          const decoupe = await decouperSource(
-            display,
-            sourceId,
-            useDevices.getState().media.screenFrameRate,
-          );
+          display = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+              ...screenConstraints(useDevices.getState().media),
+              // Le selecteur s'ouvre sur l'ecran entier, ce qu'on partage le
+              // plus souvent.
+              displaySurface: 'monitor',
+            },
 
-          arreterDecoupe = decoupe.arreter;
-          if (decoupe.piste) videoTrack = decoupe.piste;
+            // Le son de ce qui est partage part avec l'image. Sans lui, montrer
+            // une video ou un jeu revient a mimer. Les traitements du micro sont
+            // desactives : ils sont faits pour une voix, et ils ecraseraient de
+            // la musique.
+            audio: useDevices.getState().media.shareSystemAudio
+              ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+              : false,
 
-          if (decoupe.horsEcranPrincipal) {
-            set({
-              error:
-                "Cette fenetre est sur un second ecran : c'est l'ecran entier qui est partage.",
-            });
-          }
+            // Notre propre fenetre est retiree de la liste : la partager
+            // afficherait le partage a l'interieur de lui-meme, en miroir sans
+            // fin. C'est une erreur qu'on ne fait qu'une fois, mais qu'on fait.
+            selfBrowserSurface: 'exclude',
+
+            // On peut changer de source sans couper : sinon il faut arreter,
+            // rouvrir le selecteur, et tout le monde voit l'ecran disparaitre.
+            surfaceSwitching: 'include',
+          } as DisplayMediaStreamOptions);
         } catch {
-          // Decoupe impossible : on partage l'ecran plutot que rien, et
-          // l'utilisateur le voit dans sa propre vignette.
+          // Selecteur de fenetre annule : rien a signaler.
+          return;
         }
-      }
 
-      if (!videoTrack) return;
+        /*
+         * Decoupe, quand une fenetre precise a ete choisie.
+         *
+         * Sur le bureau, la selection du moteur web est court-circuitee : il
+         * prend toujours l'ecran entier. Choisir une fenetre dans notre
+         * selecteur revient donc a n'emettre que la portion correspondante —
+         * sans quoi on diffuserait tout l'ecran en croyant l'inverse.
+         */
+        let videoTrack = display.getVideoTracks()[0];
 
-      /*
-       * La barre du moteur est masquee.
-       *
-       * Chromium pose une fenetre flottante « http://tauri.localhost partage
-       * votre ecran » pendant toute la duree du partage. Aucune API ne la
-       * retire, et elle annonce une adresse interne qui ne veut rien dire.
-       * Notre interface annonce deja le partage et propose de l'arreter, a
-       * trois endroits.
-       *
-       * Sans attendre : la fenetre met un instant a paraitre, et la commande
-       * la guette d'elle-meme pendant deux secondes.
-       */
-      if (DANS_TAURI) {
-        void import('@tauri-apps/api/core')
-          .then(({ invoke }) => invoke('masquer_barre_partage'))
-          .catch(() => undefined);
-      }
+        if (sourceId) {
+          try {
+            const { decouperSource } = await import('./decoupe');
+            const decoupe = await decouperSource(
+              display,
+              sourceId,
+              useDevices.getState().media.screenFrameRate,
+            );
 
-      // L'indice de contenu oriente l'encodeur avant meme la negociation :
-      // « motion » lui dit de sacrifier la nettete plutot que la fluidite.
-      // Sans lui, un 1080p a soixante images est traite comme une webcam.
-      videoTrack.contentHint =
-        useDevices.getState().media.screenPriority === 'motion' ? 'motion' : 'detail';
+            arreterDecoupe = decoupe.arreter;
+            if (decoupe.piste) videoTrack = decoupe.piste;
 
-      // Le partage s'arrete aussi depuis la barre du navigateur. Sans suivre cet
-      // evenement, l'interface afficherait un partage qui n'existe plus.
-      videoTrack.addEventListener('ended', () => {
-        for (const peer of peers.values()) {
-          if (peer.screenSender) {
-            peer.connection.removeTrack(peer.screenSender);
-            peer.screenSender = null;
-          }
-          if (peer.screenAudioSender) {
-            peer.connection.removeTrack(peer.screenAudioSender);
-            peer.screenAudioSender = null;
+            if (decoupe.horsEcranPrincipal) {
+              set({
+                error:
+                  "Cette fenetre est sur un second ecran : c'est l'ecran entier qui est partage.",
+              });
+            }
+          } catch {
+            // Decoupe impossible : on partage l'ecran plutot que rien, et
+            // l'utilisateur le voit dans sa propre vignette.
           }
         }
-        set({ sharing: false, localScreen: null });
+
+        if (!videoTrack) return;
+
+        /*
+         * La barre du moteur est masquee.
+         *
+         * Chromium pose une fenetre flottante « http://tauri.localhost partage
+         * votre ecran » pendant toute la duree du partage. Aucune API ne la
+         * retire, et elle annonce une adresse interne qui ne veut rien dire.
+         * Notre interface annonce deja le partage et propose de l'arreter, a
+         * trois endroits.
+         *
+         * Sans attendre : la fenetre met un instant a paraitre, et la commande
+         * la guette d'elle-meme pendant deux secondes.
+         */
+        if (DANS_TAURI) {
+          void import('@tauri-apps/api/core')
+            .then(({ invoke }) => invoke('masquer_barre_partage'))
+            .catch(() => undefined);
+        }
+
+        // L'indice de contenu oriente l'encodeur avant meme la negociation :
+        // « motion » lui dit de sacrifier la nettete plutot que la fluidite.
+        // Sans lui, un 1080p a soixante images est traite comme une webcam.
+        videoTrack.contentHint =
+          useDevices.getState().media.screenPriority === 'motion' ? 'motion' : 'detail';
+
+        // Le partage s'arrete aussi depuis la barre du navigateur. Sans suivre cet
+        // evenement, l'interface afficherait un partage qui n'existe plus.
+        videoTrack.addEventListener('ended', () => {
+          for (const peer of peers.values()) {
+            if (peer.screenSender) {
+              peer.connection.removeTrack(peer.screenSender);
+              peer.screenSender = null;
+            }
+            if (peer.screenAudioSender) {
+              peer.connection.removeTrack(peer.screenAudioSender);
+              peer.screenAudioSender = null;
+            }
+          }
+          set({ sharing: false, localScreen: null });
+          publishState();
+        });
+
+        const media = useDevices.getState().media;
+
+        // Le son du partage, quand la source en fournit. Il voyage dans le meme
+        // flux que l'image : le separer obligerait a resynchroniser a l'arrivee.
+        const [audioTrack] = display.getAudioTracks();
+
+        for (const [peerId, peer] of peers) {
+          peer.screenSender = peer.connection.addTrack(videoTrack, display);
+
+          // Le codec se choisit sur le transceiver, pas sur l'emetteur : c'est
+          // lui qui porte la negociation.
+          const transceiver = peer.connection
+            .getTransceivers()
+            .find((t) => t.sender === peer.screenSender);
+          if (transceiver) preferVideoCodec(transceiver);
+
+          void applyEncodingWithRetry(peer.screenSender, screenBitrate(media), media.screenPriority);
+
+          if (audioTrack) {
+            peer.screenAudioSender = peer.connection.addTrack(audioTrack, display);
+          }
+
+          announceStream(peerId, display.id, 'screen');
+        }
+
+        set({ sharing: true, localScreen: display });
+        startStats();
+        playCue('share-start');
         publishState();
-      });
-
-      const media = useDevices.getState().media;
-
-      // Le son du partage, quand la source en fournit. Il voyage dans le meme
-      // flux que l'image : le separer obligerait a resynchroniser a l'arrivee.
-      const [audioTrack] = display.getAudioTracks();
-
-      for (const [peerId, peer] of peers) {
-        peer.screenSender = peer.connection.addTrack(videoTrack, display);
-
-        // Le codec se choisit sur le transceiver, pas sur l'emetteur : c'est
-        // lui qui porte la negociation.
-        const transceiver = peer.connection
-          .getTransceivers()
-          .find((t) => t.sender === peer.screenSender);
-        if (transceiver) preferVideoCodec(transceiver);
-
-        void applyEncodingWithRetry(peer.screenSender, screenBitrate(media), media.screenPriority);
-
-        if (audioTrack) {
-          peer.screenAudioSender = peer.connection.addTrack(audioTrack, display);
-        }
-
-        announceStream(peerId, display.id, 'screen');
+      } finally {
+        basculePartageEnCours = false;
       }
-
-      set({ sharing: true, localScreen: display });
-      startStats();
-      playCue('share-start');
-      publishState();
     },
 
     /**

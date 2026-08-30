@@ -17,6 +17,8 @@ pub struct Source {
     pub genre: &'static str,
     pub largeur: i32,
     pub hauteur: i32,
+    pub x: i32,
+    pub y: i32,
     pub vignette: String,
 }
 

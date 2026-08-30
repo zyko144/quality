@@ -28,7 +28,20 @@ interface Source {
   genre: 'fenetre' | 'ecran';
   largeur: number;
   hauteur: number;
+  x: number;
+  y: number;
   vignette: string;
+}
+
+/*
+ * Seul le moniteur principal est capturable sans rouvrir la fenetre du moteur.
+ *
+ * La selection automatique vise toujours la premiere source. Une source posee
+ * ailleurs qu'a l'origine du bureau n'est donc pas dans l'image, et la
+ * proposer sans le dire reviendrait a promettre ce qu'on ne peut pas tenir.
+ */
+function surEcranPrincipal(source: Source): boolean {
+  return source.x === 0 && source.y === 0;
 }
 
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -149,9 +162,21 @@ export function SourcePicker({
               <li key={source.id}>
                 <button
                   type="button"
-                  className={'picker__source' + (choisie === source.id ? ' is-active' : '')}
+                  className={
+                    'picker__source' +
+                    (choisie === source.id ? ' is-active' : '') +
+                    (source.genre === 'ecran' && !surEcranPrincipal(source)
+                      ? ' is-indisponible'
+                      : '')
+                  }
+                  disabled={source.genre === 'ecran' && !surEcranPrincipal(source)}
                   onClick={() => setChoisie(source.id)}
                   aria-pressed={choisie === source.id}
+                  title={
+                    source.genre === 'ecran' && !surEcranPrincipal(source)
+                      ? 'Seul l’ecran principal peut etre partage pour l’instant.'
+                      : source.titre
+                  }
                 >
                   <span className="picker__apercu">
                     {source.vignette ? (
@@ -164,7 +189,9 @@ export function SourcePicker({
                   </span>
                   <span className="picker__titre truncate">{source.titre}</span>
                   <span className="picker__taille">
-                    {source.largeur} × {source.hauteur}
+                    {source.genre === 'ecran' && !surEcranPrincipal(source)
+                      ? 'Indisponible pour l’instant'
+                      : `${source.largeur} × ${source.hauteur}`}
                   </span>
                 </button>
               </li>

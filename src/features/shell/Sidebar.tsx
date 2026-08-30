@@ -97,6 +97,17 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar">
+      {/*
+        La banniere de l'espace, au-dessus de tout.
+        C'est ce qui donne son caractere a un serveur une fois qu'on y est : la
+        pastille du rail ne se voit que de loin, et de trois centimetres.
+      */}
+      {space.banner_url ? (
+        <div className="sidebar__banniere">
+          <img src={space.banner_url} alt="" />
+        </div>
+      ) : null}
+
       <header className="sidebar__header">
         <button
           type="button"

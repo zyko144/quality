@@ -166,3 +166,46 @@ export async function uploadProfileImage(
   const { data } = supabase.storage.from('avatars').getPublicUrl(path);
   return { url: data.publicUrl };
 }
+
+/**
+ * Icone ou banniere d'un espace.
+ *
+ * Le fichier va dans le meme depot que les images de profil, sous le dossier de
+ * la personne qui l'envoie : la politique de stockage exige que le premier
+ * segment du chemin soit son identifiant, et il n'y a pas de raison d'en
+ * ajouter une seconde pour un cas si proche.
+ *
+ * L'image reste donc rattachee a qui l'a posee, pas a l'espace. Consequence
+ * assumee : supprimer un espace ne supprime pas son icone du stockage. Elle
+ * n'est plus referencee nulle part, et une image publique de quelques centaines
+ * de kilo-octets ne justifie pas un menage automatique qui pourrait effacer
+ * autre chose.
+ */
+export async function uploadSpaceImage(
+  file: File,
+  userId: UUID,
+  kind: 'icon' | 'banner',
+): Promise<{ url: string } | { error: string }> {
+  const animated = /gif|webp|apng|avif/.test(file.type);
+  const base = kind === 'icon' ? 2 : 4;
+  const limit = (animated ? base * 4 : base) * 1024 * 1024;
+
+  if (file.size > limit) {
+    return { error: `L'image depasse ${Math.round(limit / 1024 / 1024)} Mo.` };
+  }
+  if (!file.type.startsWith('image/')) {
+    return { error: "Ce fichier n’est pas une image." };
+  }
+
+  const extension = (file.name.split('.').pop() ?? 'png').toLowerCase().slice(0, 5);
+  const path = `${userId}/espace-${kind}-${Date.now()}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { contentType: file.type, upsert: true });
+
+  if (error) return { error: error.message };
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  return { url: data.publicUrl };
+}
