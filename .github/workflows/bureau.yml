@@ -15,6 +15,14 @@ on:
   push:
     tags: ['v*']
 
+# Le jeton fourni au workflow est en lecture seule par defaut sur les depots
+# recents. Publier une version demande d'ecrire dans le depot — creer le tag, la
+# publication et y deposer les paquets — d'ou cette permission, accordee ici
+# plutot que dans les reglages du depot : elle vaut pour ce workflow seul, et se
+# lit a cote de ce qui s'en sert.
+permissions:
+  contents: write
+
 jobs:
   construire:
     strategy:
