@@ -99,6 +99,67 @@ export function Workspace() {
     };
   }, [userId, bootstrapChat, resetChat, setProfile]);
 
+  /* ---------------------------------------- Sync profil → site portfolio */
+
+  useEffect(() => {
+    if (!profile) return;
+
+    let isSubscribed = false;
+    const channel = supabase.channel('public:presence');
+
+    const sendPresence = (overrideStatus?: string) => {
+      const p = useSession.getState().profile;
+      if (!p) return;
+      const currentStatus = overrideStatus || p.status || 'online';
+
+      if (isSubscribed) {
+        void channel.send({
+          type: 'broadcast',
+          event: 'user_presence',
+          payload: {
+            userId: p.id,
+            username: p.username || 'vq',
+            display_name: p.display_name || 'vq',
+            avatar_url: p.avatar_url || null,
+            status: currentStatus,
+            custom_status: p.custom_status ?? null,
+            timestamp: Date.now(),
+          },
+        });
+      }
+    };
+
+    channel
+      .on('broadcast', { event: 'presence_ping' }, () => {
+        sendPresence();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          isSubscribed = true;
+          sendPresence();
+        }
+      });
+
+    // Battement de coeur toutes les 3s pour synchronisation instantanee avec le portfolio
+    const heartbeat = setInterval(() => {
+      sendPresence();
+    }, 3000);
+
+    const handleBeforeUnload = () => {
+      if (isSubscribed) {
+        sendPresence('offline');
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(heartbeat);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      sendPresence('offline');
+      void supabase.removeChannel(channel);
+    };
+  }, [profile]);
+
   /* ------------------------------------------------- Selection par defaut */
 
   useEffect(() => {

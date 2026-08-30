@@ -126,9 +126,10 @@ test.describe('Espaces et salons', () => {
     const dialog = openDialog(page);
     await expect(dialog).toBeVisible();
 
-    // Un code reellement present, et non un emplacement vide : c'est tout
-    // l'interet de la fenetre.
-    await expect(dialog.getByRole('button', { name: /Copier/ })).toBeEnabled();
+    // Deux boutons copient desormais : le lien d'invitation complet, et le
+    // code seul. On vise le second, exactement, sinon les deux repondent.
+    await expect(dialog.getByRole('button', { name: 'Copier', exact: true })).toBeEnabled();
+    await expect(dialog.getByRole('button', { name: 'Copier le lien' })).toBeEnabled();
   });
 
   test('rejoindre refuse un code inexistant avec une phrase lisible', async ({ page }) => {
@@ -238,6 +239,16 @@ test.describe('Espaces et salons', () => {
     await expect(cible).toBeVisible({ timeout: 15_000 });
     await cible.scrollIntoViewIfNeeded();
 
+    /*
+     * On laisse l'amorce se terminer.
+     *
+     * Au demarrage, les non-lus et la presence arrivent par vagues et
+     * redessinent le rail comme la liste des salons. Un clic droit lance au
+     * milieu de ces vagues vise une ligne qui n'existe deja plus, et
+     * l'evenement se perd sans rien signaler.
+     */
+    await page.waitForTimeout(700);
+
     await expect
       .poll(
         async () => {
@@ -250,7 +261,19 @@ test.describe('Espaces et salons', () => {
       )
       .toBe(true);
 
-    await cible.click({ button: 'right' });
+    /*
+     * Une seconde tentative si le menu ne parait pas.
+     *
+     * Le rail se redessine des qu'un espace change — un non-lu qui arrive, une
+     * creation ailleurs dans la suite. La ligne visee est alors remplacee entre
+     * la mesure et le clic, et l'evenement se perd. Reessayer une fois vaut
+     * mieux qu'attendre plus longtemps : ce n'est pas une question de delai.
+     */
+    for (let essai = 0; essai < 2; essai += 1) {
+      await cible.click({ button: 'right' });
+      if ((await page.getByRole('menu').count()) > 0) return;
+      await page.waitForTimeout(200);
+    }
   }
 
   async function entreesDuMenu(page: import('@playwright/test').Page): Promise<string[]> {

@@ -26,6 +26,29 @@ import './styles/mobile.css';
 // enregistre ne prendrait effet qu'apres avoir rouvert les parametres.
 setCueVolume(useDevices.getState().media.cueVolume);
 
+/*
+ * Le menu du navigateur ne s'ouvre plus dans le vide.
+ *
+ * « Enregistrer sous », « Afficher le code source », « Recharger » : rien de
+ * tout cela n'a de sens dans une application, et l'on tombe dessus des qu'on
+ * vise a cote d'un message ou d'un salon. Les menus de l'application, eux,
+ * appellent deja `preventDefault` sur l'element vise ; ce garde-fou ne
+ * s'applique donc qu'a ce qu'ils n'ont pas couvert.
+ *
+ * Deux exceptions gardees : les champs de saisie, ou l'on veut couper, copier
+ * et coller, et le texte selectionne, ou l'on veut copier. Les supprimer
+ * couterait plus que le menu ne gene.
+ */
+document.addEventListener('contextmenu', (event) => {
+  const cible = event.target as HTMLElement | null;
+  if (!cible) return;
+
+  if (cible.closest('input, textarea, [contenteditable="true"]')) return;
+  if ((window.getSelection()?.toString() ?? '').trim().length > 0) return;
+
+  event.preventDefault();
+});
+
 const container = document.getElementById('root');
 if (!container) throw new Error('Element racine introuvable.');
 

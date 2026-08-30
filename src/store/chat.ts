@@ -186,6 +186,11 @@ interface ChatState {
   leaveSpace: (spaceId: UUID, userId: UUID) => Promise<boolean>;
   deleteChannel: (channelId: UUID) => Promise<UUID | null>;
   renameChannel: (channelId: UUID, name: string, topic?: string | null) => Promise<boolean>;
+  reorderChannels: (spaceId: UUID, channelIds: UUID[]) => Promise<void>;
+  updateSpaceVisuals: (
+    spaceId: UUID,
+    patch: { name?: string; description?: string; icon_url?: string | null; banner_url?: string | null },
+  ) => Promise<boolean>;
 
   /* Points d'entree utilises par la couche temps reel. */
   applyIncomingMessage: (raw: MessageRow, currentUserId: UUID) => Promise<void>;
@@ -922,6 +927,39 @@ export const useChat = create<ChatState>((set, get) => ({
     return true;
   },
 
+  reorderChannels: async (spaceId, channelIds) => {
+    set((state) => {
+      const spaceChannels = state.channels.filter((c) => c.space_id === spaceId);
+      const otherChannels = state.channels.filter((c) => c.space_id !== spaceId);
+      const sorted = [...spaceChannels].sort((a, b) => {
+        const idxA = channelIds.indexOf(a.id);
+        const idxB = channelIds.indexOf(b.id);
+        return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+      });
+      return { channels: [...otherChannels, ...sorted] };
+    });
+
+    try {
+      for (let i = 0; i < channelIds.length; i++) {
+        await supabase.from('channels').update({ position: i }).eq('id', channelIds[i]);
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  updateSpaceVisuals: async (spaceId, data) => {
+    set((state) => ({
+      spaces: state.spaces.map((s) => (s.id === spaceId ? { ...s, ...data } : s)),
+    }));
+    try {
+      const { error } = await supabase.from('spaces').update(data).eq('id', spaceId);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
   /* --------------------------------------------------------------- Temps reel */
 
   applyIncomingMessage: async (raw, currentUserId) => {
@@ -995,14 +1033,36 @@ export const useChat = create<ChatState>((set, get) => ({
     }));
   },
 
+  /*
+   * Retrait par identifiant, dans toutes les vues.
+   *
+   * On ne peut pas se fier au salon annonce : quand RLS est active, Supabase ne
+   * transmet que la CLE PRIMAIRE dans l'ancienne ligne d'un evenement de
+   * suppression. Les politiques ne peuvent pas etre evaluees sur une ligne qui
+   * n'existe plus, alors l'evenement part a tout le monde — et pour ne rien
+   * divulguer, il est vide de tout le reste.
+   *
+   * `channel_id` et `thread_id` arrivent donc indefinis, la cle de vue calculee
+   * ne designe aucune liste, et le message restait affiche chez les autres
+   * alors qu'il etait bel et bien efface de la base. On balaie toutes les vues,
+   * ce qui coute une comparaison par message charge et ne peut pas se tromper.
+   */
   applyMessageDelete: (raw) => {
-    const view = viewKeyFor(raw.channel_id, raw.thread_id);
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [view]: (state.messages[view] ?? []).filter((message) => message.id !== raw.id),
-      },
-    }));
+    set((state) => {
+      const messages: typeof state.messages = {};
+      let touche = false;
+
+      for (const [view, liste] of Object.entries(state.messages)) {
+        if (!liste.some((message) => message.id === raw.id)) {
+          messages[view] = liste;
+          continue;
+        }
+        messages[view] = liste.filter((message) => message.id !== raw.id);
+        touche = true;
+      }
+
+      return touche ? { messages } : {};
+    });
   },
 
   applyReactionChange: (messageId, rows) => {

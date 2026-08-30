@@ -58,9 +58,17 @@ export function startRealtime(userId: UUID): () => void {
       'postgres_changes',
       { event: 'DELETE', schema: 'public', table: 'messages' },
       (payload) => {
-        // `replica identity full` garantit que l'ancienne ligne complete arrive
-        // ici ; sans cela on n'aurait que la cle primaire et on ne saurait pas
-        // quelle vue mettre a jour.
+        /*
+         * L'ancienne ligne ne porte QUE la cle primaire.
+         *
+         * `replica identity full` ne suffit pas : des que RLS est active,
+         * Supabase vide l'ancienne ligne de tout sauf sa cle. Les politiques ne
+         * peuvent pas etre evaluees sur une ligne disparue, donc l'evenement
+         * part a tous les abonnes — et pour ne rien divulguer, il ne contient
+         * plus rien d'autre.
+         *
+         * Le magasin retrouve donc le message par son identifiant seul.
+         */
         useChat.getState().applyMessageDelete(payload.old as MessageRow);
       },
     )

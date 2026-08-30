@@ -62,9 +62,7 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: transparent;
 }
 
 .auth__wordmark {
@@ -178,6 +176,29 @@
 .auth__notice {
   background: var(--accent-soft);
   color: var(--accent-text);
+}
+
+/* Quarante-quatre pixels de haut : au doigt, une cible de vingt-sept se rate
+   une fois sur trois, et c'est le seul chemin de retour de cet ecran. */
+.auth__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--ease-out);
+  align-self: flex-start;
+}
+
+.auth__back-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  text-decoration: none;
 }
 
 .auth__legal {
@@ -1092,7 +1113,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--bg-sunken);
   border: 1px dashed var(--border-default);
@@ -1106,6 +1127,126 @@
   color: var(--accent-text);
   user-select: all;
   word-break: break-all;
+}
+
+.invite__link-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* ── Carte du serveur dans l'invitation ── */
+.invite-server-card {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-sunken);
+  margin-bottom: var(--space-4);
+}
+
+.invite-server-card__banner {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  display: block;
+}
+
+.invite-server-card__banner-placeholder {
+  width: 100%;
+  height: 70px;
+  background: linear-gradient(135deg, var(--accent) 0%, #38bdf8 100%);
+  opacity: 0.7;
+}
+
+.invite-server-card__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.invite-server-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+  overflow: hidden;
+  border: 2px solid var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.invite-server-card__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.invite-server-card__info {
+  min-width: 0;
+  flex: 1;
+}
+
+.invite-server-card__name {
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.invite-server-card__desc {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+/* ── Liste d'amis dans l'invitation ── */
+.invite-friends-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.invite-friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.invite-friend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  transition: background var(--duration-fast);
+}
+
+.invite-friend-item:hover {
+  background: var(--bg-hover);
+}
+
+.invite-friend-item__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.invite-friend-item__name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
 }
 
 /* ----------------------------------------------------------------- Profil */

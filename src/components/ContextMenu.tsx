@@ -23,11 +23,18 @@ export interface MenuItem {
   disabled?: boolean;
 }
 
-/** Un separateur entre deux groupes d'actions. */
-export type MenuEntry = MenuItem | { id: string; separator: true };
+/** Un separateur entre deux groupes d'actions, ou un composant personnalise. */
+export type MenuEntry =
+  | MenuItem
+  | { id: string; separator: true }
+  | { id: string; custom: ReactNode };
 
 function isSeparator(entry: MenuEntry): entry is { id: string; separator: true } {
-  return 'separator' in entry;
+  return 'separator' in entry && entry.separator === true;
+}
+
+function isCustom(entry: MenuEntry): entry is { id: string; custom: ReactNode } {
+  return 'custom' in entry;
 }
 
 export interface MenuPosition {
@@ -125,6 +132,10 @@ export function ContextMenu({
       {entries.map((entry) =>
         isSeparator(entry) ? (
           <hr key={entry.id} className="ctx-menu__rule" />
+        ) : isCustom(entry) ? (
+          <div key={entry.id} className="ctx-menu__custom" onPointerDown={(e) => e.stopPropagation()}>
+            {entry.custom}
+          </div>
         ) : (
           <button
             key={entry.id}

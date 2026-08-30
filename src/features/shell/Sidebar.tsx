@@ -8,6 +8,7 @@ import { Avatar } from '@/components/Avatar';
 import { formatRelative } from '@/lib/time';
 import { DirectMessageList } from '@/features/dm/DirectMessageList';
 import { ChannelContextMenu } from '@/features/channels/ChannelContextMenu';
+import { UserContextMenu } from '@/features/profile/UserContextMenu';
 import { useContextMenu } from '@/components/ContextMenu';
 import { Modal } from '@/components/Modal';
 import type { Channel, UUID } from '@/types/db';
@@ -274,6 +275,9 @@ function ChannelItem({
   const deleteChannel = useChat((state) => state.deleteChannel);
   const menu = useContextMenu();
   const [aSupprimer, setASupprimer] = useState(false);
+  const [menuMembre, setMenuMembre] = useState<{ userId: UUID; x: number; y: number } | null>(
+    null,
+  );
 
   const hasUnread = unread > 0 && !active;
 
@@ -370,10 +374,36 @@ function ChannelItem({
 
       {channel.kind === 'voice' && participants && participants.length > 0 ? (
         <ul className="channel__voice">
+          {menuMembre ? (
+            <UserContextMenu
+              userId={menuMembre.userId}
+              position={{ x: menuMembre.x, y: menuMembre.y }}
+              onClose={() => setMenuMembre(null)}
+            />
+          ) : null}
+
           {participants.map((participant) => {
             const profile = profiles[participant.user_id];
             return (
-              <li key={participant.user_id}>
+              <li
+                key={participant.user_id}
+                /*
+                  Le clic droit sur une personne parle d'elle, pas du salon.
+                  La liste des participants vit a l'interieur de la ligne du
+                  salon : sans arreter l'evenement ici, il remontait jusqu'a
+                  elle et l'on obtenait « Supprimer le salon » en visant
+                  quelqu'un.
+                */
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setMenuMembre({
+                    userId: participant.user_id,
+                    x: event.clientX,
+                    y: event.clientY,
+                  });
+                }}
+              >
                 {/* Un nom se clique pour savoir a qui l'on a affaire — ici comme
                     dans la conversation ou sur la scene vocale. */}
                 <button
@@ -404,6 +434,8 @@ function UserBar() {
   const profile = useSession((state) => state.profile);
   const setStatus = useSession((state) => state.setStatus);
   const openSettings = useUI((state) => state.openSettings);
+  const selectChannel = useUI((state) => state.selectChannel);
+  const selectSpace = useUI((state) => state.selectSpace);
 
   const voiceChannelId = useVoice((state) => state.channelId);
   const muted = useVoice((state) => state.muted);
@@ -423,14 +455,26 @@ function UserBar() {
     <div className="userbar">
       {voiceChannelId ? (
         <div className="userbar__voice">
-          <div className="userbar__voice-info">
+          {/* Le bandeau ramene au salon ou l'on parle. On y revient souvent —
+              pour voir qui est la, pour partager — et il fallait sinon le
+              retrouver dans la liste. */}
+          <button
+            type="button"
+            className="userbar__voice-info"
+            onClick={() => {
+              if (!voiceChannel) return;
+              if (voiceChannel.space_id) selectSpace(voiceChannel.space_id);
+              selectChannel(voiceChannel.id);
+            }}
+            title="Revenir au salon vocal"
+          >
             <span className="userbar__voice-state">
               <Icon name="volume" size={13} /> Connecte
             </span>
             <span className="userbar__voice-channel truncate">
               {voiceChannel?.name ?? 'Salon vocal'}
             </span>
-          </div>
+          </button>
           <button
             type="button"
             className="icon-btn icon-btn--danger"

@@ -53,7 +53,9 @@ test.describe('Presentation', () => {
 
   test('depuis la connexion, on peut revenir a la presentation', async ({ page }) => {
     await page.goto('/connexion');
-    await page.getByRole('button', { name: 'Decouvrir Orbit' }).click();
+    // Le bouton a ete renomme : « Retour a l'accueil » dit ou l'on va, la ou
+    // « Decouvrir Orbit » decrivait une decouverte qu'on a deja faite.
+    await page.getByRole('button', { name: /Retour . l.accueil/i }).click();
 
     await expect(page).toHaveURL(/\/$/);
   });

@@ -1,10 +1,45 @@
+import { useState } from 'react';
 import { ContextMenu, type MenuEntry, type MenuPosition } from '@/components/ContextMenu';
 import { Icon } from '@/components/Icon';
 import { useChat } from '@/store/chat';
 import { useFriends } from '@/store/friends';
 import { useSession } from '@/store/session';
 import { useUI } from '@/store/ui';
+import { useUserAudio } from '@/store/userAudio';
 import type { UUID } from '@/types/db';
+
+/**
+ * Curseur de volume individuel, integre dans le menu contextuel.
+ *
+ * Le volume va de 0 a 200 % : au-dela de 100 le gain numerique amplifie le
+ * flux, ce qui peut saturer — c'est le meme compromis que Discord propose.
+ */
+function VolumeSlider({ userId }: { userId: UUID }) {
+  const volume = useUserAudio((s) => s.getVolume(userId));
+  const setVolume = useUserAudio((s) => s.setVolume);
+  const [local, setLocal] = useState(volume);
+
+  return (
+    <div className="ctx-volume">
+      <Icon name="volume" size={14} />
+      <input
+        type="range"
+        className="ctx-volume__slider"
+        min={0}
+        max={200}
+        step={1}
+        value={local}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          setLocal(v);
+          setVolume(userId, v);
+        }}
+        aria-label="Volume de l'utilisateur"
+      />
+      <span className="ctx-volume__value">{local} %</span>
+    </div>
+  );
+}
 
 /**
  * Actions disponibles sur une personne.
@@ -13,6 +48,10 @@ import type { UUID } from '@/types/db';
  * pour que le clic droit reponde toujours la meme chose. Les entrees qui
  * n'auraient pas de sens sont retirees plutot que grisees : proposer
  * « Ajouter en ami » a quelqu'un qui l'est deja n'informe personne.
+ *
+ * Inspiré de Discord : voir le profil, envoyer un message, copier le pseudo,
+ * régler le volume individuel, muter/démuter, ajouter/retirer en ami,
+ * signaler et bloquer.
  */
 export function UserContextMenu({
   userId,
@@ -37,7 +76,11 @@ export function UserContextMenu({
 
   const openModal = useUI((state) => state.openModal);
   const selectChannel = useUI((state) => state.selectChannel);
+  const showDirectMessages = useUI((state) => state.showDirectMessages);
   const openSettings = useUI((state) => state.openSettings);
+
+  const userMuted = useUserAudio((s) => s.isMuted(userId));
+  const toggleMute = useUserAudio((s) => s.toggleMute);
 
   const profil = useFriends((state) => state.profiles[userId]) ?? profiles[userId];
   const estMoi = userId === me?.id;
@@ -47,6 +90,7 @@ export function UserContextMenu({
   const estBloque = bloques.some((lien) => lien.user_id === userId);
 
   const entrees: MenuEntry[] = [
+    // ── Profil ──
     {
       id: 'profil',
       label: estMoi ? 'Mon profil' : 'Voir le profil',
@@ -57,21 +101,26 @@ export function UserContextMenu({
   ];
 
   if (!estMoi) {
+    // ── Envoyer un message privé ──
     entrees.push({
       id: 'message',
       label: 'Envoyer un message',
       icon: <Icon name="thread" size={15} />,
-      // Bloque, la conversation est refusee par la base : mieux vaut ne pas
-      // proposer un bouton qui affichera une erreur.
       disabled: estBloque,
       onSelect: () => {
         void openDm(userId).then((salon) => {
-          if (salon) selectChannel(salon.id);
+          if (salon) {
+            // Basculer sur la vue "messages privés" AVANT de sélectionner le salon,
+            // sinon selectChannel ne change pas la vue et on reste dans le space.
+            showDirectMessages();
+            selectChannel(salon.id);
+          }
         });
       },
     });
   }
 
+  // ── Copier le pseudo ──
   if (profil) {
     entrees.push({
       id: 'copier',
@@ -81,13 +130,33 @@ export function UserContextMenu({
     });
   }
 
+  // ── Section audio (seulement pour les autres) ──
+  if (!estMoi) {
+    entrees.push({ id: 'sep-audio', separator: true });
+
+    // Muter / Démuter l'utilisateur
+    entrees.push({
+      id: 'muter',
+      label: userMuted ? 'Démuter' : 'Muter',
+      icon: <Icon name={userMuted ? 'mic' : 'mic-off'} size={15} />,
+      onSelect: () => toggleMute(userId),
+    });
+
+    // Slider de volume individuel (toujours visible, comme Discord)
+    entrees.push({
+      id: 'volume-slider',
+      custom: <VolumeSlider userId={userId} />,
+    });
+  }
+
+  // ── Section amis / blocage ──
   if (!estMoi) {
     entrees.push({ id: 'sep-amis', separator: true });
 
     if (estBloque) {
       entrees.push({
         id: 'debloquer',
-        label: 'Debloquer',
+        label: 'Débloquer',
         icon: <Icon name="shield-off" size={15} />,
         onSelect: () => void debloquer(userId),
       });
@@ -116,6 +185,18 @@ export function UserContextMenu({
         });
       }
 
+      entrees.push({ id: 'sep-danger', separator: true });
+
+      // ── Signaler ──
+      entrees.push({
+        id: 'signaler',
+        label: 'Signaler',
+        icon: <Icon name="shield" size={15} />,
+        danger: true,
+        onSelect: () => openModal({ kind: 'profile', userId }),
+      });
+
+      // ── Bloquer ──
       entrees.push({
         id: 'bloquer',
         label: 'Bloquer',

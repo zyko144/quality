@@ -52,9 +52,7 @@
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: transparent;
 }
 
 .landing__nav {

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { openApp, uniqueText, withoutCredentials, skipReason } from './session';
+import { openApp, uniqueText, withoutCredentials, skipReason, STATE_FILE } from './session';
 
 /** Parcours critiques avec une session ouverte. */
 
@@ -54,6 +54,23 @@ async function settledMessage(page: Page, text: string) {
   return row;
 }
 
+/*
+ * Declenche une action du menu d'un message.
+ *
+ * La barre qui apparait au survol ne porte plus que trois gestes — reagir,
+ * repondre, ouvrir le menu. Tout le reste y etait represente par une icone de
+ * seize pixels sans intitule ; c'est maintenant le menu qui les nomme.
+ */
+async function actionDuMenu(
+  page: Page,
+  message: ReturnType<Page['locator']>,
+  nom: string,
+): Promise<void> {
+  await message.hover();
+  await message.getByRole('button', { name: "Plus d'actions" }).click();
+  await page.getByRole('menu').getByRole('menuitem', { name: nom, exact: true }).click();
+}
+
 test.describe('Parcours authentifies', () => {
   test.skip(withoutCredentials, skipReason);
 
@@ -85,8 +102,7 @@ test.describe('Parcours authentifies', () => {
     await expect(messageRow(page, original)).toBeVisible({ timeout: 10_000 });
 
     const message = await settledMessage(page, original);
-    await message.hover();
-    await message.getByRole('button', { name: 'Modifier' }).click();
+    await actionDuMenu(page, message, 'Modifier le message');
 
     const editor = message.locator('.message__editor-input');
     await editor.fill(`${original} — corrige`);
@@ -125,11 +141,10 @@ test.describe('Parcours authentifies', () => {
     await expect(messageRow(page, text)).toBeVisible({ timeout: 10_000 });
 
     const message = await settledMessage(page, text);
-    await message.hover();
-    await message.getByRole('button', { name: 'Supprimer' }).click();
+    await actionDuMenu(page, message, 'Supprimer le message');
 
-    // Supprimer est definitif et le bouton voisine « Modifier » : une
-    // confirmation s'interpose, et elle rappelle le message vise.
+    // Supprimer est definitif : une confirmation s'interpose, et elle rappelle
+    // le message vise.
     const confirmation = page.getByRole('dialog', { name: 'Supprimer ce message ?' });
     await expect(confirmation).toBeVisible();
     await expect(confirmation.locator('.confirm-quote')).toContainText(text);
@@ -150,8 +165,7 @@ test.describe('Parcours authentifies', () => {
     await expect(messageRow(page, text)).toBeVisible({ timeout: 10_000 });
 
     const message = await settledMessage(page, text);
-    await message.hover();
-    await message.getByRole('button', { name: 'Ouvrir un fil' }).click();
+    await actionDuMenu(page, message, 'Ouvrir un fil');
 
     // Le panneau lateral s'ouvre sur le fil qui vient d'etre cree.
     await expect(page.locator('.thread-panel')).toBeVisible({ timeout: 10_000 });
@@ -220,6 +234,49 @@ test.describe('Parcours authentifies', () => {
 
     await message.locator('.message__author').click();
     await expect(fiche).toBeVisible();
+  });
+
+  /*
+   * La suppression doit atteindre les autres.
+   *
+   * Signale a l'usage : « quand je supprime un message, l'autre membre ne voit
+   * pas que je l'ai supprime ». Deux pages ouvertes sur le meme compte
+   * suffisent a trancher — elles recoivent les evenements par le meme chemin
+   * qu'un autre membre, chacune ayant sa propre connexion temps reel.
+   */
+  test('supprimer un message le retire aussi chez les autres', async ({ browser }) => {
+    const contexte = await browser.newContext({ storageState: STATE_FILE });
+    const auteur = await contexte.newPage();
+    const temoin = await contexte.newPage();
+
+    await openApp(auteur);
+    await openApp(temoin);
+
+    // Les deux pages doivent regarder le meme salon : sans cela, l'absence du
+    // message chez le temoin ne prouverait rien.
+    for (const page of [auteur, temoin]) {
+      await page.locator('.channel', { hasText: 'general' }).first().click();
+      await expect(page.locator('.composer__input')).toBeVisible();
+    }
+
+    const text = uniqueText('A voir disparaitre');
+    await auteur.locator('.composer__input').fill(text);
+    await auteur.keyboard.press('Enter');
+
+    // Le temoin doit d'abord le voir : sans cela, le test passerait pour de
+    // mauvaises raisons.
+    await expect(messageRow(temoin, text)).toBeVisible({ timeout: 15_000 });
+
+    const message = await settledMessage(auteur, text);
+    await actionDuMenu(auteur, message, 'Supprimer le message');
+
+    const confirmation = auteur.getByRole('dialog', { name: 'Supprimer ce message ?' });
+    await confirmation.getByRole('button', { name: 'Supprimer' }).click();
+
+    await expect(messageRow(auteur, text)).toHaveCount(0, { timeout: 15_000 });
+    await expect(messageRow(temoin, text)).toHaveCount(0, { timeout: 15_000 });
+
+    await contexte.close();
   });
 
   test('le clic droit sur un message ouvre les actions du message', async ({ page }) => {

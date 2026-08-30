@@ -9,8 +9,11 @@ import { ProfileEditor } from '@/features/profile/ProfileEditor';
 import { NewDmModal } from '@/features/dm/NewDmModal';
 import { SpaceSettings } from '@/features/spaces/SpaceSettings';
 import { Icon } from '@/components/Icon';
+import { Avatar } from '@/components/Avatar';
 import { useUI } from '@/store/ui';
 import { useChat } from '@/store/chat';
+import { useSession } from '@/store/session';
+import { useFriends } from '@/store/friends';
 import { supabase } from '@/lib/supabase';
 import type { UUID } from '@/types/db';
 import { LIMITS } from '@/constants';
@@ -358,28 +361,43 @@ function InviteModal({
   onClose: () => void;
 }) {
   const spaces = useChat((state) => state.spaces);
+  const openDm = useChat((state) => state.openDm);
+  const sendMessage = useChat((state) => state.sendMessage);
+  const friends = useFriends((state) => state.friends);
+  const friendProfiles = useFriends((state) => state.profiles);
   const space = spaces.find((item) => item.id === spaceId) ?? null;
 
-  const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [code, setCode] = useState<string | null>(null);
+  const [invitedFriends, setInvitedFriends] = useState<Record<string, boolean>>({});
+  const [searchFriend, setSearchFriend] = useState('');
 
   useEffect(() => {
     if (open) {
-      setCopied(false);
+      setCopiedCode(false);
+      setCopiedLink(false);
+      setInvitedFriends({});
+      setSearchFriend('');
       setCode(space?.invite_code ?? null);
     }
   }, [open, space?.invite_code]);
 
-  const copy = async () => {
-    if (!code) return;
+  const inviteLink = code ? `${window.location.origin}/invite/${code}` : '';
+
+  const copy = async (text: string, isLink: boolean) => {
+    if (!text) return;
     try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Le presse-papiers peut etre refuse : le code reste selectionnable.
-    }
+      await navigator.clipboard.writeText(text);
+      if (isLink) {
+        setCopiedLink(true);
+        window.setTimeout(() => setCopiedLink(false), 2000);
+      } else {
+        setCopiedCode(true);
+        window.setTimeout(() => setCopiedCode(false), 2000);
+      }
+    } catch {}
   };
 
   const rotate = async () => {
@@ -390,36 +408,157 @@ function InviteModal({
     if (typeof data === 'string') setCode(data);
   };
 
+  const inviteFriendDirect = async (friendId: string) => {
+    if (!code || !space) return;
+    setInvitedFriends((prev) => ({ ...prev, [friendId]: true }));
+    try {
+      const dmChannel = await openDm(friendId);
+      const currentUserId = useSession.getState().session?.user.id;
+      if (dmChannel && currentUserId) {
+        await sendMessage({
+          channelId: dmChannel.id,
+          authorId: currentUserId,
+          content: `👋 Salut ! Je t'invite à rejoindre mon serveur **${space.name}** !\nCode d'invitation : \`${code}\`\nLien direct : ${inviteLink}`,
+        });
+      }
+    } catch (e) {
+      console.warn('Invite error:', e);
+    }
+  };
+
+  const filteredFriends = friends.filter((f) => {
+    const p = friendProfiles[f.user_id];
+    if (!p) return true;
+    if (!searchFriend.trim()) return true;
+    const q = searchFriend.toLowerCase();
+    return p.display_name.toLowerCase().includes(q) || p.username.toLowerCase().includes(q);
+  });
+
   return (
     <Modal
       open={open}
-      title={`Inviter dans ${space?.name ?? ''}`}
-      description="Toute personne disposant de ce code peut rejoindre l’espace."
+      title="Inviter des amis"
+      description={`Partagez ce serveur ou invitez directement vos amis en un clic.`}
       onClose={onClose}
     >
-      <div className="invite">
-        <code className="invite__code">{code ?? '—'}</code>
-        <button type="button" className="btn btn--sm" onClick={() => void copy()}>
-          <Icon name={copied ? 'check' : 'copy'} size={14} />
-          {copied ? 'Copie' : 'Copier'}
-        </button>
+      {/* Carte visuelle du serveur */}
+      <div className="invite-server-card">
+        {space?.banner_url ? (
+          <img src={space.banner_url} alt="Bannière" className="invite-server-card__banner" />
+        ) : (
+          <div className="invite-server-card__banner-placeholder" />
+        )}
+        <div className="invite-server-card__content">
+          <div className="invite-server-card__icon">
+            {space?.icon_url ? (
+              <img src={space.icon_url} alt={space.name} />
+            ) : (
+              <span>{space?.name.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="invite-server-card__info">
+            <h3 className="invite-server-card__name">{space?.name ?? 'Serveur'}</h3>
+            <p className="invite-server-card__desc">
+              {space?.description || 'Serveur communautaire Quality'}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <p className="field__hint" style={{ marginTop: 'var(--space-4)' }}>
-        Si ce code a circule trop loin, regenerez-le : l’ancien cesse aussitot de
-        fonctionner, sans affecter les membres deja presents.
-      </p>
+      {/* Inviter directement un ami */}
+      {friends.length > 0 ? (
+        <div className="invite-friends-section">
+          <div className="field">
+            <label className="field__label" htmlFor="search-invite-friends">
+              Inviter directement un ami ({friends.length})
+            </label>
+            <div className="invite-search-wrap">
+              <input
+                id="search-invite-friends"
+                type="text"
+                className="input input--sm"
+                placeholder="Rechercher un ami..."
+                value={searchFriend}
+                onChange={(e) => setSearchFriend(e.target.value)}
+              />
+            </div>
+          </div>
 
-      <button
-        type="button"
-        className="btn btn--sm"
-        style={{ marginTop: 'var(--space-3)' }}
-        onClick={() => void rotate()}
-        disabled={rotating}
-      >
-        {rotating ? <span className="spinner" /> : <Icon name="refresh" size={14} />}
-        Regenerer le code
-      </button>
+          <ul className="invite-friends-list">
+            {filteredFriends.map((friend) => {
+              const profile = friendProfiles[friend.user_id];
+              const wasInvited = invitedFriends[friend.user_id];
+              return (
+                <li key={friend.user_id} className="invite-friend-item">
+                  <div className="invite-friend-item__left">
+                    <Avatar profile={profile} size={32} />
+                    <span className="invite-friend-item__name">
+                      {profile?.display_name ?? 'Ami'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn btn--sm ${wasInvited ? 'btn--ghost' : 'btn--primary'}`}
+                    onClick={() => void inviteFriendDirect(friend.user_id)}
+                    disabled={wasInvited}
+                  >
+                    {wasInvited ? (
+                      <>
+                        <Icon name="check" size={13} />
+                        Envoyé
+                      </>
+                    ) : (
+                      'Inviter'
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+
+      {/* Lien d'invitation */}
+      <div className="field" style={{ marginTop: 'var(--space-3)' }}>
+        <label className="field__label">Lien d'invitation direct</label>
+        <div className="invite">
+          <input
+            type="text"
+            readOnly
+            className="input input--sm invite__link-input"
+            value={inviteLink}
+          />
+          <button
+            type="button"
+            className="btn btn--sm btn--primary"
+            onClick={() => void copy(inviteLink, true)}
+          >
+            <Icon name={copiedLink ? 'check' : 'copy'} size={14} />
+            {copiedLink ? 'Copié !' : 'Copier le lien'}
+          </button>
+        </div>
+      </div>
+
+      {/* Code d'invitation brut */}
+      <div className="field" style={{ marginTop: 'var(--space-2)' }}>
+        <label className="field__label">Code d'accès rapide</label>
+        <div className="invite">
+          <code className="invite__code">{code ?? '—'}</code>
+          <button type="button" className="btn btn--sm" onClick={() => void copy(code ?? '', false)}>
+            <Icon name={copiedCode ? 'check' : 'copy'} size={14} />
+            {copiedCode ? 'Copié' : 'Copier'}
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title="Régénérer le code"
+            onClick={() => void rotate()}
+            disabled={rotating}
+          >
+            {rotating ? <span className="spinner" /> : <Icon name="refresh" size={14} />}
+          </button>
+        </div>
+      </div>
     </Modal>
   );
 }

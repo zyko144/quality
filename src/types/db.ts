@@ -58,6 +58,7 @@ export interface Space {
   slug: string;
   description: string | null;
   icon_url: string | null;
+  banner_url?: string | null;
   accent: string;
   owner_id: UUID;
   invite_code: string;

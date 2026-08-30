@@ -1,4 +1,5 @@
 import { Icon, type IconName } from '@/components/Icon';
+import { QualityLogo } from '@/components/QualityLogo';
 import { navigate } from '@/lib/router';
 
 /**
@@ -92,9 +93,9 @@ export function Landing() {
       <header className="landing__bar">
         <a className="landing__brand" href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
           <span className="landing__logo" aria-hidden="true">
-            <Icon name="compass" size={20} />
+            <QualityLogo size={24} />
           </span>
-          Orbit
+          Quality
         </a>
 
         <nav className="landing__nav" aria-label="Sections">
@@ -126,7 +127,7 @@ export function Landing() {
 
           <p className="hero__lede">
             L’historique illisible, la recherche approximative et les trois gigaoctets
-            de memoire. Orbit garde l’efficacite, corrige le reste.
+            de memoire. Quality garde l’efficacite, corrige le reste.
           </p>
 
           <div className="hero__actions">
@@ -280,9 +281,9 @@ export function Landing() {
       <footer className="landing__footer">
         <div className="landing__brand">
           <span className="landing__logo" aria-hidden="true">
-            <Icon name="compass" size={18} />
+            <QualityLogo size={22} />
           </span>
-          Orbit
+          Quality
         </div>
         <p>Discussion d’equipe en temps reel.</p>
       </footer>
@@ -301,7 +302,7 @@ export function Landing() {
  */
 function AppPreview() {
   return (
-    <div className="preview" role="img" aria-label="Apercu de l’interface d’Orbit">
+    <div className="preview" role="img" aria-label="Apercu de l’interface de Quality">
       <div className="preview__frame">
         <div className="preview__rail">
           <span className="preview__rail-dot preview__rail-dot--home" />

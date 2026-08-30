@@ -1722,3 +1722,38 @@ button.voice-member {
 button.voice-member:hover {
   background: var(--bg-hover);
 }
+
+/* Le bandeau vocal est devenu un bouton : il ramene au salon ou l'on parle. */
+button.userbar__voice-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: var(--space-1) var(--space-2);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+button.userbar__voice-info:hover {
+  background: var(--bg-hover);
+}
+
+/*
+ * Les deux pastilles du bas du rail se touchaient.
+ *
+ * « Creer un espace » et « Rejoindre » sont deux gestes differents, dont l'un
+ * est bien plus engageant que l'autre : les coller invite a se tromper de
+ * cible.
+ */
+.rail__actions .rail__item + .rail__item,
+.rail__actions > * + * {
+  margin-top: var(--space-3);
+}

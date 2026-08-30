@@ -76,7 +76,6 @@ function MessageItemInner({
   const openModal = useUI((state) => state.openModal);
   const showLinkPreviews = useSession((state) => state.preferences.showLinkPreviews);
 
-  const isMine = message.author_id === currentUserId;
   const mentionsMe =
     richTextContext.currentUsername !== null &&
     new RegExp(`@(${richTextContext.currentUsername}|everyone|here|tous)\\b`, 'i').test(
@@ -312,7 +311,7 @@ function MessageItemInner({
 
       {!editing ? (
         <div className="message__actions" role="toolbar" aria-label="Actions du message">
-          {QUICK_REACTIONS.slice(0, 3).map((emoji) => (
+          {QUICK_REACTIONS.slice(0, 2).map((emoji) => (
             <button
               type="button"
               key={emoji}
@@ -342,68 +341,23 @@ function MessageItemInner({
             <Icon name="reply" size={15} />
           </button>
 
-          {!message.thread && !message.thread_id ? (
-            <button
-              type="button"
-              className="message__action"
-              onClick={() => onStartThread(message.id)}
-              title="Ouvrir un fil"
-            >
-              <Icon name="thread" size={15} />
-            </button>
-          ) : null}
+          {/*
+            Tout le reste passe dans le menu.
 
+            La barre portait neuf boutons de seize pixels, tous muets, qu'il
+            fallait survoler un par un pour savoir lequel epinglait et lequel
+            supprimait. Trois gestes couvrent l'essentiel — reagir, repondre,
+            ouvrir le menu ; le menu, lui, nomme ses entrees.
+          */}
           <button
             type="button"
             className="message__action"
-            onClick={() => onPin(message.id)}
-            title={message.pinned ? 'Retirer l’epingle' : 'Epingler'}
+            onClick={(event) => menu.openAt(event.currentTarget)}
+            title="Plus d'actions"
+            aria-label="Plus d'actions"
           >
-            <Icon name="pin" size={15} />
+            <Icon name="more" size={15} />
           </button>
-
-          <button
-            type="button"
-            className={'message__action' + (bookmarked ? ' is-active' : '')}
-            onClick={() => onBookmark(message.id)}
-            title={bookmarked ? 'Retirer des sauvegardes' : 'Sauvegarder pour moi'}
-            aria-pressed={bookmarked}
-          >
-            <Icon name="inbox" size={15} />
-          </button>
-
-          {!isMine ? (
-            <button
-              type="button"
-              className="message__action"
-              onClick={() => onReport(message.id)}
-              title="Signaler a la moderation"
-            >
-              <Icon name="filter" size={15} />
-            </button>
-          ) : null}
-
-          {isMine ? (
-            <button
-              type="button"
-              className="message__action"
-              onClick={() => onEdit(message.id)}
-              title="Modifier"
-            >
-              <Icon name="edit" size={15} />
-            </button>
-          ) : null}
-
-          {isMine || canManage ? (
-            <button
-              type="button"
-              className="message__action message__action--danger"
-              onClick={() => onDelete(message.id)}
-              title="Supprimer"
-            >
-              <Icon name="trash" size={15} />
-            </button>
-          ) : null}
         </div>
       ) : null}
 

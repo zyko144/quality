@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useSession } from '@/store/session';
 import { Icon } from '@/components/Icon';
+import { QualityLogo } from '@/components/QualityLogo';
 import { navigate } from '@/lib/router';
 import { GoogleMark } from '@/components/GoogleMark';
 
@@ -102,9 +103,9 @@ export function AuthScreen() {
           aria-label="Revenir a la presentation"
         >
           <span className="auth__logo" aria-hidden="true">
-            <Icon name="compass" size={22} />
+            <QualityLogo size={28} />
           </span>
-          <span className="auth__wordmark">Orbit</span>
+          <span className="auth__wordmark">Quality</span>
         </button>
 
         <h1 className="auth__headline">
@@ -135,6 +136,16 @@ export function AuthScreen() {
 
       <section className="auth__panel">
         <form className="auth__form" onSubmit={handleSubmit}>
+          <button
+            type="button"
+            className="auth__back-btn"
+            onClick={() => navigate('/')}
+            title="Revenir à la page de présentation"
+          >
+            <Icon name="arrow-left" size={16} />
+            <span>Retour à l'accueil</span>
+          </button>
+
           {mode !== 'forgot' ? (
           <div className="auth__tabs" role="tablist" aria-label="Mode de connexion">
             <button
@@ -280,7 +291,23 @@ export function AuthScreen() {
                 : 'Creer mon espace'}
           </button>
 
-          {mode === 'forgot' ? (
+          {mode === 'signin' ? (
+            <button
+              type="button"
+              className="auth__link auth__link--centered"
+              onClick={() => switchMode('signup')}
+            >
+              Pas encore de compte ? <strong>Créer un compte</strong>
+            </button>
+          ) : mode === 'signup' ? (
+            <button
+              type="button"
+              className="auth__link auth__link--centered"
+              onClick={() => switchMode('signin')}
+            >
+              Vous avez déjà un compte ? <strong>Se connecter</strong>
+            </button>
+          ) : (
             <button
               type="button"
               className="auth__link auth__link--centered"
@@ -288,15 +315,7 @@ export function AuthScreen() {
             >
               Revenir a la connexion
             </button>
-          ) : null}
-
-          <button
-            type="button"
-            className="auth__link auth__link--centered"
-            onClick={() => navigate('/')}
-          >
-            Decouvrir Orbit
-          </button>
+          )}
 
           <p className="auth__legal">
             En continuant, vous acceptez que vos messages soient stockes sur le projet

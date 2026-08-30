@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Orbit",
+  "productName": "Quality",
   "version": "0.1.0",
-  "identifier": "app.orbit.desktop",
+  "identifier": "app.quality.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Orbit",
+        "title": "Quality",
         "width": 1280,
         "height": 820,
         "minWidth": 760,
@@ -41,11 +41,11 @@
       "icons/icon.ico",
       "icons/icon.icns"
     ],
-    "publisher": "Orbit",
+    "publisher": "Quality",
     "copyright": "",
     "category": "SocialNetworking",
     "shortDescription": "Discussion d'equipe en temps reel",
-    "longDescription": "Orbit : discussion d'equipe en temps reel, avec des fils qui se referment, une recherche qui trouve et du vocal en pair a pair.",
+    "longDescription": "Quality : discussion d'equipe en temps reel, avec des fils qui se referment, une recherche qui trouve et du vocal en pair a pair.",
     "windows": {
       "nsis": {
         "installMode": "currentUser",

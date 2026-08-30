@@ -1,9 +1,9 @@
 {
-  "name": "orbit",
+  "name": "quality",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Orbit - plateforme de communication temps reel, moderne et legere",
+  "description": "Quality - plateforme de communication temps reel, moderne et legere",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

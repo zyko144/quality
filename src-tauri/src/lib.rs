@@ -83,14 +83,25 @@ mod capture;
 /// premiere source dont le nom contient la chaine donnee, et de ne rien
 /// afficher.
 ///
-/// Deux reserves, et elles comptent :
+/// La valeur est VIDE, et c'est voulu.
 ///
-///  - Le nom compare est celui que le moteur donne aux sources, susceptible
-///    d'etre traduit. On essaie donc plusieurs formulations ; si aucune ne
-///    correspond, la fenetre reapparait comme avant — on ne perd rien.
-///  - Le choix porte toujours sur l'ecran entier. Partager une fenetre seule
-///    demande de decouper l'image, ce que fait l'interface a partir de la zone
-///    que le systeme nous donne.
+/// Chromium retient la premiere source dont le nom *contient* la chaine
+/// donnee. Une chaine vide est contenue dans n'importe quel nom : la premiere
+/// source de la liste est donc prise, quel que soit son intitule.
+///
+/// C'est le seul critere qui resiste a la traduction. Un premier essai avec
+/// « Entire screen » n'a rien trouve sur un systeme en francais, ou les sources
+/// s'appellent « Ecran 1 » et « Ecran 2 » — et la fenetre s'est rouverte comme
+/// avant.
+///
+/// Deux consequences a assumer :
+///
+///  - La source prise est toujours la premiere, c'est-a-dire l'ecran principal.
+///    Partager une fenetre revient donc a decouper cette image, ce que fait
+///    `decoupe.ts` a partir de la position que le systeme nous donne.
+///  - Une fenetre ou un ecran situes hors de l'ecran principal ne sont pas dans
+///    l'image : l'interface le detecte et le dit, plutot que de diffuser autre
+///    chose que ce qui a ete choisi.
 ///
 /// La variable doit etre posee avant que Tauri ne construise le WebView : une
 /// fois l'environnement cree, elle n'est plus relue.
@@ -100,7 +111,7 @@ fn desactiver_selecteur_webview() {
     // 2021 il ne l'est pas, et l'appel a lieu avant tout fil supplementaire.
     std::env::set_var(
         "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-        "--auto-select-desktop-capture-source=Entire screen",
+        "--auto-select-desktop-capture-source=",
     );
 }
 

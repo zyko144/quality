@@ -550,6 +550,26 @@ export const useSession = create<SessionState>((set, get) => ({
 
     if (current) set({ profile: { ...current, ...patch } });
     await supabase.from('profiles').update(patch).eq('id', userId);
+
+    // Broadcast presence + profil complet au site portfolio en temps reel
+    try {
+      const channel = supabase.channel('public:presence');
+      channel.send({
+        type: 'broadcast',
+        event: 'user_presence',
+        payload: {
+          userId,
+          username: current?.username,
+          display_name: current?.display_name,
+          avatar_url: current?.avatar_url,
+          status,
+          custom_status: customStatus ?? current?.custom_status,
+          timestamp: Date.now(),
+        },
+      });
+    } catch {
+      // ignore
+    }
   },
 
   setPreference: (key, value) => {

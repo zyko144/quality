@@ -5,6 +5,7 @@ import { useVoice } from './useVoice';
 import { useDevices, applySink } from '@/store/devices';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
+import { useUserAudio } from '@/store/userAudio';
 import { SharePanel } from './SharePanel';
 import { SourcePicker } from './SourcePicker';
 
@@ -279,7 +280,11 @@ export function VoiceStage({ channel }: { channel: Channel }) {
                 </div>
               ) : null}
               {!isMe ? (
-                <RemoteAudio stream={remoteAudio[participant.user_id]} muted={deafened} />
+                <RemoteAudio
+                  stream={remoteAudio[participant.user_id]}
+                  muted={deafened}
+                  userId={participant.user_id}
+                />
               ) : null}
             </VoiceTile>
           );
@@ -418,11 +423,25 @@ export function VoiceStage({ channel }: { channel: Channel }) {
  *
  * React ne sait pas assigner un `MediaStream` par attribut : il faut passer par
  * la propriete `srcObject`, donc par une reference.
+ *
+ * Le volume final combine le volume global de sortie et le reglage individuel
+ * de l'utilisateur (0–200 %, stocke dans userAudio). Si l'utilisateur est mute
+ * localement, l'element est mis en sourdine sans couper la piste WebRTC.
  */
-function RemoteAudio({ stream, muted }: { stream: MediaStream | undefined; muted: boolean }) {
+function RemoteAudio({
+  stream,
+  muted,
+  userId,
+}: {
+  stream: MediaStream | undefined;
+  muted: boolean;
+  userId: UUID;
+}) {
   const ref = useRef<HTMLAudioElement>(null);
   const speakerId = useDevices((state) => state.media.speakerId);
   const outputVolume = useDevices((state) => state.media.outputVolume);
+  const userVolume = useUserAudio((s) => s.getVolume(userId));
+  const userMuted = useUserAudio((s) => s.isMuted(userId));
 
   useEffect(() => {
     const node = ref.current;
@@ -434,17 +453,19 @@ function RemoteAudio({ stream, muted }: { stream: MediaStream | undefined; muted
     });
   }, [stream]);
 
-  // Volume et sortie sont des proprietes et non des attributs : React ne les
-  // ecrit pas depuis le rendu.
+  // Volume global × volume individuel (pourcentage 0–200).
   useEffect(() => {
-    if (ref.current) ref.current.volume = outputVolume;
-  }, [outputVolume]);
+    if (ref.current) {
+      const combined = outputVolume * (userVolume / 100);
+      ref.current.volume = Math.min(1, combined);
+    }
+  }, [outputVolume, userVolume]);
 
   useEffect(() => {
     if (ref.current) void applySink(ref.current, speakerId);
   }, [speakerId]);
 
-  return <audio ref={ref} autoPlay muted={muted} />;
+  return <audio ref={ref} autoPlay muted={muted || userMuted} />;
 }
 
 function ScreenTile({

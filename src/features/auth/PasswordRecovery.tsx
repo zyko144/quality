@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useSession } from '@/store/session';
 import { Icon } from '@/components/Icon';
+import { QualityLogo } from '@/components/QualityLogo';
 
 /**
  * Choix d'un nouveau mot de passe apres un retour depuis le courriel.
@@ -40,9 +41,9 @@ export function PasswordRecovery() {
         <form className="auth__form" onSubmit={submit}>
           <div className="auth__brand auth__brand--centered">
             <span className="auth__logo" aria-hidden="true">
-              <Icon name="compass" size={22} />
+              <QualityLogo size={28} />
             </span>
-            <span className="auth__wordmark">Orbit</span>
+            <span className="auth__wordmark">Quality</span>
           </div>
 
           <div className="stack" style={{ gap: 'var(--space-2)' }}>
