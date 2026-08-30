@@ -103,3 +103,23 @@ jobs:
             src-tauri/target/${{ matrix.cible }}/release/bundle/macos/*.app.tar.gz
             src-tauri/target/${{ matrix.cible }}/release/bundle/nsis/*.exe
             src-tauri/target/${{ matrix.cible }}/release/bundle/msi/*.msi
+
+      # ----------------------------------------------------------------------
+      # Une copie au nom fixe, pour que le lien du site ne bouge jamais.
+      #
+      # Les paquets portent leur version dans leur nom — `Quality_0.1.0_...` —
+      # donc une adresse directe casse a chaque publication. GitHub sait servir
+      # `releases/latest/download/<nom>`, mais seulement si le nom est stable.
+      # On depose donc un second exemplaire, sans version.
+      # ----------------------------------------------------------------------
+      - name: Copie au nom fixe
+        if: matrix.nom == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          paquet=$(ls src-tauri/target/${{ matrix.cible }}/release/bundle/nsis/*-setup.exe | head -1)
+          cp "$paquet" Quality-setup.exe
+          etiquette=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          gh release upload "$etiquette" Quality-setup.exe --clobber
