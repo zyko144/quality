@@ -12,6 +12,7 @@ import { ChannelHeader } from '@/features/channels/ChannelHeader';
 import { WindowControls } from '@/components/WindowControls';
 import { QualityLogo } from '@/components/QualityLogo';
 import { MiseAJour } from './MiseAJour';
+import { SortieAudio } from '@/features/voice/SortieAudio';
 import { MessageList } from '@/features/messages/MessageList';
 import { Composer } from '@/features/messages/Composer';
 import { VoiceStage } from '@/features/voice/VoiceStage';
@@ -377,6 +378,10 @@ export function Workspace() {
       {/* La bannière de mise a jour flotte au-dessus de tout, sans deplacer
           quoi que ce soit : elle propose, elle n'interrompt pas. */}
       <MiseAJour />
+
+      {/* Le son des autres, monte une fois pour toutes : il ne doit pas
+          dependre de l'ecran qu'on regarde. */}
+      <SortieAudio />
 
       {/* Sur petit ecran, la navigation recouvre la conversation : il faut un
           voile pour la refermer, et l'ecarter des lecteurs d'ecran quand elle

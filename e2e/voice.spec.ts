@@ -199,6 +199,37 @@ test.describe('Salon vocal', () => {
     await stage(page).getByRole('button', { name: /Quitter/ }).first().click();
   });
 
+  /*
+   * Le son survit au changement de salon.
+   *
+   * Les balises audio vivaient dans la scene vocale : ouvrir #general la
+   * demontait et les emportait avec elle. On restait connecte sans entendre
+   * personne, et le seul remede etait de revenir sur la scene — ce qui va
+   * exactement contre l'interet de parler en faisant autre chose.
+   */
+  test('la sortie audio survit au changement de salon', async ({ page }) => {
+    if (!(await openVoiceChannel(page))) return;
+    await page.getByRole('button', { name: 'Rejoindre le salon vocal' }).click();
+    await expect(page.locator('.voice-tile[data-me="true"]')).toBeVisible({ timeout: 20_000 });
+
+    // Le bandeau du bas prouve qu'on est toujours connecte apres avoir quitte
+    // la scene des yeux.
+    await page.locator('.channel', { hasText: 'general' }).first().click();
+    await expect(page.locator('.composer__input')).toBeVisible();
+    await expect(page.locator('.userbar__voice')).toBeVisible();
+
+    // La sortie audio est montee au-dessus de la navigation : elle ne doit pas
+    // dependre de la scene.
+    const monteeHorsScene = await page.evaluate(() => {
+      const scene = document.querySelector('.voice-stage');
+      const sorties = [...document.querySelectorAll('audio')];
+      return sorties.every((son) => !scene || !scene.contains(son));
+    });
+    expect(monteeHorsScene).toBe(true);
+
+    await page.locator('.userbar__voice .icon-btn--danger').click();
+  });
+
   test('des bascules rapides laissent un etat coherent', async ({ page }) => {
     if (!(await openVoiceChannel(page))) return;
     await page.getByRole('button', { name: 'Rejoindre le salon vocal' }).click();

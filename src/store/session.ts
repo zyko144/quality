@@ -90,6 +90,20 @@ export interface Preferences {
   /** Attenue les couleurs vives, qui fatiguent a la longue. */
   saturation: number;
 
+  /**
+   * Mode performance.
+   *
+   * Coupe d'un coup tout ce qui coute cher au processeur graphique sans rien
+   * apporter a la comprehension : flous d'arriere-plan, ombres portees,
+   * degrades animes, transitions, images animees. Chacun est negligeable seul ;
+   * ensemble ils occupent une carte graphique en permanence, ce qui se paie en
+   * images par seconde quand un jeu tourne a cote.
+   *
+   * L'interface reste entierement lisible : ce sont des effets, pas des
+   * informations.
+   */
+  performance: boolean;
+
   /* -- Notifications ----------------------------------------------------- */
 
   /** Joue une note quand on est mentionne. */
@@ -122,6 +136,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   textScale: 'normal',
   alwaysShowFocus: false,
   saturation: 100,
+  performance: false,
 
   mentionSound: true,
   notifyEveryMessage: false,
@@ -199,6 +214,7 @@ export function applyPreferences(preferences: Preferences): void {
   // `prefers-reduced-transparency` puis sous le reglage de l'application.
   root.setAttribute('data-transparency', resolveTransparency(preferences.transparency));
   root.setAttribute('data-text-scale', preferences.textScale);
+  root.setAttribute('data-perf', preferences.performance ? 'on' : 'off');
   root.setAttribute('data-underline-links', preferences.underlineLinks ? 'on' : 'off');
   root.setAttribute('data-focus', preferences.alwaysShowFocus ? 'always' : 'auto');
 

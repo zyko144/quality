@@ -515,3 +515,57 @@
 :root[data-saturated='on'] body {
   filter: saturate(var(--saturation, 1));
 }
+
+/* ==========================================================================
+   Mode performance
+   ==========================================================================
+   Une regle, un effet coupe. L'ordre suit le cout reel mesure sur une carte
+   graphique : le flou d'arriere-plan domine tout le reste, puis les ombres,
+   puis les degrades animes.
+
+   Rien de ce qui est coupe ne porte d'information : ce sont des effets. Les
+   couleurs, les contrastes et les etats restent intacts, donc l'interface se
+   lit exactement pareil.
+   ========================================================================== */
+
+/*
+ * `backdrop-filter` force le compositeur a relire le fond a chaque image, pour
+ * chaque surface qui en porte. Avec une douzaine de panneaux en verre a
+ * l'ecran, c'est de loin le poste le plus cher.
+ */
+:root[data-perf='on'] * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Une ombre portee large se recalcule des que l'element bouge, et beaucoup
+   bougent au survol. */
+:root[data-perf='on'] *:not(.modal__panel):not(.ctx-menu) {
+  box-shadow: none !important;
+}
+
+/* Les degrades animes tournent en permanence, meme hors du champ. */
+:root[data-perf='on'] .profile__banner-fallback,
+:root[data-perf='on'] .espace-images__vide,
+:root[data-perf='on'] .splash__mark img {
+  animation: none !important;
+}
+
+/* Le fond flou d'une fiche de profil est une image entiere refloutee a chaque
+   rendu : on la remplace par un aplat. */
+:root[data-perf='on'] .profile__wash {
+  display: none;
+}
+
+/* Les transitions et les ressorts font travailler le compositeur a chaque
+   survol ; l'etat final, lui, ne change pas. */
+:root[data-perf='on'] * {
+  transition: none !important;
+  animation-duration: 0s !important;
+}
+
+/* Le grain est une image repetee sur toute la surface. */
+:root[data-perf='on'] body::after,
+:root[data-perf='on'] .grain {
+  display: none !important;
+}

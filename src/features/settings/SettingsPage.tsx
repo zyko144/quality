@@ -659,6 +659,19 @@ function AccessibilitySection() {
       </p>
 
       <section className="settings__group">
+        <h2 className="settings__group-title">Performance</h2>
+
+        <div className="settings__stack">
+          <SwitchRow
+            label="Mode performance"
+            hint="Coupe le flou, les ombres et les animations. L'interface se lit pareil — ce sont des effets, pas des informations — mais la carte graphique cesse de travailler en continu. A activer quand un jeu tourne a cote."
+            checked={preferences.performance}
+            onChange={(value) => setPreference('performance', value)}
+          />
+        </div>
+      </section>
+
+      <section className="settings__group">
         <h2 className="settings__group-title">Lecture</h2>
 
         <div className="settings__stack">

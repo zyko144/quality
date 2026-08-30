@@ -2,10 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ContextMenu, useContextMenu, type MenuEntry, type MenuPosition } from '@/components/ContextMenu';
 import { UserContextMenu } from '@/features/profile/UserContextMenu';
 import { useVoice } from './useVoice';
-import { useDevices, applySink } from '@/store/devices';
+import { useDevices } from '@/store/devices';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
-import { useUserAudio } from '@/store/userAudio';
 import { SharePanel } from './SharePanel';
 import { SourcePicker } from './SourcePicker';
 
@@ -35,7 +34,6 @@ export function VoiceStage({ channel }: { channel: Channel }) {
   // comparant les references, redeclencherait un rendu sans fin.
   const rawParticipants = useVoice((state) => state.participantsByChannel[channel.id]);
   const participants = rawParticipants ?? EMPTY_PARTICIPANTS;
-  const remoteAudio = useVoice((state) => state.remoteAudio);
   const remoteScreens = useVoice((state) => state.remoteScreens);
   const localScreen = useVoice((state) => state.localScreen);
   const localCamera = useVoice((state) => state.localCamera);
@@ -279,13 +277,6 @@ export function VoiceStage({ channel }: { channel: Channel }) {
                   </button>
                 </div>
               ) : null}
-              {!isMe ? (
-                <RemoteAudio
-                  stream={remoteAudio[participant.user_id]}
-                  muted={deafened}
-                  userId={participant.user_id}
-                />
-              ) : null}
             </VoiceTile>
           );
         })}
@@ -428,46 +419,6 @@ export function VoiceStage({ channel }: { channel: Channel }) {
  * de l'utilisateur (0–200 %, stocke dans userAudio). Si l'utilisateur est mute
  * localement, l'element est mis en sourdine sans couper la piste WebRTC.
  */
-function RemoteAudio({
-  stream,
-  muted,
-  userId,
-}: {
-  stream: MediaStream | undefined;
-  muted: boolean;
-  userId: UUID;
-}) {
-  const ref = useRef<HTMLAudioElement>(null);
-  const speakerId = useDevices((state) => state.media.speakerId);
-  const outputVolume = useDevices((state) => state.media.outputVolume);
-  const userVolume = useUserAudio((s) => s.getVolume(userId));
-  const userMuted = useUserAudio((s) => s.isMuted(userId));
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || !stream) return;
-    node.srcObject = stream;
-    void node.play().catch(() => {
-      // La lecture automatique peut etre refusee tant que l'utilisateur n'a pas
-      // interagi avec la page ; le prochain clic la debloquera.
-    });
-  }, [stream]);
-
-  // Volume global × volume individuel (pourcentage 0–200).
-  useEffect(() => {
-    if (ref.current) {
-      const combined = outputVolume * (userVolume / 100);
-      ref.current.volume = Math.min(1, combined);
-    }
-  }, [outputVolume, userVolume]);
-
-  useEffect(() => {
-    if (ref.current) void applySink(ref.current, speakerId);
-  }, [speakerId]);
-
-  return <audio ref={ref} autoPlay muted={muted || userMuted} />;
-}
-
 function ScreenTile({
   stream,
   label,
