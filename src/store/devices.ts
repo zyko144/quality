@@ -23,6 +23,14 @@ export interface MediaPreferences {
   /** Traitements du navigateur sur le micro. */
   echoCancellation: boolean;
   noiseSuppression: boolean;
+  /**
+   * Isolation de la voix.
+   *
+   * Retire ce qui n'est pas une voix — clavier, chien, conversation a cote —
+   * la ou la reduction de bruit ordinaire ne s'attaque qu'aux bruits continus.
+   * Ignoree par les moteurs qui ne la connaissent pas.
+   */
+  voiceIsolation: boolean;
   autoGainControl: boolean;
 
   /** Volume applique aux voix distantes, de 0 a 1. */
@@ -61,6 +69,7 @@ const DEFAULTS: MediaPreferences = {
   cameraId: null,
   echoCancellation: true,
   noiseSuppression: true,
+  voiceIsolation: true,
   autoGainControl: true,
   outputVolume: 1,
   speakingThreshold: -50,
@@ -237,13 +246,27 @@ export const useDevices = create<DeviceState>((set, get) => ({
  * l'entree en vocal au lieu de basculer sur un autre. On l'exprime donc en
  * preference.
  */
+/**
+ * Contraintes du micro.
+ *
+ * `voiceIsolation` va plus loin que `noiseSuppression` : la seconde attenue les
+ * bruits stationnaires — ventilateur, souffle, bourdonnement — la premiere
+ * isole la voix de tout le reste, y compris d'un clavier, d'un chien ou d'une
+ * conversation voisine. Le traitement se fait dans le moteur, en amont de
+ * l'encodage, donc sans cout pour la qualite de ce qui reste.
+ *
+ * Elle est demandee en `ideal` et non en `exact` : les moteurs qui ne la
+ * connaissent pas l'ignorent au lieu de refuser le micro, et l'on retombe alors
+ * sur la reduction de bruit ordinaire.
+ */
 export function audioConstraints(media: MediaPreferences): MediaTrackConstraints {
   return {
     ...(media.microphoneId ? { deviceId: { ideal: media.microphoneId } } : {}),
     echoCancellation: media.echoCancellation,
     noiseSuppression: media.noiseSuppression,
     autoGainControl: media.autoGainControl,
-  };
+    ...(media.voiceIsolation ? { voiceIsolation: { ideal: true } } : {}),
+  } as MediaTrackConstraints;
 }
 
 export function videoConstraints(media: MediaPreferences): MediaTrackConstraints {

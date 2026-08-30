@@ -168,9 +168,15 @@ export function VoiceSettings() {
         />
         <SwitchRow
           label="Reduction du bruit"
-          hint="Attenue le bruit de fond constant : ventilateur, clavier, rue."
+          hint="Attenue le bruit de fond constant : ventilateur, souffle, rue."
           checked={media.noiseSuppression}
           onChange={(value) => setMedia('noiseSuppression', value)}
+        />
+        <SwitchRow
+          label="Isolation de la voix"
+          hint="Ne laisse passer que la parole : un clavier, un chien ou une conversation a cote disparaissent. Sans effet sur les moteurs qui ne la gerent pas."
+          checked={media.voiceIsolation}
+          onChange={(value) => setMedia('voiceIsolation', value)}
         />
         <SwitchRow
           label="Gain automatique"

@@ -937,3 +937,89 @@ button.voice-tile__name:hover {
 .picker__source.is-indisponible:hover {
   transform: none;
 }
+
+/* ==========================================================================
+   La scene tient dans l'ecran
+   ==========================================================================
+   Les partages, les participants et la barre de commandes s'empilaient : des
+   qu'une personne diffusait, la page defilait et l'on perdait de vue soit les
+   visages, soit l'image partagee. Une scene d'appel ne devrait jamais demander
+   de faire defiler pour voir ce qui s'y passe.
+
+   Les partages prennent la place restante et se partagent la largeur ; les
+   participants se rangent en bandeau sous eux, a taille reduite. Rien ne
+   deborde, rien ne defile.
+   ========================================================================== */
+
+.voice-stage:has(.voice-stage__screens) .voice-grid,
+.voice-stage:has(.voice-stage__focus) .voice-grid {
+  /* Un bandeau de vignettes : on veut savoir qui est la, pas detailler les
+     visages pendant qu'on regarde un ecran. */
+  flex: none;
+  grid-template-columns: repeat(auto-fit, minmax(132px, max-content));
+  justify-content: center;
+  gap: var(--space-3);
+  overflow: visible;
+}
+
+.voice-stage:has(.voice-stage__screens) .voice-tile,
+.voice-stage:has(.voice-stage__focus) .voice-tile {
+  width: 132px;
+  aspect-ratio: 1;
+}
+
+.voice-stage:has(.voice-stage__screens) .voice-tile .avatar,
+.voice-stage:has(.voice-stage__focus) .voice-tile .avatar {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+}
+
+.voice-stage:has(.voice-stage__screens) .voice-tile__live {
+  display: none;
+}
+
+/*
+ * Plusieurs partages a la fois.
+ *
+ * La grille s'adapte au nombre : un seul occupe toute la place, deux se
+ * partagent la largeur, quatre forment un carre. Chacun garde son rapport, et
+ * l'ensemble tient dans la hauteur disponible.
+ */
+.voice-stage__screens {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+  align-content: center;
+  overflow: hidden;
+}
+
+.voice-stage__screens .screen-tile {
+  aspect-ratio: auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.voice-stage__focus {
+  flex: 1;
+  min-height: 0;
+}
+
+.voice-stage__focus .screen-tile {
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+/* La barre flottante n'a plus a reserver de place : plus rien ne defile
+   dessous. */
+.voice-stage {
+  padding-bottom: var(--space-6);
+}
+
+.voice-stage:has(.voice-stage__screens),
+.voice-stage:has(.voice-stage__focus) {
+  padding-bottom: 84px;
+}
