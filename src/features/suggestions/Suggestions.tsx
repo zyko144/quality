@@ -51,7 +51,7 @@ export function Suggestions() {
         </h1>
 
         <p className="suggestions__accroche">
-          Ce qui manque a Quality, propose par ceux qui s&rsquo;en servent. Les
+          Ce qui manque a Echow, propose par ceux qui s&rsquo;en servent. Les
           plus soutenues remontent.
         </p>
 

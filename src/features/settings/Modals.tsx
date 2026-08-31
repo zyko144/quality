@@ -459,7 +459,7 @@ function InviteModal({
           <div className="invite-server-card__info">
             <h3 className="invite-server-card__name">{space?.name ?? 'Serveur'}</h3>
             <p className="invite-server-card__desc">
-              {space?.description || 'Serveur communautaire Quality'}
+              {space?.description || 'Serveur communautaire Echow'}
             </p>
           </div>
         </div>

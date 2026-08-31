@@ -41,9 +41,9 @@ export function PasswordRecovery() {
         <form className="auth__form" onSubmit={submit}>
           <div className="auth__brand auth__brand--centered">
             <span className="auth__logo" aria-hidden="true">
-              <QualityLogo size={28} />
+              <QualityLogo size={54} />
             </span>
-            <span className="auth__wordmark">Quality</span>
+            <span className="auth__wordmark">Echow</span>
           </div>
 
           <div className="stack" style={{ gap: 'var(--space-2)' }}>

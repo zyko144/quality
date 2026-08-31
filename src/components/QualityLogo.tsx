@@ -6,7 +6,7 @@ interface QualityLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'sr
   className?: string;
 }
 
-export function QualityLogo({ size = 24, className = '', style, alt = 'Quality', ...props }: QualityLogoProps) {
+export function QualityLogo({ size = 24, className = '', style, alt = 'Echow', ...props }: QualityLogoProps) {
   return (
     <img
       src={logoUrl}
@@ -24,3 +24,5 @@ export function QualityLogo({ size = 24, className = '', style, alt = 'Quality',
     />
   );
 }
+
+export const EchowLogo = QualityLogo;

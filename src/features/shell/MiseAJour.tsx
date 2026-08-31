@@ -213,7 +213,7 @@ export function MiseAJour() {
             <p className="maj__titre">
               {installation === 'prete'
                 ? 'Mise a jour prete'
-                : `Quality ${disponible.version} est disponible`}
+                : `Echow ${disponible.version} est disponible`}
             </p>
             <p className="maj__note">
               {installation === 'prete'

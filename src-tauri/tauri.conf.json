@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Quality",
+  "productName": "Echow",
   "version": "0.3.7",
-  "identifier": "app.quality.desktop",
+  "identifier": "app.echow.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Quality",
+        "title": "Echow",
         "width": 1280,
         "height": 820,
         "minWidth": 760,
@@ -41,11 +41,11 @@
       "icons/icon.ico",
       "icons/icon.icns"
     ],
-    "publisher": "Quality",
+    "publisher": "Echow",
     "copyright": "",
     "category": "SocialNetworking",
     "shortDescription": "Discussion d'equipe en temps reel",
-    "longDescription": "Quality : discussion d'equipe en temps reel, avec des fils qui se referment, une recherche qui trouve et du vocal en pair a pair.",
+    "longDescription": "Echow : discussion d'equipe en temps reel, avec des fils qui se referment, une recherche qui trouve et du vocal en pair a pair.",
     "windows": {
       "nsis": {
         "installMode": "currentUser",

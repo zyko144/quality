@@ -2,7 +2,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { QualityLogo } from '@/components/QualityLogo';
 
 /**
- * Waves — l'abonnement de Quality.
+ * Waves — l'abonnement de Echow.
  *
  * Le nom vient du logo, une vague en spirale — au pluriel, parce qu'il y en
  * aura d'autres. Il dit aussi ce que l'abonnement est : ce qui pousse

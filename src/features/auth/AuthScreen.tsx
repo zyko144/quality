@@ -126,7 +126,7 @@ export function AuthScreen() {
             <QualityLogo size={54} />
           </span>
 
-          <p className="auth__wordmark">Quality</p>
+          <p className="auth__wordmark">Echow</p>
 
           {mode !== 'forgot' ? (
           <div className="auth__tabs" role="tablist" aria-label="Mode de connexion">

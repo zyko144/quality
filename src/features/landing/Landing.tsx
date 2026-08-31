@@ -95,7 +95,7 @@ export function Landing() {
           <span className="landing__logo" aria-hidden="true">
             <QualityLogo size={24} />
           </span>
-          Quality
+          Echow
         </a>
 
         <nav className="landing__nav" aria-label="Sections">
@@ -127,7 +127,7 @@ export function Landing() {
 
           <p className="hero__lede">
             L’historique illisible, la recherche approximative et les trois gigaoctets
-            de memoire. Quality garde l’efficacite, corrige le reste.
+            de memoire. Echow garde l’efficacite, corrige le reste.
           </p>
 
           <div className="hero__actions">
@@ -283,7 +283,7 @@ export function Landing() {
           <span className="landing__logo" aria-hidden="true">
             <QualityLogo size={22} />
           </span>
-          Quality
+          Echow
         </div>
         <p>Discussion d’equipe en temps reel.</p>
       </footer>

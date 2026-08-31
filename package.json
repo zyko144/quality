@@ -1,9 +1,9 @@
 {
-  "name": "quality",
+  "name": "echow",
   "private": true,
   "version": "0.3.7",
   "type": "module",
-  "description": "Quality - plateforme de communication temps reel, moderne et legere",
+  "description": "Echow - plateforme de communication temps reel, moderne et legere",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

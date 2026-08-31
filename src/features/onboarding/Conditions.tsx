@@ -66,7 +66,7 @@ const REGLES: Regle[] = [
   {
     titre: 'Le service est fourni tel quel',
     corps:
-      'Quality est en developpement. Des interruptions, des pertes de messages et des defauts sont possibles. N’en faites pas le seul depot de ce que vous ne pouvez pas perdre.',
+      'Echow est en developpement. Des interruptions, des pertes de messages et des defauts sont possibles. N’en faites pas le seul depot de ce que vous ne pouvez pas perdre.',
   },
   {
     titre: 'Vos donnees',
