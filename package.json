@@ -1,7 +1,7 @@
 {
   "name": "quality",
   "private": true,
-  "version": "0.2.5",
+  "version": "0.2.6",
   "type": "module",
   "description": "Quality - plateforme de communication temps reel, moderne et legere",
   "scripts": {
@@ -21,6 +21,8 @@
     "natif:test": "cargo test --release --manifest-path native/Cargo.toml -- --nocapture"
   },
   "dependencies": {
+    "@jitsi/rnnoise-wasm": "^0.2.1",
+    "@sapphi-red/web-noise-suppressor": "^0.4.0",
     "@supabase/supabase-js": "^2.48.1",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-notification": "^2.2.0",

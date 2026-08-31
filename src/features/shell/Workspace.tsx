@@ -10,7 +10,6 @@ import { Sidebar } from './Sidebar';
 import { SidePanel } from './SidePanel';
 import { ChannelHeader } from '@/features/channels/ChannelHeader';
 import { WindowControls } from '@/components/WindowControls';
-import { QualityLogo } from '@/components/QualityLogo';
 import { MiseAJour } from './MiseAJour';
 import { SortieAudio } from '@/features/voice/SortieAudio';
 import { Sonnerie } from '@/features/voice/Sonnerie';
@@ -349,20 +348,19 @@ export function Workspace() {
   const channel = channels.find((item) => item.id === activeChannelId) ?? null;
   const voiceChannelId = useVoice((state) => state.channelId);
 
-  if (!ready) {
-    return (
-      <div className="boot">
-        {/* Le meme logo que l'ecran de demarrage : passer d'une marque a une
-            autre entre deux ecrans d'attente donne l'impression d'avoir change
-            d'application en route. */}
-        <span className="boot__mark">
-          <QualityLogo size={30} />
-        </span>
-        <span className="spinner" />
-        <p>Chargement de vos espaces…</p>
-      </div>
-    );
-  }
+  /*
+   * Rien tant que les espaces chargent — le voile d'origine est encore la.
+   *
+   * Un second ecran d'attente s'affichait ici, avec le meme logo et un texte
+   * different. Ils se suivaient : le voile de `index.html` partait des que la
+   * session etait connue, celui-ci prenait le relais pendant que les espaces
+   * arrivaient. Deux chargements pour une seule attente, ce qui la fait
+   * paraitre deux fois plus longue qu'elle n'est.
+   *
+   * C'est `main.tsx` qui leve le voile, maintenant qu'il attend aussi ce
+   * drapeau.
+   */
+  if (!ready) return null;
 
   return (
     <div

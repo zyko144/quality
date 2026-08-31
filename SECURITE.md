@@ -367,3 +367,20 @@ adresse dans le navigateur. Selon le comportement de la vue web, un lien ne
 fait rien ou detourne la fenetre de l'application vers un site tiers, sans
 barre d'adresse ni retour possible. La correction habituelle est le greffon
 `opener`, avec un gestionnaire de clic qui intercepte les liens externes.
+
+
+## `wasm-unsafe-eval` dans la CSP
+
+La directive `script-src` porte `'wasm-unsafe-eval'` depuis la version 0.2.6.
+
+Elle est necessaire au retrait de bruit du micro, qui s'appuie sur RNNoise —
+un petit reseau compile en WebAssembly. Sans elle, Chromium refuse
+`WebAssembly.instantiate` et le traitement echoue en silence : il fonctionnerait
+en developpement, ou aucune CSP ne s'applique, et pas dans l'application livree.
+C'est precisement le genre de defaut qu'on ne remarque qu'apres coup.
+
+Ce qu'elle autorise, et ce qu'elle n'autorise pas : elle permet de compiler du
+WebAssembly, rien d'autre. Elle n'ouvre ni `eval`, ni `new Function`, ni
+l'execution de scripts d'une autre origine — `'unsafe-eval'`, que nous
+n'utilisons pas, ferait cela. Le seul binaire charge est celui de RNNoise,
+servi depuis notre propre origine et versionne avec l'application.

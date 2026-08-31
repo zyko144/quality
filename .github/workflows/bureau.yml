@@ -225,12 +225,11 @@ jobs:
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
           releaseBody: |
-            Le son des partages d'ecran s'entend enfin : il arrivait dans le meme casier que la voix, et le dernier des deux effacait l'autre.
-            Il a son propre curseur, distinct de celui de la voix — on baisse un jeu sans baisser celui qui le commente. Il demarre a 75 %, un jeu etant mixe bien plus fort qu'un micro.
-            Le curseur de volume fonctionne enfin : le pourcentage n'etait jamais divise par cent, si bien qu'il ne faisait rien du tout au-dessus de 1 %.
-            Il suit desormais une courbe perceptive : a mi-course on obtient douze decibels de moins, au lieu d'un curseur ou tout se jouait dans les derniers pourcents.
-            Au-dela de cent pour cent, le son est reellement amplifie — un element audio ne depasse pas son volume d'origine, il faut passer par le graphe audio.
-            Les reglages sont refaits : vrais titres de section, groupes en cartes, colonne elargie.
+            Une vraie suppression du bruit : RNNoise retire le clavier, la chaise et le ventilateur PENDANT qu'on parle, la ou une porte ne sait que couper entre les phrases.
+            La case « Isolation de la voix » etait sans effet : le moteur l'annonce supportee puis la refuse. Elle est remplacee par le traitement ci-dessus.
+            Un seul ecran de demarrage, enfin : un second attendait le chargement des espaces derriere le premier.
+            Le son des partages d'ecran s'entend, avec son propre curseur — il n'apparait que lorsque la personne partage effectivement du son.
+            Le curseur de volume fonctionne et suit une courbe perceptive ; au-dela de cent pour cent il amplifie reellement.
 
       - uses: actions/upload-artifact@v4
         if: steps.version.outputs.publier == 'oui'

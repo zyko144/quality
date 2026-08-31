@@ -23,6 +23,7 @@ import './styles/depth.css';
 import './styles/mobile.css';
 import { useSession } from '@/store/session';
 import { suivreLesLiens } from './lib/liens';
+import { useChat } from './store/chat';
 
 // Le volume des signaux est lu au demarrage : sans cela, le reglage
 // enregistre ne prendrait effet qu'apres avoir rouvert les parametres.
@@ -111,16 +112,46 @@ void root().then((screen) => {
    * resoudrait jamais : mieux vaut une page vide qu'un voile eternel, car on
    * peut recharger la premiere.
    */
-  if (!useSession.getState().loading) {
+  /*
+   * Le voile tient jusqu'a ce qu'il y ait quelque chose a montrer.
+   *
+   * Deux conditions, pas une : la session doit etre connue, et si elle existe,
+   * les espaces doivent etre arrives. Ne tenir que la premiere decouvrait une
+   * application qui affichait alors son propre ecran d'attente — deux
+   * chargements a la suite pour une seule attente.
+   *
+   * Sans session, il n'y a rien a charger : on decouvre la page de connexion
+   * tout de suite.
+   */
+  const pret = () => {
+    const session = useSession.getState();
+    if (session.loading) return false;
+    if (!session.session) return true;
+    return useChat.getState().ready;
+  };
+
+  if (pret()) {
     dismissSplash();
   } else {
-    const arret = useSession.subscribe((etat) => {
-      if (etat.loading) return;
-      arret();
+    const arrets: (() => void)[] = [];
+
+    const verifier = () => {
+      if (!pret()) return;
+      for (const arret of arrets) arret();
       dismissSplash();
-    });
+    };
+
+    arrets.push(useSession.subscribe(verifier), useChat.subscribe(verifier));
+
+    /*
+     * Huit secondes, et l'on decouvre quoi qu'il arrive.
+     *
+     * Si le chargement n'aboutit jamais — reseau coupe, base injoignable —
+     * mieux vaut une application vide qu'un voile eternel : la premiere se
+     * recharge, la seconde ne dit rien et ne mene nulle part.
+     */
     window.setTimeout(() => {
-      arret();
+      for (const arret of arrets) arret();
       dismissSplash();
     }, 8000);
   }
