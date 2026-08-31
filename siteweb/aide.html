@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Centre d'aide — Qualityz</title>
+<meta name="description" content="Centre d'aide de Quality : installation, connexion, son et micro, partage d'ecran, salons, notifications, performances et confidentialite. Les reponses, rangees par sujet.">
+<meta name="theme-color" content="#0b0b0d">
+<link rel="icon" href="assets/quality-logo.png" type="image/png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<a class="saut-contenu" href="#contenu">Aller au contenu</a>
+
+<header class="entete">
+  <div class="enveloppe entete__barre">
+    <a class="marque" href="index.html">
+      <img class="marque__glyphe" src="assets/quality-logo.png" alt="" width="26" height="26" decoding="async">
+      Qualityz
+    </a>
+
+    <button class="bascule-nav" type="button" aria-expanded="false" aria-controls="nav-principale">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+      </svg>
+      Menu
+    </button>
+
+    <nav class="nav" id="nav-principale" aria-label="Navigation principale">
+      <a href="index.html">Accueil</a>
+      <a href="telecharger.html">Telecharger</a>
+      <a href="player.html">Lecteur web</a>
+      <a href="aide.html" aria-current="page">Aide</a>
+      <a href="securite.html">Securite</a>
+      <a class="bouton bouton--principal" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">Telecharger</a>
+    </nav>
+  </div>
+</header>
+
+<main id="contenu">
+
+  <section class="enveloppe section section--serre">
+    <div class="section__intro">
+      <span class="surtitre">Centre d'aide</span>
+      <h1>Une question, une reponse</h1>
+      <p>
+        Les problemes les plus courants, ranges par sujet, avec ce qu'il faut
+        verifier et dans quel ordre. Commencez par chercher : c'est plus rapide
+        que de parcourir dix categories.
+      </p>
+    </div>
+
+    <!-- Recherche : filtre les entrees a la frappe. Sans JavaScript, le champ
+         disparait et la liste complete reste consultable. -->
+    <div class="aide__barre">
+      <label class="visuellement-cache" for="recherche-aide">Rechercher dans l'aide</label>
+      <div class="aide__champ-recherche">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+        </svg>
+        <input type="search" id="recherche-aide" placeholder="micro, mise a jour, notification..." autocomplete="off" spellcheck="false">
+      </div>
+      <p class="aide__compte" id="aide-compte" role="status" aria-live="polite"></p>
+    </div>
+
+    <p class="aide__vide" id="aide-vide" hidden>
+      Aucune entree ne correspond a cette recherche. Essayez un mot plus court,
+      ou <a href="#nous-ecrire">ecrivez-nous</a>.
+    </p>
+  </section>
+
+  <div class="enveloppe aide">
+
+    <!-- ══ Installation et mise a jour ═══════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-installation">
+      <h2 class="aide__titre" id="cat-installation">Installation et mise a jour</h2>
+
+      <details class="aide__entree">
+        <summary>Windows affiche un avertissement quand j'ouvre l'installateur</summary>
+        <div class="aide__reponse">
+          <p>
+            SmartScreen previent devant tout installateur encore peu diffuse. Ce
+            n'est pas un signe d'infection, mais une invitation a verifier
+            l'origine du fichier.
+          </p>
+          <ol>
+            <li>Verifiez que le fichier s'appelle bien <code>Quality-setup.exe</code> et qu'il vient de <a href="telecharger.html">la page de telechargement</a> ou de la page des publications officielles.</li>
+            <li>Dans la fenetre d'avertissement, cliquez sur <strong>Informations complementaires</strong>, puis sur <strong>Executer quand meme</strong>.</li>
+            <li>Si le fichier provient d'ailleurs — un lien recu par message, un site tiers — ne l'ouvrez pas : retelechargez-le depuis la page officielle.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>L'installation demande-t-elle des droits administrateur ?</summary>
+        <div class="aide__reponse">
+          <p>
+            Non. Quality s'installe pour votre seule session utilisateur, dans
+            votre dossier personnel. Aucun mot de passe administrateur n'est
+            demande, et l'application n'ecrit rien dans les dossiers systeme.
+          </p>
+          <p>
+            C'est aussi pourquoi un autre compte Windows sur la meme machine ne
+            verra pas l'application : il devra l'installer de son cote.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>L'application ne se met pas a jour</summary>
+        <div class="aide__reponse">
+          <p>
+            Quality cherche une nouvelle version au demarrage, telecharge la mise
+            a jour en arriere-plan et l'applique au redemarrage suivant. Si rien
+            ne se passe :
+          </p>
+          <ol>
+            <li>Fermez completement l'application, y compris depuis la zone de notification, puis relancez-la. La verification a lieu au lancement, pas en cours d'utilisation.</li>
+            <li>Verifiez votre connexion : la mise a jour se telecharge depuis GitHub, qu'un pare-feu d'entreprise bloque parfois.</li>
+            <li>Regardez la version installee dans <strong>Parametres &gt; Avance</strong> et comparez-la a celle de la page des publications.</li>
+            <li>Si l'ecart persiste, reinstallez par-dessus avec l'installateur : vos donnees et votre session sont conservees.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Comment revenir a une version precedente ?</summary>
+        <div class="aide__reponse">
+          <p>
+            Les anciennes versions restent disponibles sur la page des
+            publications. Telechargez l'installateur voulu et lancez-le : il
+            remplace la version en place.
+          </p>
+          <p>
+            Sachez que l'application se remettra a jour au prochain demarrage.
+            Un retour en arriere n'a donc de sens que le temps de nous signaler
+            ce qui vous a fait reculer.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Desinstaller Quality</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Ouvrez <strong>Parametres de Windows &gt; Applications &gt; Applications installees</strong>.</li>
+            <li>Cherchez <strong>Quality</strong>, puis choisissez <strong>Desinstaller</strong>.</li>
+          </ol>
+          <p>
+            La desinstallation retire l'application et les preferences stockees
+            sur la machine. Elle ne supprime pas votre compte ni vos messages,
+            qui vivent cote serveur : pour cela, voyez
+            <a href="#supprimer-compte">supprimer mon compte</a>.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Connexion et compte ═══════════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-compte">
+      <h2 class="aide__titre" id="cat-compte">Connexion et compte</h2>
+
+      <details class="aide__entree">
+        <summary>J'ai oublie mon mot de passe</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Sur l'ecran de connexion, choisissez <strong>Mot de passe oublie</strong>.</li>
+            <li>Saisissez l'adresse electronique de votre compte : un lien de reinitialisation vous est envoye.</li>
+            <li>Ouvrez le lien, puis choisissez un nouveau mot de passe.</li>
+          </ol>
+          <p>
+            Le lien a une duree de validite courte. S'il a expire, redemandez-en
+            un plutot que de reutiliser l'ancien courriel.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Le courriel de confirmation ou de reinitialisation n'arrive pas</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Attendez deux ou trois minutes : l'envoi n'est pas toujours instantane.</li>
+            <li>Regardez dans les indesirables, et dans les onglets « Promotions » ou « Notifications » si votre messagerie en utilise.</li>
+            <li>Verifiez l'adresse saisie, lettre a lettre : une faute de frappe envoie le message a quelqu'un d'autre.</li>
+            <li>Si votre adresse appartient a une organisation, son filtre peut retenir les messages automatiques ; essayez une autre adresse.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>La connexion avec Google echoue</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>La fenetre d'authentification s'ouvre dans votre navigateur : verifiez qu'un bloqueur de fenetres surgissantes ne l'a pas empechee.</li>
+            <li>Si plusieurs comptes Google sont ouverts, choisissez explicitement celui associe a Quality.</li>
+            <li>Terminez la procedure jusqu'au retour vers l'application ; fermer l'onglet trop tot laisse la connexion inachevee.</li>
+            <li>En cas d'echec repete, creez ou utilisez un compte par adresse electronique : la connexion Google reste facultative.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Changer mon adresse, mon mot de passe ou mon nom affiche</summary>
+        <div class="aide__reponse">
+          <p>
+            L'adresse et le mot de passe se modifient dans
+            <strong>Parametres &gt; Mon compte</strong>. Le nom affiche, l'avatar,
+            la banniere et la description se trouvent dans
+            <strong>Parametres &gt; Profil</strong>.
+          </p>
+          <p>
+            Un changement d'adresse demande une confirmation sur la nouvelle
+            boite : tant qu'elle n'est pas validee, l'ancienne reste celle du
+            compte.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree" id="supprimer-compte">
+        <summary>Supprimer mon compte</summary>
+        <div class="aide__reponse">
+          <p>
+            La suppression se demande depuis
+            <strong>Parametres &gt; Mon compte</strong>. Elle est definitive.
+          </p>
+          <p>
+            Vos messages deja envoyes dans des salons partages restent visibles
+            par leurs membres, mais votre identite en est dissociee. Le detail des
+            durees figure dans la
+            <a href="confidentialite.html#conservation">politique de confidentialite</a>.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Je suis deconnecte a chaque lancement</summary>
+        <div class="aide__reponse">
+          <p>
+            La session est conservee dans le stockage local de l'application. Elle
+            se perd si ce stockage est efface a chaque fermeture.
+          </p>
+          <ol>
+            <li>Verifiez qu'un outil de nettoyage ne vide pas les donnees des applications au demarrage.</li>
+            <li>Si vous utilisez un profil Windows temporaire ou un poste partage restaure a chaque session, la session ne peut pas survivre : c'est attendu.</li>
+            <li>Sinon, deconnectez-vous puis reconnectez-vous une fois : cela reecrit proprement le jeton de session.</li>
+          </ol>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Son et micro ══════════════════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-son">
+      <h2 class="aide__titre" id="cat-son">Son et micro</h2>
+
+      <details class="aide__entree">
+        <summary>Personne ne m'entend</summary>
+        <div class="aide__reponse">
+          <p>Dans cet ordre, du plus frequent au plus rare :</p>
+          <ol>
+            <li>Verifiez que votre micro n'est pas coupe dans l'application — l'icone du micro en bas du panneau des salons. Le raccourci est <code>Ctrl</code> + <code>Maj</code> + <code>M</code>.</li>
+            <li>Ouvrez <strong>Parametres &gt; Voix et video</strong> et regardez l'indicateur de niveau en parlant. S'il ne bouge pas, le probleme est en amont de Quality.</li>
+            <li>Choisissez explicitement votre micro dans la liste des peripheriques : le peripherique « par defaut » suit Windows, qui change parfois d'avis en cours de route.</li>
+            <li>Dans Windows, ouvrez <strong>Confidentialite et securite &gt; Microphone</strong> et verifiez que l'acce des applications de bureau est autorise.</li>
+            <li>Baissez la <strong>sensibilite du detecteur de parole</strong> : reglee trop haut, elle prend une voix calme pour du silence.</li>
+            <li>Si vous entendez un souffle mais pas votre voix, desactivez l'<strong>isolation de la voix</strong> : certains micros la mettent en defaut.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Je n'entends personne</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Verifiez que le son n'est pas coupe dans l'application : <code>Ctrl</code> + <code>Maj</code> + <code>D</code>.</li>
+            <li>Dans <strong>Parametres &gt; Voix et video</strong>, selectionnez le bon peripherique de sortie — casque ou haut-parleurs — plutot que le peripherique par defaut.</li>
+            <li>Verifiez le melangeur de volume de Windows : Quality peut y avoir ete baisse independamment du volume general.</li>
+            <li>Remontez le <strong>volume des voix distantes</strong> dans les memes reglages.</li>
+            <li>Si une seule personne est inaudible, c'est son micro qu'il faut regarder, pas votre sortie.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Ma voix est hachee, les debuts de phrase disparaissent</summary>
+        <div class="aide__reponse">
+          <p>
+            C'est presque toujours la porte de bruit qui se referme trop vite ou
+            trop tot. Dans <strong>Parametres &gt; Voix et video</strong> :
+          </p>
+          <ol>
+            <li>Baissez la <strong>sensibilite du detecteur de parole</strong> jusqu'a ce que l'indicateur reste allume pendant toute votre phrase.</li>
+            <li>Si le probleme persiste, desactivez la <strong>porte de bruit</strong> et jugez a l'oreille.</li>
+            <li>Un micro trop eloigne oblige la porte a travailler : rapprochez-le avant de pousser les reglages.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Les autres entendent de l'echo</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Un casque supprime l'echo a la source, en empechant le son des autres de revenir dans votre micro. C'est la solution la plus sure.</li>
+            <li>Si vous tenez aux haut-parleurs, verifiez que l'<strong>annulation d'echo</strong> est activee dans <strong>Parametres &gt; Voix et video</strong>.</li>
+            <li>Baissez le volume de sortie : au-dela d'un certain niveau, aucune annulation ne suit.</li>
+            <li>Si l'echo apparait des qu'une personne precise parle, c'est de son cote qu'il faut regarder.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Un souffle ou un bruit de fond permanent</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Activez la <strong>suppression de bruit</strong> dans <strong>Parametres &gt; Voix et video</strong>.</li>
+            <li>Si le souffle subsiste, essayez l'<strong>isolation de la voix</strong>, qui retire plus largement ce qui n'est pas une voix — au prix d'un rendu moins naturel.</li>
+            <li>Desactivez le <strong>controle de gain automatique</strong> si le niveau monte et descend tout seul : il amplifie le silence pour trouver de la voix.</li>
+            <li>Un micro branche sur une entree analogique bruitee soufflera toujours un peu ; un micro USB regle souvent le probleme d'un coup.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Mon micro n'apparait pas dans la liste</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Branchez le micro avant de lancer l'application, puis rouvrez <strong>Parametres &gt; Voix et video</strong> : la liste se construit a l'ouverture.</li>
+            <li>Verifiez que Windows le voit, dans <strong>Parametres &gt; Systeme &gt; Son &gt; Entree</strong>. S'il n'y figure pas, c'est un probleme de pilote.</li>
+            <li>Autorisez l'acces au microphone pour les applications de bureau dans <strong>Confidentialite et securite &gt; Microphone</strong> : sans cette autorisation, la liste revient vide.</li>
+            <li>Certains casques exposent plusieurs entrees : choisissez celle qui porte le nom du peripherique, pas « Mix stereo ».</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Ameliorer la qualite de ma voix</summary>
+        <div class="aide__reponse">
+          <p>
+            Dans <strong>Parametres &gt; Voix et video</strong>, le reglage de
+            qualite du son propose trois positions : <strong>Voix</strong>,
+            econome et suffisant pour parler ; <strong>Haute</strong>, plus
+            genereuse en debit ; <strong>Musique</strong>, a reserver a ce qui
+            n'est pas de la parole.
+          </p>
+          <p>
+            Montez d'un cran seulement si votre connexion suit. Sur une liaison
+            juste, un debit trop ambitieux se paie en coupures, ce qui degrade
+            davantage qu'un reglage modeste.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Camera et partage d'ecran ═════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-video">
+      <h2 class="aide__titre" id="cat-video">Camera et partage d'ecran</h2>
+
+      <details class="aide__entree">
+        <summary>Ma camera ne demarre pas</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Fermez toute autre application qui utilise la camera : sous Windows, une seule a la fois y accede reellement.</li>
+            <li>Autorisez l'acces dans <strong>Confidentialite et securite &gt; Camera</strong>, section des applications de bureau.</li>
+            <li>Verifiez le cache physique s'il y en a un sur l'objectif.</li>
+            <li>Dans <strong>Parametres &gt; Voix et video</strong>, baissez la definition demandee a la camera : certains modeles refusent le 1080p et ne renvoient alors rien.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Partager un ecran, une fenetre ou un jeu</summary>
+        <div class="aide__reponse">
+          <p>
+            Dans un salon vocal, choisissez <strong>Partager</strong>. Le selecteur
+            propose vos ecrans et les fenetres ouvertes ; choisissez la source,
+            puis confirmez.
+          </p>
+          <p>
+            Partager une <strong>fenetre</strong> plutot qu'un ecran entier evite
+            de diffuser vos notifications et le reste de votre bureau. Pour un jeu,
+            en revanche, l'ecran entier est souvent plus fiable.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Le partage est flou, saccade, ou illisible</summary>
+        <div class="aide__reponse">
+          <p>
+            Les reglages sont dans <strong>Parametres &gt; Voix et video</strong>.
+            Le partage monte jusqu'a 1080p a soixante images par seconde, mais
+            cette combinaison demande beaucoup a la machine comme au reseau.
+          </p>
+          <ol>
+            <li>Choisissez la priorite : <strong>Nettete</strong> pour du texte et du code, <strong>Fluidite</strong> pour un jeu ou une video.</li>
+            <li>Si l'image est floue sur du texte, descendez a 30 images par seconde plutot que de baisser la definition.</li>
+            <li>Si l'image saccade, gardez 60 images par seconde et descendez a 720p.</li>
+            <li>Sur une connexion partagee, essayez un cable plutot que le Wi-Fi avant de toucher aux reglages.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Les autres voient un ecran noir pendant mon partage</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Un jeu en plein ecran exclusif ne se laisse pas capturer : passez-le en <strong>fenetre sans bordure</strong>.</li>
+            <li>Si vous partagez une fenetre precise, verifiez qu'elle n'est pas reduite : une fenetre reduite n'a plus rien a montrer.</li>
+            <li>Sur les portables a deux cartes graphiques, l'ecran noir apparait quand l'application et la fenetre partagee ne tournent pas sur la meme carte. Forcez-les sur la meme dans les parametres graphiques de Windows.</li>
+            <li>Certaines applications bancaires ou de lecture protegee se noircissent volontairement a la capture : c'est leur protection, pas un defaut.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Partager le son de mon ordinateur</summary>
+        <div class="aide__reponse">
+          <p>
+            Le son du systeme peut accompagner un partage d'ecran : l'option se
+            trouve dans le selecteur de source, au moment de choisir ce que vous
+            partagez.
+          </p>
+          <p>
+            Elle depend de la source retenue. Un ecran entier transporte le son du
+            systeme plus facilement qu'une fenetre isolee ; si le son manque,
+            repassez par un partage d'ecran complet.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Serveurs et salons ════════════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-espaces">
+      <h2 class="aide__titre" id="cat-espaces">Serveurs et salons</h2>
+
+      <details class="aide__entree">
+        <summary>Creer un espace et ses salons</summary>
+        <div class="aide__reponse">
+          <p>
+            Le bouton <strong>+</strong>, au bas de la colonne des espaces, cree un
+            nouvel espace dont vous devenez administrateur. Vous y ajoutez ensuite
+            autant de salons ecrits et vocaux que necessaire.
+          </p>
+          <p>
+            Un conseil d'usage : commencez avec deux ou trois salons. Une longue
+            liste creee d'avance se vide plus vite qu'elle ne se remplit.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Inviter quelqu'un dans mon espace</summary>
+        <div class="aide__reponse">
+          <p>Deux moyens, dans les parametres de l'espace :</p>
+          <ul>
+            <li>le <strong>lien d'invitation direct</strong>, a envoyer tel quel ;</li>
+            <li>le <strong>code d'acces rapide</strong>, plus court, a dicter ou a recopier.</li>
+          </ul>
+          <p>
+            Traitez l'un et l'autre comme une cle : toute personne qui l'obtient
+            peut entrer. Si un lien circule trop, regenerez-le.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Rejoindre un espace avec un lien ou un code</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Avec un lien : ouvrez-le, l'application prend le relais.</li>
+            <li>Avec un code : utilisez <strong>Rejoindre un espace</strong> depuis la colonne des espaces, puis saisissez-le.</li>
+            <li>Si le code est refuse, verifiez qu'il n'a pas expire et redemandez-en un a la personne qui vous invite.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Roles et permissions</summary>
+        <div class="aide__reponse">
+          <p>
+            Les roles se gerent dans les parametres de l'espace. Chaque role porte
+            un ensemble de permissions, et chaque membre peut en cumuler plusieurs.
+          </p>
+          <p>
+            Reglez au plus juste : donner l'administration a tout le monde pour
+            eviter une demande ponctuelle est le moyen le plus court de perdre un
+            salon par accident.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Quitter ou supprimer un espace, supprimer un salon</summary>
+        <div class="aide__reponse">
+          <p>
+            Quitter un espace se fait depuis son menu contextuel, par un clic droit
+            sur son icone. Vous perdez l'acces a ses salons mais vos messages y
+            restent.
+          </p>
+          <p>
+            <strong>Supprimer ce salon</strong> figure dans les parametres du salon,
+            et n'est accessible qu'aux administrateurs. La suppression emporte les
+            messages du salon et ne se defait pas.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Amis et messages prives ═══════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-amis">
+      <h2 class="aide__titre" id="cat-amis">Amis et messages prives</h2>
+
+      <details class="aide__entree">
+        <summary>Ajouter quelqu'un en ami</summary>
+        <div class="aide__reponse">
+          <p>
+            Ouvrez la page des amis — <code>Ctrl</code> + <code>J</code> — puis
+            envoyez une demande a partir du nom d'utilisateur exact de la personne.
+          </p>
+          <p>
+            Le nom d'utilisateur n'est pas le nom affiche : c'est l'identifiant
+            unique, sans majuscules ni espaces. Demandez-le plutot que de le
+            deviner.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Ma demande d'ami reste sans reponse, ou la personne est introuvable</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Verifiez l'orthographe exacte du nom d'utilisateur.</li>
+            <li>La personne peut avoir restreint qui peut lui envoyer des demandes, dans <strong>Parametres &gt; Confidentialite</strong>.</li>
+            <li>Une demande en attente ne se renvoie pas : elle reste visible dans l'onglet des demandes en cours, du cote du destinataire.</li>
+            <li>Si vous avez ete bloque, la demande n'aboutira pas et rien ne vous le signalera.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Ouvrir une conversation privee</summary>
+        <div class="aide__reponse">
+          <p>
+            Depuis la page des amis, ou depuis le profil d'une personne rencontree
+            dans un salon. La conversation apparait ensuite dans votre liste de
+            messages prives.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Bloquer ou ignorer quelqu'un</summary>
+        <div class="aide__reponse">
+          <p>
+            Le blocage se declenche depuis le profil de la personne ou par un clic
+            droit sur son nom. Une fois bloquee, elle ne peut plus vous ecrire en
+            prive ni vous envoyer de demande d'ami.
+          </p>
+          <p>
+            Dans un salon partage, ses messages restent presents mais replies. Si
+            son comportement depasse la gene, <a href="#signaler-message">signalez-le</a>.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Retrouver un message ancien</summary>
+        <div class="aide__reponse">
+          <p>
+            <code>Ctrl</code> + <code>F</code> ouvre la recherche dans les messages.
+            <code>Ctrl</code> + <code>K</code> ouvre la palette de commandes, plus
+            rapide pour sauter d'un salon a l'autre.
+          </p>
+          <p>
+            Cherchez un mot rare plutot qu'une phrase entiere : la recherche
+            travaille sur les mots, et une citation approximative ne trouvera rien.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Notifications ═════════════════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-notifications">
+      <h2 class="aide__titre" id="cat-notifications">Notifications</h2>
+
+      <details class="aide__entree">
+        <summary>Je ne recois aucune notification</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Dans Windows, ouvrez <strong>Systeme &gt; Notifications</strong> et verifiez que Quality y est autorisee.</li>
+            <li>Desactivez l'<strong>assistant de concentration</strong>, ou ajoutez Quality a sa liste de priorite : il masque silencieusement les notifications.</li>
+            <li>Dans <strong>Parametres &gt; Notifications</strong>, verifiez le reglage general de l'application.</li>
+            <li>Verifiez ensuite l'espace et le salon concernes : une mise en sourdine posee a leur niveau prime sur le reglage general.</li>
+            <li>Le mode <strong>Ne pas deranger</strong> de votre statut de presence coupe egalement tout.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>J'en recois beaucoup trop</summary>
+        <div class="aide__reponse">
+          <p>
+            Reglez au plus pres plutot qu'en bloc : un espace bruyant se met en
+            sourdine sans toucher aux autres, et un salon precis se coupe sans
+            eteindre son espace.
+          </p>
+          <ol>
+            <li>Clic droit sur l'espace ou le salon, puis mise en sourdine.</li>
+            <li>Pour un espace de veille, preferez ne recevoir que les mentions.</li>
+            <li>Le statut <strong>Ne pas deranger</strong> reste l'option la plus expeditive quand la journee l'exige.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Couper les sons sans couper les notifications</summary>
+        <div class="aide__reponse">
+          <p>
+            Les sons se reglent independamment de l'affichage, dans
+            <strong>Parametres &gt; Notifications</strong>. Vous pouvez garder les
+            bulles a l'ecran et faire taire l'ensemble des sons.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Recevoir des notifications quand l'application est fermee</summary>
+        <div class="aide__reponse">
+          <p>
+            Fermer la fenetre range Quality dans la zone de notification, ou elle
+            continue de fonctionner. Quitter reellement l'application, en revanche,
+            interrompt toute notification jusqu'au prochain lancement.
+          </p>
+          <p>
+            Pour les recevoir des l'ouverture de session, activez le demarrage
+            automatique dans <strong>Parametres &gt; Avance</strong>.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Performances ══════════════════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-performances">
+      <h2 class="aide__titre" id="cat-performances">Performances</h2>
+
+      <details class="aide__entree">
+        <summary>L'application consomme beaucoup de processeur</summary>
+        <div class="aide__reponse">
+          <p>
+            En usage courant, Quality reste discrete. La consommation monte
+            franchement dans un cas : le partage d'ecran en 1080p a soixante images
+            par seconde, qui occupe un coeur a lui seul pour encoder.
+          </p>
+          <ol>
+            <li>Pendant un partage, descendez a 30 images par seconde, ou a 720p.</li>
+            <li>Choisissez la priorite <strong>Nettete</strong> : elle demande moins d'images que <strong>Fluidite</strong>.</li>
+            <li>Hors partage, si la consommation reste elevee, redemarrez l'application : c'est le moyen le plus rapide de savoir si le probleme persiste.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>L'interface est lente ou saccade</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Reduisez la densite d'affichage : <strong>Compact</strong> affiche plus de messages mais en dessine moins que <strong>Aere</strong>.</li>
+            <li>Dans <strong>Parametres &gt; Accessibilite</strong>, reduisez les animations.</li>
+            <li>Un salon tres long se parcourt plus lentement : passer par la recherche evite de le derouler.</li>
+            <li>Verifiez que Windows et ses pilotes graphiques sont a jour ; Quality s'appuie sur le moteur de rendu du systeme.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>La voix arrive en retard, ou se coupe</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Preferez un cable au Wi-Fi : la plupart des coupures viennent de la liaison sans fil.</li>
+            <li>Suspendez ce qui sature la connexion — telechargement, sauvegarde, mise a jour de jeu.</li>
+            <li>Redescendez la qualite du son sur <strong>Voix</strong> : un debit modeste qui passe vaut mieux qu'un debit genereux qui hache.</li>
+            <li>Si la latence ne touche qu'une personne du salon, c'est sa liaison qu'il faut examiner, pas la votre.</li>
+          </ol>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Confidentialite et donnees ════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-donnees">
+      <h2 class="aide__titre" id="cat-donnees">Confidentialite et donnees</h2>
+
+      <details class="aide__entree">
+        <summary>Mes messages sont-ils chiffres de bout en bout ?</summary>
+        <div class="aide__reponse">
+          <p>
+            Non, et nous preferons le dire clairement. Les messages ecrits sont
+            chiffres en transit et cloisonnes dans la base, mais ils y sont stockes
+            de facon lisible par le service : c'est ce qui permet de les retrouver
+            d'un appareil a l'autre et de les rechercher.
+          </p>
+          <p>
+            Le son et l'image des appels, eux, sont chiffres entre les
+            participants. Le detail est sur la
+            <a href="securite.html#limites">page securite</a>.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Qui peut voir mon adresse IP ?</summary>
+        <div class="aide__reponse">
+          <p>
+            Dans un salon vocal, une liaison directe suppose que les machines
+            connaissent leurs adresses reseau : votre adresse IP peut donc etre
+            visible des autres participants du salon.
+          </p>
+          <p>
+            Quand la liaison directe est impossible, un serveur de relais prend le
+            relais et masque cette adresse, sans pouvoir dechiffrer les flux.
+            N'entrez dans un salon vocal qu'avec des gens en qui vous avez
+            confiance.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Recuperer ou effacer mes donnees</summary>
+        <div class="aide__reponse">
+          <p>
+            Vous disposez d'un droit d'acces, de rectification, d'effacement, de
+            portabilite, d'opposition et de limitation. La marche a suivre,
+            l'adresse a saisir et les delais figurent au chapitre
+            <a href="confidentialite.html#droits">vos droits</a> de la politique de
+            confidentialite.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Apparaitre hors ligne, ou masquer mon activite</summary>
+        <div class="aide__reponse">
+          <p>
+            Le statut se change depuis votre avatar, en bas de la fenetre :
+            <strong>En ligne</strong>, <strong>Absent</strong>,
+            <strong>Ne pas deranger</strong> ou <strong>Invisible</strong>.
+          </p>
+          <p>
+            Invisible vous affiche hors ligne aux autres tout en vous laissant
+            l'usage complet de l'application. Les reglages voisins — qui peut vous
+            ajouter, qui peut vous ecrire — sont dans
+            <strong>Parametres &gt; Confidentialite</strong>.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Quelles donnees sont conservees, et combien de temps ?</summary>
+        <div class="aide__reponse">
+          <p>
+            Le compte, le profil, les messages et l'appartenance aux espaces sont
+            conserves ; le son et l'image des appels ne le sont pas, puisqu'ils ne
+            passent pas par nos serveurs sous une forme lisible.
+          </p>
+          <p>
+            Le tableau complet des durees se trouve dans la
+            <a href="confidentialite.html#conservation">politique de confidentialite</a>.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ══ Signaler un abus ══════════════════════════════════════════════ -->
+    <section class="aide__categorie" aria-labelledby="cat-abus">
+      <h2 class="aide__titre" id="cat-abus">Signaler un abus</h2>
+
+      <details class="aide__entree" id="signaler-message">
+        <summary>Signaler un message ou un membre</summary>
+        <div class="aide__reponse">
+          <ol>
+            <li>Commencez par l'administrateur de l'espace concerne : c'est lui qui modere chez lui, et il agira le plus vite.</li>
+            <li>Bloquez la personne si ses messages vous visent directement.</li>
+            <li>Pour un contenu manifestement illicite, adressez un signalement a l'editeur, en suivant les modalites de l'<a href="cgu.html#signalement">article 10 des conditions generales</a>.</li>
+          </ol>
+          <p>
+            Un signalement utile precise l'espace, le salon, la date et l'heure, et
+            ce qui pose probleme. Sans ces reperes, le message est introuvable.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>Que se passe-t-il apres un signalement ?</summary>
+        <div class="aide__reponse">
+          <p>
+            Selon la gravite et la repetition des faits : avertissement, retrait du
+            contenu, restriction de certaines fonctionnalites, suspension, puis
+            suppression du compte. Cette gradation n'est pas obligatoire, une
+            atteinte grave pouvant entrainer une suspension immediate.
+          </p>
+          <p>
+            Une mesure peut etre contestee ; la procedure figure a
+            l'<a href="cgu.html#moderation">article 9 des conditions generales</a>.
+          </p>
+        </div>
+      </details>
+
+      <details class="aide__entree">
+        <summary>J'ai trouve une faille de securite</summary>
+        <div class="aide__reponse">
+          <p>
+            Ne la publiez pas avant de nous en parler. La procedure de divulgation,
+            les delais que nous nous imposons et le perimetre concerne sont decrits
+            sur la <a href="securite.html#signaler">page securite</a>.
+          </p>
+        </div>
+      </details>
+    </section>
+
+  </div>
+
+  <!-- ══ Contact ═════════════════════════════════════════════════════════
+       Ce que la liste ne couvre pas. Le formulaire est desactive tant qu'aucune
+       adresse n'est renseignee dans `assets/site.js` : mieux vaut un bouton
+       eteint qu'un bouton qui fait semblant d'envoyer. -->
+  <section class="enveloppe section" id="nous-ecrire" aria-labelledby="titre-ecrire">
+    <div class="section__intro">
+      <span class="surtitre">Rien trouve ?</span>
+      <h2 id="titre-ecrire">Nous ecrire</h2>
+      <p>
+        Si votre situation n'entre dans aucune des entrees ci-dessus, decrivez-la
+        ici. Les informations techniques font gagner un aller-retour : sans elles,
+        la premiere reponse consiste presque toujours a les demander.
+      </p>
+    </div>
+
+    <form class="formulaire" id="formulaire-aide" novalidate>
+      <p class="formulaire__avis" id="avis-formulaire" role="status">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>
+        </svg>
+        <span id="avis-texte">
+          Ce formulaire n'est pas encore relie. Aucune adresse de contact n'est
+          publiee a ce jour : les champs sont volontairement desactives plutot
+          que de donner le change.
+        </span>
+      </p>
+
+      <fieldset class="formulaire__champs" id="champs-aide" disabled>
+        <legend class="visuellement-cache">Votre demande</legend>
+
+        <div class="champ">
+          <label for="champ-categorie">Categorie</label>
+          <select id="champ-categorie" name="categorie">
+            <option value="Installation et mise a jour">Installation et mise a jour</option>
+            <option value="Connexion et compte">Connexion et compte</option>
+            <option value="Son et micro">Son et micro</option>
+            <option value="Camera et partage d'ecran">Camera et partage d'ecran</option>
+            <option value="Serveurs et salons">Serveurs et salons</option>
+            <option value="Amis et messages prives">Amis et messages prives</option>
+            <option value="Notifications">Notifications</option>
+            <option value="Performances">Performances</option>
+            <option value="Confidentialite et donnees">Confidentialite et donnees</option>
+            <option value="Signaler un abus">Signaler un abus</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+
+        <div class="champ">
+          <label for="champ-objet">Objet</label>
+          <input type="text" id="champ-objet" name="objet" maxlength="120" placeholder="En une ligne, ce qui ne va pas">
+        </div>
+
+        <div class="champ champ--large">
+          <label for="champ-description">Description</label>
+          <textarea id="champ-description" name="description" rows="7" placeholder="Ce que vous avez fait, ce que vous attendiez, ce qui s'est produit. Les etapes exactes valent mieux qu'un resume."></textarea>
+        </div>
+
+        <div class="champ">
+          <label for="champ-version">Version de l'application</label>
+          <input type="text" id="champ-version" name="version" placeholder="par exemple 0.1.7">
+          <p class="champ__aide">Visible dans Parametres &gt; Avance.</p>
+        </div>
+
+        <div class="champ">
+          <label for="champ-systeme">Systeme</label>
+          <select id="champ-systeme" name="systeme">
+            <option value="Windows 11">Windows 11</option>
+            <option value="Windows 10">Windows 10</option>
+            <option value="Autre Windows">Autre version de Windows</option>
+            <option value="macOS">macOS</option>
+            <option value="Linux">Linux</option>
+            <option value="Non precise">Je ne sais pas</option>
+          </select>
+        </div>
+
+        <div class="champ champ--large">
+          <button type="submit" class="bouton bouton--principal bouton--grand" id="envoi-aide">
+            Preparer le message
+          </button>
+          <p class="champ__aide">
+            Le bouton ouvre votre logiciel de messagerie avec le message deja
+            redige. Rien n'est transmis avant que vous ne l'envoyiez vous-meme.
+          </p>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+
+</main>
+
+<footer class="pied">
+  <div class="enveloppe">
+    <div class="pied__grille">
+      <div>
+        <a class="pied__marque" href="index.html">
+          <img class="marque__glyphe" src="assets/quality-logo.png" alt="" width="26" height="26" decoding="async">
+          Qualityz
+        </a>
+        <p class="pied__accroche">La discussion d'equipe, avec la voix qui passe directement d'un membre a l'autre.</p>
+      </div>
+
+      <div>
+        <h2>Produit</h2>
+        <ul>
+          <li><a href="index.html">Accueil</a></li>
+          <li><a href="telecharger.html">Telecharger</a></li>
+          <li><a href="player.html">Lecteur web</a></li>
+          <li><a href="aide.html">Centre d'aide</a></li>
+          <li><a href="securite.html">Securite</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>Juridique</h2>
+        <ul>
+          <li><a href="cgu.html">Conditions generales</a></li>
+          <li><a href="confidentialite.html">Confidentialite</a></li>
+          <li><a href="mentions-legales.html">Mentions legales</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>Ressources</h2>
+        <ul>
+          <li><a href="https://github.com/zyko144/quality/releases/latest">Versions publiees</a></li>
+          <li><a href="securite.html#signaler">Signaler une faille</a></li>
+          <li><a href="confidentialite.html#droits">Exercer vos droits</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pied__bas">
+      <p>&copy; <span data-annee>2026</span> Qualityz — edite par <span class="a-completer">[Nom de l'editeur]</span>.</p>
+      <p>Quality n'est affilie a aucun editeur tiers.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

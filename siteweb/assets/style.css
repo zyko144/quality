@@ -117,14 +117,16 @@ body {
   letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Voile tres doux en haut de page : pose la profondeur sans degrade visible */
+  /* Voile tres doux en haut de page : pose la profondeur sans degrade visible.
+     Volontairement pas `background-attachment: fixed` — le voile doit rester
+     en haut du document, pas suivre la fenetre, et un fond fixe se repeint a
+     chaque defilement sur les pages longues comme le centre d'aide. */
   background-image: radial-gradient(
     120% 60% at 50% -10%,
     rgba(101, 112, 255, 0.06),
     transparent 62%
   );
   background-repeat: no-repeat;
-  background-attachment: fixed;
 }
 
 img,
@@ -629,6 +631,33 @@ hr {
   height: 19px;
 }
 
+/* Les limites annoncees : meme carte, mais teintee d'ambre et bordee a
+   gauche, pour qu'on la distingue d'un argument de vente au premier coup
+   d'oeil sans lui donner l'air d'une alerte. */
+.limites {
+  border-top: 1px solid var(--border);
+}
+
+.carte--limite {
+  border-color: rgba(240, 178, 50, 0.3);
+  border-left: 3px solid var(--warn);
+  background: rgba(240, 178, 50, 0.05);
+}
+
+.carte--limite:hover {
+  border-color: rgba(240, 178, 50, 0.5);
+  border-left-color: var(--warn);
+  background: rgba(240, 178, 50, 0.08);
+}
+
+.carte--limite h3 {
+  color: var(--text);
+}
+
+.carte--limite p {
+  color: var(--text-2);
+}
+
 /* Carte de telechargement par systeme */
 .carte-os {
   display: flex;
@@ -1096,6 +1125,282 @@ tbody tr:last-child th {
 
   .maquette__colonne {
     display: none;
+  }
+}
+
+/* ---------------------------------------------------- Centre d'aide -----
+   Une liste de questions repliees. Le `<details>` natif fait tout le travail :
+   il s'ouvre au clavier, il s'annonce correctement, et il reste utilisable si
+   le script ne se charge pas. */
+
+.aide {
+  padding-bottom: clamp(2rem, 5vw, 3.5rem);
+}
+
+.aide__barre {
+  max-width: 620px;
+}
+
+.aide__champ-recherche {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  transition: border-color 0.15s var(--ease);
+}
+
+.aide__champ-recherche:focus-within {
+  border-color: var(--accent);
+}
+
+.aide__champ-recherche svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: var(--text-3);
+}
+
+.aide__champ-recherche input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.8rem 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.98rem;
+}
+
+.aide__champ-recherche input::placeholder {
+  color: var(--text-3);
+}
+
+.aide__champ-recherche input:focus {
+  outline: none;
+}
+
+.aide__compte {
+  margin: 0.7rem 0 0;
+  min-height: 1.4em;
+  font-size: 0.85rem;
+  color: var(--text-3);
+}
+
+.aide__vide {
+  margin-top: 1.5rem;
+  padding: 1.2rem 1.4rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-2);
+}
+
+.aide__categorie {
+  margin-bottom: clamp(2.25rem, 5vw, 3.25rem);
+}
+
+.aide__categorie[hidden] {
+  display: none;
+}
+
+.aide__titre {
+  margin-bottom: 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-clair);
+}
+
+.aide__entree {
+  border-bottom: 1px solid var(--border);
+}
+
+.aide__entree[hidden] {
+  display: none;
+}
+
+.aide__entree > summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 0.2rem;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 500;
+  list-style: none;
+  transition: color 0.15s var(--ease);
+}
+
+/* Le triangle par defaut est remplace par un chevron dessine, plus discret et
+   identique d'un navigateur a l'autre. */
+.aide__entree > summary::-webkit-details-marker {
+  display: none;
+}
+
+.aide__entree > summary::before {
+  content: '';
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-top: 0.45em;
+  border-right: 2px solid var(--accent-clair);
+  border-bottom: 2px solid var(--accent-clair);
+  transform: rotate(-45deg);
+  transition: transform 0.18s var(--ease);
+}
+
+.aide__entree[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.aide__entree > summary:hover {
+  color: var(--accent-clair);
+}
+
+.aide__entree > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.aide__reponse {
+  padding: 0 0 1.35rem 1.85rem;
+}
+
+.aide__reponse > :last-child {
+  margin-bottom: 0;
+}
+
+.aide__reponse p,
+.aide__reponse li {
+  font-size: 0.94rem;
+}
+
+.aide__reponse ol,
+.aide__reponse ul {
+  padding-left: 1.15em;
+}
+
+/* ---------------------------------------------------------- Formulaire --- */
+
+.formulaire {
+  max-width: 780px;
+}
+
+.formulaire__avis {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0 0 1.75rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid rgba(240, 178, 50, 0.4);
+  border-radius: var(--radius);
+  background: rgba(240, 178, 50, 0.08);
+  color: var(--text-2);
+  font-size: 0.92rem;
+  max-width: none;
+}
+
+.formulaire__avis svg {
+  flex: none;
+  margin-top: 0.2em;
+  color: var(--warn);
+}
+
+.formulaire__avis--pret {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.formulaire__avis--pret svg {
+  color: var(--accent-clair);
+}
+
+.formulaire__champs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.15rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.formulaire__champs[disabled] {
+  opacity: 0.55;
+}
+
+.champ--large {
+  grid-column: 1 / -1;
+}
+
+.champ label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.champ input,
+.champ select,
+.champ textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.94rem;
+  transition: border-color 0.15s var(--ease);
+}
+
+.champ textarea {
+  resize: vertical;
+  min-height: 8rem;
+  line-height: 1.55;
+}
+
+.champ input::placeholder,
+.champ textarea::placeholder {
+  color: var(--text-3);
+}
+
+.champ input:focus,
+.champ select:focus,
+.champ textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.champ input:disabled,
+.champ select:disabled,
+.champ textarea:disabled {
+  cursor: not-allowed;
+}
+
+.champ__aide {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-3);
+}
+
+.formulaire__champs[disabled] .bouton--principal {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+
+@media (max-width: 620px) {
+  .formulaire__champs {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

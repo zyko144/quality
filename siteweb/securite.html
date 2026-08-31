@@ -31,6 +31,7 @@
       <a href="index.html">Accueil</a>
       <a href="telecharger.html">Telecharger</a>
       <a href="player.html">Lecteur web</a>
+      <a href="aide.html">Aide</a>
       <a href="securite.html" aria-current="page">Securite</a>
       <a class="bouton bouton--principal" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">Telecharger</a>
     </nav>
@@ -44,10 +45,11 @@
       <span class="surtitre">Securite</span>
       <h1>Ce que nous protegeons, et comment</h1>
       <p>
-        La meilleure donnee est celle que personne ne detient. Quality en garde le
-        moins possible : les conversations vocales ne passent pas par nos serveurs,
-        et ce qui reste est cloisonne, chiffre en transit, et mis a jour
-        automatiquement.
+        La meilleure donnee est celle que personne ne detient. Quality en garde
+        le moins possible : le son de vos conversations n'est jamais lisible par
+        nos serveurs, et ce qui reste est cloisonne, chiffre en transit et mis a
+        jour automatiquement. Nous disons aussi, plus bas,
+        <a href="#limites">ce que nous ne promettons pas</a>.
       </p>
       <h2 id="titre-mesures">Les mesures en place</h2>
     </div>
@@ -70,7 +72,7 @@
             <path d="M12 3l7 3v6c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6l7-3Z"/><path d="m9.5 12.2 1.9 1.9 3.6-3.7"/>
           </svg>
         </div>
-        <h2>Mots de passe et sessions</h2>
+        <h3>Mots de passe et sessions</h3>
         <p>Les mots de passe ne sont jamais stockes en clair : seule une empreinte cryptographique est conservee, par un service d'authentification dedie. Les sessions sont porteuses de jetons a duree limitee, renouveles automatiquement.</p>
       </article>
 
@@ -80,7 +82,7 @@
             <rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>
           </svg>
         </div>
-        <h2>Cloisonnement des donnees</h2>
+        <h3>Cloisonnement des donnees</h3>
         <p>Les regles d'acces sont appliquees dans la base elle-meme, ligne par ligne, et non seulement dans l'interface. Un compte ne peut lire que les espaces dont il est membre, meme si une requete est forgee a la main.</p>
       </article>
 
@@ -90,8 +92,8 @@
             <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>
           </svg>
         </div>
-        <h2>Voix et video en pair-a-pair</h2>
-        <p>Les flux audio, video et de partage d'ecran sont etablis directement entre les participants, via WebRTC, et chiffres par ce protocole. Nos serveurs ne les recoivent pas et ne peuvent donc ni les ecouter ni les conserver.</p>
+        <h3>Voix et video en pair-a-pair</h3>
+        <p>Les flux audio, video et de partage d'ecran sont etablis directement entre les participants, via WebRTC, et chiffres par ce protocole. Nous ne detenons pas les cles : meme lorsqu'un relais achemine le flux, faute de liaison directe possible, il ne peut ni l'ecouter ni le conserver.</p>
       </article>
 
       <article class="carte">
@@ -100,7 +102,7 @@
             <path d="M12 3 4 6.5v5c0 4.5 3.4 8.3 8 9.5 4.6-1.2 8-5 8-9.5v-5L12 3Z"/><path d="M12 11v4"/><path d="M12 8h.01"/>
           </svg>
         </div>
-        <h2>Mises a jour signees</h2>
+        <h3>Mises a jour signees</h3>
         <p>Chaque mise a jour est signee avec une cle privee que nous seuls detenons. L'application embarque la cle publique correspondante et refuse d'installer un paquet dont la signature ne correspond pas.</p>
       </article>
 
@@ -110,42 +112,59 @@
             <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/>
           </svg>
         </div>
-        <h2>Une surface d'attaque reduite</h2>
+        <h3>Une surface d'attaque reduite</h3>
         <p>Quality n'embarque pas son propre navigateur : elle s'appuie sur le moteur de rendu du systeme, tenu a jour par celui-ci. Moins de code embarque, c'est moins de failles heritees a corriger nous-memes.</p>
       </article>
 
     </div>
   </section>
 
-  <!-- Le pendant honnete des promesses ci-dessus. -->
-  <section class="enveloppe section--serre" aria-labelledby="titre-limites">
-    <div class="encart encart--avertissement" role="note">
-      <h2 class="encart__titre" id="titre-limites">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.5M12 17.5h.01"/>
-        </svg>
-        Ce que nous ne promettons pas
-      </h2>
+  <!-- Le pendant honnete des promesses ci-dessus. Cette section est traitee
+       comme l'egale de « Les mesures en place » : meme rang de titre, meme
+       place dans le flux. Une limite releguee en bas de page n'est pas une
+       limite annoncee. -->
+  <section class="enveloppe section limites" id="limites" aria-labelledby="titre-limites">
+    <div class="section__intro">
+      <span class="surtitre">En toute franchise</span>
+      <h2 id="titre-limites">Ce que nous ne promettons pas</h2>
       <p>
-        <strong>Le pair-a-pair a une contrepartie.</strong> Une liaison directe
-        suppose que les deux machines connaissent leurs adresses reseau : dans un
-        salon vocal, votre adresse IP peut donc etre visible des autres
-        participants. Lorsqu'une liaison directe est impossible, un serveur de
-        relais prend le relais et masque cette adresse, sans pouvoir dechiffrer
-        les flux.
+        Trois choses que ce logiciel ne fait pas, et qu'aucune formule habile ne
+        rendra vraies. Mieux vaut les lire ici qu'en faire la decouverte plus
+        tard.
       </p>
-      <p>
-        <strong>Les messages ecrits ne sont pas chiffres de bout en bout.</strong>
-        Ils sont chiffres en transit et cloisonnes dans la base, mais ils y sont
-        stockes de facon lisible par le service — c'est ce qui permet de les
-        retrouver d'un appareil a l'autre et de les rechercher. Ne confiez pas a
-        un salon ce que vous ne confieriez pas a un hebergeur.
-      </p>
-      <p>
-        <strong>Aucun audit externe n'a ete conduit a ce jour.</strong> Ce qui est
-        decrit ici correspond a la conception du logiciel, non au resultat d'une
-        certification.
-      </p>
+    </div>
+
+    <div class="grille grille--3" data-apparition>
+
+      <article class="carte carte--limite">
+        <h3>Le pair-a-pair a une contrepartie</h3>
+        <p>
+          Une liaison directe suppose que les deux machines connaissent leurs
+          adresses reseau : dans un salon vocal, votre adresse IP peut donc etre
+          visible des autres participants. Lorsqu'une liaison directe est
+          impossible, un serveur de relais prend le relais et masque cette
+          adresse, sans pouvoir dechiffrer les flux.
+        </p>
+      </article>
+
+      <article class="carte carte--limite">
+        <h3>Les messages ecrits ne sont pas chiffres de bout en bout</h3>
+        <p>
+          Ils sont chiffres en transit et cloisonnes dans la base, mais ils y
+          sont stockes de facon lisible par le service — c'est ce qui permet de
+          les retrouver d'un appareil a l'autre et de les rechercher. Ne confiez
+          pas a un salon ce que vous ne confieriez pas a un hebergeur.
+        </p>
+      </article>
+
+      <article class="carte carte--limite">
+        <h3>Aucun audit externe n'a ete conduit a ce jour</h3>
+        <p>
+          Ce qui est decrit ici correspond a la conception du logiciel, non au
+          resultat d'une certification. Si cela change, cette page le dira.
+        </p>
+      </article>
+
     </div>
   </section>
 
@@ -243,6 +262,7 @@
           <li><a href="index.html">Accueil</a></li>
           <li><a href="telecharger.html">Telecharger</a></li>
           <li><a href="player.html">Lecteur web</a></li>
+          <li><a href="aide.html">Centre d'aide</a></li>
           <li><a href="securite.html">Securite</a></li>
         </ul>
       </div>
