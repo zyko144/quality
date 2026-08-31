@@ -24,6 +24,11 @@ import { EmojiPicker } from '@/components/EmojiPicker';
 import { LIMITS } from '@/constants';
 import { formatBytes, formatRelative } from '@/lib/time';
 import type { Profile, UUID } from '@/types/db';
+import {
+  useSuggestions,
+  SUGGESTION_MIN,
+  SUGGESTION_MAX,
+} from '@/store/suggestions';
 
 interface ComposerProps {
   channelId: UUID;
@@ -300,6 +305,48 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
   const submit = useCallback(async () => {
     const trimmed = value.trim();
     if ((!trimmed && uploads.length === 0) || !profile || sending || blocked) return;
+
+    /*
+     * `/suggestion` n'envoie pas un message : il depose une suggestion.
+     *
+     * La commande est la seule porte d'entree, et c'est voulu. Un champ
+     * toujours ouvert recueille surtout des essais ; ecrire une commande
+     * demande d'avoir voulu proposer. Ce qui suit n'atteint donc jamais le
+     * salon : une suggestion n'est pas une conversation, et la laisser aussi
+     * dans le fil obligerait a la lire deux fois.
+     */
+    const commande = /^\/suggestion\b\s*([\s\S]*)$/i.exec(trimmed);
+
+    if (commande) {
+      const idee = (commande[1] ?? '').trim();
+
+      if (idee.length < SUGGESTION_MIN) {
+        setNotice(
+          `Ecrivez votre idee apres la commande, en ${SUGGESTION_MIN} caracteres au moins.`,
+        );
+        return;
+      }
+
+      if (idee.length > SUGGESTION_MAX) {
+        setNotice(`Une suggestion tient en ${SUGGESTION_MAX} caracteres.`);
+        return;
+      }
+
+      setSending(true);
+      const pose = await useSuggestions.getState().proposer(idee);
+      setSending(false);
+
+      if (!pose) {
+        setNotice('La suggestion n’a pas pu etre enregistree.');
+        return;
+      }
+
+      setValue('');
+      setNotice(null);
+      // On ouvre la liste : sans cela, la suggestion part sans qu'on voie ou.
+      useUI.getState().showSuggestions();
+      return;
+    }
 
     setSending(true);
 

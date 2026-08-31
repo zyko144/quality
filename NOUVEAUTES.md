@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.3
+
+### Nouveau
+
+- Un espace **Suggestions**, sous Waves. On y propose par la commande `/suggestion` suivie de son idee, depuis n'importe quel salon — c'est la seule porte d'entree : ecrire une commande demande d'avoir voulu proposer, la ou un champ toujours ouvert recueille surtout des essais.
+- On vote pour ou contre. Le vote est binaire et non un compte de « j'aime » : une idee peut deranger autant qu'elle plait, et une echelle a un seul sens ne dirait que la moitie de ce qu'on veut savoir. Recliquer sur son vote le retire.
+- Les plus soutenues remontent. Une liste chronologique enterrerait une bonne idee sous une semaine de nouvelles.
+
 ## 0.3.2
 
 ### Corrige

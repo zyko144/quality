@@ -61,6 +61,8 @@ interface UIState {
    * ranger parmi les salons obligerait a la traiter comme tel partout ailleurs.
    */
   wavesOpen: boolean;
+  /** La liste des suggestions, sous « Waves ». */
+  suggestionsOpen: boolean;
   /** Parametres en pleine page ; `null` quand ils sont fermes. */
   settings: SettingsSection | null;
   activeSpaceId: UUID | null;
@@ -101,6 +103,7 @@ interface UIState {
   selectSpace: (spaceId: UUID | null) => void;
   showDirectMessages: () => void;
   showWaves: () => void;
+  showSuggestions: () => void;
   selectChannel: (channelId: UUID) => void;
   openThread: (threadId: UUID) => void;
   closeThread: () => void;
@@ -122,6 +125,7 @@ export const useUI = create<UIState>((set, get) => ({
   view: 'space',
   friendsOpen: false,
   wavesOpen: false,
+  suggestionsOpen: false,
   settings: null,
   activeSpaceId: null,
   activeChannelId: null,
@@ -143,6 +147,7 @@ export const useUI = create<UIState>((set, get) => ({
       view: 'direct',
       friendsOpen: true,
       wavesOpen: false,
+  suggestionsOpen: false,
       activeSpaceId: null,
       activeChannelId: null,
       activeThreadId: null,
@@ -158,6 +163,7 @@ export const useUI = create<UIState>((set, get) => ({
       view: 'space',
       friendsOpen: false,
       wavesOpen: false,
+  suggestionsOpen: false,
       activeSpaceId: spaceId,
       activeChannelId: null,
       activeThreadId: null,
@@ -173,6 +179,7 @@ export const useUI = create<UIState>((set, get) => ({
       // meme zone.
       friendsOpen: false,
       wavesOpen: false,
+  suggestionsOpen: false,
       // Choisir un salon referme le tiroir : sur mobile il masque la
       // conversation qu'on vient justement de demander.
       navOpen: false,
@@ -191,6 +198,7 @@ export const useUI = create<UIState>((set, get) => ({
       // qu'on demarre une conversation, et la liste de gauche peut etre vide.
       friendsOpen: true,
       wavesOpen: false,
+  suggestionsOpen: false,
       activeSpaceId: null,
       activeChannelId: null,
       activeThreadId: null,
@@ -214,7 +222,22 @@ export const useUI = create<UIState>((set, get) => ({
   toggleVoiceChat: () => set((state) => ({ voiceChatOpen: !state.voiceChatOpen })),
 
   showWaves: () =>
-    set({ view: 'direct', friendsOpen: false, wavesOpen: true, activeChannelId: null }),
+    set({
+      view: 'direct',
+      friendsOpen: false,
+      wavesOpen: true,
+      suggestionsOpen: false,
+      activeChannelId: null,
+    }),
+
+  showSuggestions: () =>
+    set({
+      view: 'direct',
+      friendsOpen: false,
+      wavesOpen: false,
+      suggestionsOpen: true,
+      activeChannelId: null,
+    }),
 
   openModal: (modal) => set({ modal }),
   closeModal: () => set({ modal: { kind: 'none' } }),

@@ -82,6 +82,30 @@ function WavesEntry() {
   );
 }
 
+/**
+ * L'entree des suggestions.
+ *
+ * En ambre plutot qu'aux couleurs de l'application : c'est le seul endroit ou
+ * l'on s'adresse a ceux qui font Quality plutot qu'a ses autres utilisateurs, et
+ * cette difference merite de se voir.
+ */
+function SuggestionsEntry() {
+  const ouvert = useUI((state) => state.suggestionsOpen);
+  const montrer = useUI((state) => state.showSuggestions);
+
+  return (
+    <button
+      type="button"
+      className={'dm-friends dm-suggestions' + (ouvert ? ' is-active' : '')}
+      onClick={montrer}
+      aria-current={ouvert ? 'page' : undefined}
+    >
+      <Icon name="inbox" size={19} />
+      Suggestions
+    </button>
+  );
+}
+
 export function DirectMessageList() {
   const channels = useChat((state) => state.channels);
   const dmParticipants = useChat((state) => state.dmParticipants);
@@ -145,6 +169,7 @@ export function DirectMessageList() {
       <div className="sidebar__scroll scroll">
         <FriendsEntry />
       <WavesEntry />
+      <SuggestionsEntry />
 
         {hasAny ? (
           <div className="dm-search">
