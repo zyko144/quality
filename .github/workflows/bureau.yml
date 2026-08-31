@@ -294,6 +294,10 @@ jobs:
         run: |
           set -euo pipefail
           paquet=$(ls src-tauri/target/${{ matrix.cible }}/release/bundle/nsis/*-setup.exe | head -1)
+          cp "$paquet" Echow-setup.exe
+          # L'ancien nom reste publie le temps que les liens existants — sites,
+          # messages, favoris — cessent de le reclamer. Copier un fichier ne
+          # coute rien ; une 404 sur un bouton de telechargement, si.
           cp "$paquet" Quality-setup.exe
           etiquette=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
-          gh release upload "$etiquette" Quality-setup.exe --clobber
+          gh release upload "$etiquette" Echow-setup.exe Quality-setup.exe --clobber

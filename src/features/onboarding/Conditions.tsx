@@ -137,7 +137,7 @@ export function Conditions() {
   };
 
   return (
-    <div className="conditions" role="dialog" aria-modal="true" aria-label="Regles de Quality">
+    <div className="conditions" role="dialog" aria-modal="true" aria-label="Regles d’Echow">
       <div className="conditions__boite">
         <header className="conditions__entete">
           <span className="conditions__logo" aria-hidden="true">

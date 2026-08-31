@@ -302,7 +302,7 @@ export function Landing() {
  */
 function AppPreview() {
   return (
-    <div className="preview" role="img" aria-label="Apercu de l’interface de Quality">
+    <div className="preview" role="img" aria-label="Apercu de l’interface d’Echow">
       <div className="preview__frame">
         <div className="preview__rail">
           <span className="preview__rail-dot preview__rail-dot--home" />

@@ -86,7 +86,7 @@ function WavesEntry() {
  * L'entree des suggestions.
  *
  * En ambre plutot qu'aux couleurs de l'application : c'est le seul endroit ou
- * l'on s'adresse a ceux qui font Quality plutot qu'a ses autres utilisateurs, et
+ * l'on s'adresse a ceux qui font Echow plutot qu'a ses autres utilisateurs, et
  * cette difference merite de se voir.
  */
 function SuggestionsEntry() {

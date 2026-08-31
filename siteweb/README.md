@@ -90,7 +90,7 @@ n'en charge aucune, ce qui rend cette regle gratuite.
 Il pointe vers la derniere version publiee sur GitHub :
 
 ```
-https://github.com/zyko144/Echow/releases/latest/download/Echow-setup.exe
+https://github.com/zyko144/quality/releases/latest/download/Echow-setup.exe
 ```
 
 Cette adresse ne change jamais : `latest` suit les publications. Rien a

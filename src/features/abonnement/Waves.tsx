@@ -75,7 +75,7 @@ export function Waves() {
         <h1 className="waves__titre">Waves</h1>
 
         <p className="waves__accroche">
-          Cinq euros par mois pour soutenir Quality et essayer ce qui arrive
+          Cinq euros par mois pour soutenir Echow et essayer ce qui arrive
           avant les autres.
         </p>
 

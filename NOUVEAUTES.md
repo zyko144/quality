@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.8
+
+### Nouveau
+
+- L'application s'appelle **Echow**. Les derniers textes qui portaient encore l'ancien nom sont repris.
+
+### Corrige
+
+- Les liens de telechargement du site pointaient vers un depot qui n'existe pas : le renommage les avait fait viser `zyko144/Echow`, quand le depot reste `zyko144/quality`. Tous les boutons rendaient une erreur 404.
+- L'installateur est publie sous ses deux noms pendant la transition, pour que les liens deja partages continuent de repondre.
+
 ## 0.3.7
 
 ### Corrige
