@@ -2188,3 +2188,32 @@ button.userbar__voice-info:hover {
 .maj__liste li::marker {
   color: var(--text-faint);
 }
+
+/* --------------------------------------------------------------------------
+   L'etat vocal se lit sur la photo
+   --------------------------------------------------------------------------
+   Meme grammaire de couleurs que sur la scene vocale : rouge pour un micro
+   coupe, orange pour une sourdine. Les deux ne se cumulent pas a l'affichage —
+   etre sourd implique d'etre muet, et montrer les deux anneaux l'un dans
+   l'autre n'apprendrait rien de plus.
+   -------------------------------------------------------------------------- */
+
+.voice-member__face {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--radius-full);
+  /* L'anneau est une ombre portee, pas une bordure : une bordure agrandirait
+     la photo de deux pixels et ferait sauter la ligne a chaque changement
+     d'etat. */
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.voice-member__face.is-muted {
+  box-shadow: 0 0 0 2px var(--danger);
+}
+
+.voice-member__face.is-deafened {
+  box-shadow: 0 0 0 2px var(--warning, #f0b232);
+}

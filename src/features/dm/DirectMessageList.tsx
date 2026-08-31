@@ -106,6 +106,32 @@ function SuggestionsEntry() {
   );
 }
 
+/**
+ * L'entree du support, juste apres « Suggestions ».
+ *
+ * En rouge, la ou les suggestions sont en ambre. Les deux mènent a l'equipe,
+ * mais on n'y va pas pour la meme chose : proposer une idee peut attendre, un
+ * compte pirate ou un signalement non. La couleur est ce qui permet de
+ * distinguer les deux sans lire, et le rouge est deja celui de l'urgence
+ * partout ailleurs dans l'application.
+ */
+function SupportEntry() {
+  const ouvert = useUI((state) => state.supportOpen);
+  const montrer = useUI((state) => state.showSupport);
+
+  return (
+    <button
+      type="button"
+      className={'dm-friends dm-support' + (ouvert ? ' is-active' : '')}
+      onClick={montrer}
+      aria-current={ouvert ? 'page' : undefined}
+    >
+      <Icon name="mail" size={19} />
+      Support
+    </button>
+  );
+}
+
 export function DirectMessageList() {
   const channels = useChat((state) => state.channels);
   const dmParticipants = useChat((state) => state.dmParticipants);
@@ -168,8 +194,9 @@ export function DirectMessageList() {
 
       <div className="sidebar__scroll scroll">
         <FriendsEntry />
-      <WavesEntry />
-      <SuggestionsEntry />
+        <WavesEntry />
+        <SuggestionsEntry />
+        <SupportEntry />
 
         {hasAny ? (
           <div className="dm-search">

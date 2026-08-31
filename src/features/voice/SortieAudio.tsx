@@ -11,10 +11,8 @@ import type { UUID } from '@/types/db';
  * demontee des qu'on change de salon, et le son mourait avec elle — on
  * n'entendait plus personne des qu'on allait lire un message ailleurs.
  *
- * Deux sortes de son, et c'est nouveau : la voix, et le son de ce qui est
- * partage. Ils arrivaient auparavant dans le meme casier, ou le dernier
- * effacait le premier — d'ou un son de partage qui n'arrivait jamais, ou une
- * voix qui disparaissait quand son auteur partageait son ecran.
+ * Deux sortes de son : la voix, et le son de ce qui est partage. Ils arrivaient
+ * autrefois dans le meme casier, ou le dernier effacait le premier.
  */
 export function SortieAudio() {
   const remoteAudio = useVoice((state) => state.remoteAudio);
@@ -41,14 +39,12 @@ export function SortieAudio() {
 }
 
 /**
- * Contexte partage pour l'amplification.
+ * Contexte partage, ouvert seulement si quelqu'un depasse cent pour cent.
  *
  * Un `<audio>` ne monte pas au-dessus de son volume d'origine : `volume` est
- * borne a un. Pour depasser cent pour cent — utile pour quelqu'un dont le micro
- * est trop discret — il faut passer par le graphe audio.
- *
- * Un seul contexte pour tout le monde : en ouvrir un par personne couterait un
- * fil audio par personne, pour un reglage que la plupart ne touchent jamais.
+ * borne a un. Amplifier demande donc de passer par le graphe audio — mais
+ * l'ouvrir pour tout le monde couterait un fil audio par personne, pour un
+ * reglage que la plupart ne touchent jamais.
  */
 let contexteCommun: AudioContext | null = null;
 
@@ -89,31 +85,53 @@ function Flux({
 
   const position = genre === 'voix' ? volumeVoix : volumePartage;
 
+  /*
+   * Une seule valeur, d'ou tout decoule.
+   *
+   * Se rendre sourd et couper quelqu'un ne sont pas des etats a part : ce sont
+   * des gains a zero. Les traiter separement etait la cause d'un defaut serieux
+   * — voir plus bas.
+   */
+  const gain = sourd || coupePersonne ? 0 : gainDepuisPosition(position) * outputVolume;
+
   useEffect(() => {
     const node = ref.current;
     if (!node || !stream) return;
 
     node.srcObject = stream;
-    // Un flux qui arrive pendant que la fenetre est en arriere-plan ne demarre
-    // pas toujours seul ; le refus est sans consequence ici.
     void node.play().catch(() => undefined);
   }, [stream]);
 
   /*
-   * L'amplification passe par le graphe, le reste par l'element.
+   * Le son passe par un seul chemin a la fois, et l'autre est reduit au silence.
    *
-   * Sous cent pour cent, `volume` suffit et evite d'ouvrir un contexte audio.
-   * Au-dessus, on branche un gain — et l'element est alors mis a un, sans quoi
-   * les deux se multiplieraient.
+   * La version precedente choisissait le chemin a chaque rendu, sans defaire le
+   * precedent. Deux consequences, et ce sont exactement les defauts observes :
    *
-   * Si le contexte refuse de demarrer, on reste sur l'element : le son est
-   * alors plafonne a cent pour cent, ce qui est une limite, pas un silence.
+   *  - Une fois le graphe ouvert pour amplifier quelqu'un, redescendre sous
+   *    cent pour cent reprenait l'element sans debrancher le graphe : on
+   *    entendait les deux, ou plus rien du tout selon les volumes.
+   *
+   *  - L'attribut `muted` de l'element ne coupe pas le graphe. Se rendre sourd
+   *    laissait donc passer les voix amplifiees, et surtout : `volume` avait ete
+   *    mis a zero au moment de brancher le graphe, si bien qu'en revenant a
+   *    l'element on obtenait un silence definitif. C'est le « je me demute et
+   *    c'est comme si j'etais encore en sourdine » — il fallait relancer
+   *    l'application, puisque rien ne remettait ce zero a sa place.
+   *
+   * Desormais le graphe, une fois ouvert, garde la main pour de bon : deux
+   * chemins qui se relaient sont deux occasions de ne pas s'accorder.
    */
   useEffect(() => {
     const node = ref.current;
     if (!node || !stream) return;
 
-    const gain = gainDepuisPosition(position) * outputVolume;
+    // Le graphe tient deja la sortie : on ne repasse pas par l'element.
+    if (gainRef.current) {
+      gainRef.current.gain.value = Math.max(0, gain);
+      node.volume = 0;
+      return;
+    }
 
     if (gain <= 1) {
       node.volume = Math.max(0, gain);
@@ -122,29 +140,25 @@ function Flux({
 
     const ctx = contexte();
     if (!ctx) {
+      // Sans graphe, le son plafonne a cent pour cent. C'est une limite, pas un
+      // silence : mieux vaut entendre moins fort que ne rien entendre.
       node.volume = 1;
       return;
     }
 
     if (ctx.state === 'suspended') void ctx.resume().catch(() => undefined);
 
-    if (!gainRef.current) {
-      try {
-        const source = ctx.createMediaStreamSource(stream);
-        const noeud = ctx.createGain();
-        source.connect(noeud).connect(ctx.destination);
-        gainRef.current = noeud;
-      } catch {
-        node.volume = 1;
-        return;
-      }
+    try {
+      const source = ctx.createMediaStreamSource(stream);
+      const noeud = ctx.createGain();
+      source.connect(noeud).connect(ctx.destination);
+      gainRef.current = noeud;
+      noeud.gain.value = gain;
+      node.volume = 0;
+    } catch {
+      node.volume = 1;
     }
-
-    // L'element se tait : c'est le graphe qui produit le son a present, et le
-    // laisser jouer ferait entendre les deux chemins a la fois.
-    node.volume = 0;
-    gainRef.current.gain.value = gain;
-  }, [position, outputVolume, stream]);
+  }, [gain, stream]);
 
   useEffect(
     () => () => {
@@ -161,11 +175,12 @@ function Flux({
   }, [speakerId]);
 
   /*
-   * Se rendre sourd coupe tout, le partage comme la voix.
+   * `muted` reste pose, en plus du gain.
    *
-   * Couper quelqu'un en particulier coupe aussi son partage : c'est le meme
-   * geste, dirige contre la meme personne — on ne coupe pas quelqu'un pour
-   * continuer d'entendre son jeu.
+   * Il ne suffit pas — il n'a aucune prise sur le graphe — mais il coupe
+   * l'element sans attendre le rendu suivant, et c'est le chemin qu'emprunte la
+   * quasi-totalite des flux. Deux verrous plutot qu'un, sur ce qui doit se
+   * taire immediatement.
    */
   return <audio ref={ref} autoPlay muted={sourd || coupePersonne} />;
 }

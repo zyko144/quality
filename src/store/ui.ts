@@ -63,6 +63,15 @@ interface UIState {
   wavesOpen: boolean;
   /** La liste des suggestions, sous « Waves ». */
   suggestionsOpen: boolean;
+  /**
+   * La page du support, sous « Suggestions ».
+   *
+   * Un etat de plus plutot qu'un champ unique disant « quelle page » : le
+   * passage a un tel champ toucherait les quatre pages existantes, pour ne
+   * gagner qu'une ligne ici. Le jour ou il y en aura huit, la question se
+   * reposera d'elle-meme.
+   */
+  supportOpen: boolean;
   /** Parametres en pleine page ; `null` quand ils sont fermes. */
   settings: SettingsSection | null;
   activeSpaceId: UUID | null;
@@ -104,6 +113,7 @@ interface UIState {
   showDirectMessages: () => void;
   showWaves: () => void;
   showSuggestions: () => void;
+  showSupport: () => void;
   selectChannel: (channelId: UUID) => void;
   openThread: (threadId: UUID) => void;
   closeThread: () => void;
@@ -126,6 +136,7 @@ export const useUI = create<UIState>((set, get) => ({
   friendsOpen: false,
   wavesOpen: false,
   suggestionsOpen: false,
+  supportOpen: false,
   settings: null,
   activeSpaceId: null,
   activeChannelId: null,
@@ -147,7 +158,8 @@ export const useUI = create<UIState>((set, get) => ({
       view: 'direct',
       friendsOpen: true,
       wavesOpen: false,
-  suggestionsOpen: false,
+      suggestionsOpen: false,
+      supportOpen: false,
       activeSpaceId: null,
       activeChannelId: null,
       activeThreadId: null,
@@ -163,7 +175,8 @@ export const useUI = create<UIState>((set, get) => ({
       view: 'space',
       friendsOpen: false,
       wavesOpen: false,
-  suggestionsOpen: false,
+      suggestionsOpen: false,
+      supportOpen: false,
       activeSpaceId: spaceId,
       activeChannelId: null,
       activeThreadId: null,
@@ -179,7 +192,8 @@ export const useUI = create<UIState>((set, get) => ({
       // meme zone.
       friendsOpen: false,
       wavesOpen: false,
-  suggestionsOpen: false,
+      suggestionsOpen: false,
+      supportOpen: false,
       // Choisir un salon referme le tiroir : sur mobile il masque la
       // conversation qu'on vient justement de demander.
       navOpen: false,
@@ -198,7 +212,8 @@ export const useUI = create<UIState>((set, get) => ({
       // qu'on demarre une conversation, et la liste de gauche peut etre vide.
       friendsOpen: true,
       wavesOpen: false,
-  suggestionsOpen: false,
+      suggestionsOpen: false,
+      supportOpen: false,
       activeSpaceId: null,
       activeChannelId: null,
       activeThreadId: null,
@@ -227,6 +242,7 @@ export const useUI = create<UIState>((set, get) => ({
       friendsOpen: false,
       wavesOpen: true,
       suggestionsOpen: false,
+      supportOpen: false,
       activeChannelId: null,
     }),
 
@@ -236,6 +252,17 @@ export const useUI = create<UIState>((set, get) => ({
       friendsOpen: false,
       wavesOpen: false,
       suggestionsOpen: true,
+      supportOpen: false,
+      activeChannelId: null,
+    }),
+
+  showSupport: () =>
+    set({
+      view: 'direct',
+      friendsOpen: false,
+      wavesOpen: false,
+      suggestionsOpen: false,
+      supportOpen: true,
       activeChannelId: null,
     }),
 

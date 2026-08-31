@@ -12,6 +12,23 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.0
+
+### Corrige
+
+- **Se demuter laissait sourd.** Deux chemins de sortie audio se relayaient sans se defaire : une fois le graphe ouvert pour amplifier quelqu'un, le volume de l'element restait a zero, et revenir dessus donnait un silence definitif qu'il fallait relancer l'application pour lever. C'est aussi ce qui faisait qu'on n'entendait plus certaines personnes.
+- Se rendre sourd ne coupait pas les voix amplifiees : l'attribut `muted` d'un element audio n'a aucune prise sur le graphe. Sourdine et coupure sont desormais des gains a zero, une seule valeur d'ou tout decoule.
+- Le casque de l'icone de sourdine paraissait perce : ses coussinets etaient des contours fermes, et tout le jeu d'icones est trace sans remplissage.
+- Le logo etait pixelise dans la barre des taches. Chaque taille est desormais rendue depuis un maitre de 2048 pixels, et l'icone Windows en porte dix — le systeme prend celle dont il a besoin au lieu d'en reduire une autre.
+- Le logo est centre sur la forme de la vague et non sur le cadre de l'image : la pointe de la bulle decalait tout vers le bas.
+
+### Nouveau
+
+- Les raccourcis vocaux se choisissent. Ils etaient fixes dans le code — or `Ctrl+Maj+M` est deja pris par plusieurs jeux, et qui parle en jouant n'avait aucun moyen de contourner le conflit.
+- **Parler en maintenant une touche.** Relacher rend l'etat qui precedait l'appui, plutot que de couper : qui parlait deja micro ouvert continue de parler.
+- Le volume d'un partage se regle sur l'image, a cote du plein ecran. Il n'existait que dans le menu contextuel de la personne, a trois gestes d'un son trop fort.
+- Dans la liste des salons, un anneau colore autour de la photo dit qui est muet et qui est sourd — rouge et orange, comme sur la scene vocale.
+
 ## 0.3.9
 
 ### Nouveau

@@ -56,9 +56,19 @@ const PATHS = {
   mic: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v3',
   'mic-off':
     'M2 2l20 20 M9 9v3a3 3 0 0 0 5.12 2.12 M15 9.34V5a3 3 0 0 0-5.94-.6 M19 10v2a7 7 0 0 1-.9 3.4 M5 10v2a7 7 0 0 0 11 5.7 M12 19v3',
-  headphones: 'M3 18v-6a9 9 0 0 1 18 0v6 M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3Z',
+  /*
+   * Casque : un arceau, et deux coussinets pleins.
+   *
+   * Les coussinets etaient des rectangles arrondis fermes. Tout le jeu est
+   * trace sans remplissage, si bien qu'un contour ferme se lit comme un
+   * anneau — le casque paraissait perce de deux trous. Deux traits verticaux
+   * epais n'ont pas d'interieur, et tiennent a seize pixels.
+   */
+  headphones: 'M3 17v-5a9 9 0 0 1 18 0v5 M4.6 15.4v4 M19.4 15.4v4',
+  /* Le meme, barre. L'arceau s'arrete la ou la barre le coupe : le prolonger
+     donnerait deux traits qui se croisent sans raison lisible. */
   'headphones-off':
-    'M2 2l20 20 M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3Z M3 18v-6a9 9 0 0 1 13.5-7.8',
+    'M2 2l20 20 M3 17v-5a9 9 0 0 1 13.5-7.8 M21 17v-5a8.9 8.9 0 0 0-.6-3.2 M4.6 15.4v4 M19.4 15.4v4',
   screen: 'M2 4h20v12H2Z M8 20h8 M12 16v4',
   // Combine classique : le microtelephone incline. Trace dans le meme style
   // que `phone-off`, dont il est le pendant, pour que les deux etats du bouton

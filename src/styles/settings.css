@@ -1389,3 +1389,83 @@
   margin-top: var(--space-1);
   padding-top: var(--space-5);
 }
+
+/* --------------------------------------------------------------------------
+   Choisir ses raccourcis
+   -------------------------------------------------------------------------- */
+
+.raccourcis {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.raccourcis__ligne {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+.raccourcis__corps {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.raccourcis__libelle {
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.raccourcis__detail {
+  max-width: 58ch;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* La touche se lit comme une touche : bordure marquee, chiffres alignes. */
+.raccourcis__touche {
+  min-width: 150px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: center;
+  cursor: pointer;
+}
+
+.raccourcis__touche:hover {
+  border-color: var(--accent);
+}
+
+/* En attente d'une frappe : la bordure bat, pour qu'on sache que le clavier
+   est ecoute et qu'une touche va etre prise. */
+.raccourcis__touche.is-ecoute {
+  border-color: var(--accent);
+  color: var(--accent-text);
+  animation: raccourci-attend 1.2s ease-in-out infinite;
+}
+
+@keyframes raccourci-attend {
+  50% { border-color: color-mix(in oklab, var(--accent) 35%, transparent); }
+}
+
+[data-motion='reduced'] .raccourcis__touche.is-ecoute,
+:root[data-perf='on'] .raccourcis__touche.is-ecoute {
+  animation: none;
+}
+
+.raccourcis__vide {
+  width: 28px;
+  flex: none;
+}

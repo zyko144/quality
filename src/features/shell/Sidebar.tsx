@@ -576,9 +576,36 @@ function ChannelItem({
                     profile ? `Voir le profil de ${profile.display_name}` : 'Voir le profil'
                   }
                 >
-                  <Avatar profile={profile} size={20} />
+                  {/*
+                    L'etat se lit sur la photo, pas seulement a cote.
+
+                    Une petite icone posee apres le nom demande de la chercher
+                    dans une liste de six personnes. Un anneau colore autour du
+                    visage se voit sans etre lu — c'est ce qui permet de savoir
+                    qui parle et qui n'entend pas d'un seul regard.
+
+                    L'icone reste : la couleur seule ne dirait rien a qui ne la
+                    distingue pas, et rien ne remplace un dessin explicite.
+                  */}
+                  <span
+                    className={
+                      'voice-member__face' +
+                      (participant.deafened
+                        ? ' is-deafened'
+                        : participant.muted
+                          ? ' is-muted'
+                          : '')
+                    }
+                  >
+                    <Avatar profile={profile} size={20} />
+                  </span>
+
                   <span className="truncate">{profile?.display_name ?? 'Quelqu’un'}</span>
-                  {participant.muted ? <Icon name="mic-off" size={12} /> : null}
+                  {participant.deafened ? (
+                    <Icon name="headphones-off" size={12} />
+                  ) : participant.muted ? (
+                    <Icon name="mic-off" size={12} />
+                  ) : null}
                   {participant.sharing ? <Icon name="screen" size={12} /> : null}
                 </button>
               </li>

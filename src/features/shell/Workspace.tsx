@@ -23,6 +23,9 @@ import { SettingsPage } from '@/features/settings/SettingsPage';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { Waves } from '@/features/abonnement/Waves';
 import { Suggestions } from '@/features/suggestions/Suggestions';
+import { useRaccourcis, correspond } from '@/store/raccourcis';
+import { PousserPourParler } from '@/features/voice/PousserPourParler';
+import { Support } from '@/features/support/Support';
 import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
 import { Icon } from '@/components/Icon';
@@ -46,6 +49,7 @@ export function Workspace() {
   const friendsOpen = useUI((state) => state.friendsOpen);
   const wavesOpen = useUI((state) => state.wavesOpen);
   const suggestionsOpen = useUI((state) => state.suggestionsOpen);
+  const supportOpen = useUI((state) => state.supportOpen);
   const settings = useUI((state) => state.settings);
   const activeSpaceId = useUI((state) => state.activeSpaceId);
   const activeChannelId = useUI((state) => state.activeChannelId);
@@ -279,36 +283,35 @@ export function Workspace() {
        */
       const enVocal = useVoice.getState().channelId !== null;
 
-      if (modifier && event.shiftKey && event.key.toLowerCase() === 'm' && enVocal) {
-        event.preventDefault();
-        useVoice.getState().toggleMute();
-        return;
-      }
+      /*
+       * Les raccourcis vocaux viennent des reglages, plus du code.
+       *
+       * Ils etaient fixes ici. Cela tenait tant qu'ils ne genaient personne,
+       * mais `Ctrl+Maj+M` est deja pris par plusieurs jeux — et qui parle en
+       * jouant n'avait aucun moyen de contourner le conflit.
+       *
+       * Voir `raccourcis.ts` : la comparaison porte sur `code`, la touche
+       * physique, et non sur le caractere produit. Une touche choisie en AZERTY
+       * reste la meme touche.
+       */
+      if (enVocal) {
+        const { pour } = useRaccourcis.getState();
+        const voix = useVoice.getState();
 
-      if (modifier && event.shiftKey && event.key.toLowerCase() === 'd' && enVocal) {
-        event.preventDefault();
-        useVoice.getState().toggleDeafen();
-        return;
-      }
+        const actions: [Parameters<typeof pour>[0], () => void][] = [
+          ['micro', () => voix.toggleMute()],
+          ['sourdine', () => voix.toggleDeafen()],
+          ['camera', () => void voix.toggleCamera()],
+          ['partage', () => void voix.toggleScreenShare()],
+          ['quitter', () => void voix.leave()],
+        ];
 
-      if (modifier && event.shiftKey && event.key.toLowerCase() === 'v' && enVocal) {
-        event.preventDefault();
-        void useVoice.getState().toggleCamera();
-        return;
-      }
-
-      if (modifier && event.shiftKey && event.key.toLowerCase() === 's' && enVocal) {
-        event.preventDefault();
-        void useVoice.getState().toggleScreenShare();
-        return;
-      }
-
-      // Quitter le vocal demande Maj : une frappe isolee couperait un appel
-      // par accident, et il n'y a pas de retour en arriere.
-      if (modifier && event.shiftKey && event.key.toLowerCase() === 'h' && enVocal) {
-        event.preventDefault();
-        void useVoice.getState().leave();
-        return;
+        for (const [action, faire] of actions) {
+          if (!correspond(event, pour(action))) continue;
+          event.preventDefault();
+          faire();
+          return;
+        }
       }
 
       // Navigation entre salons, sans quitter le clavier.
@@ -425,6 +428,7 @@ export function Workspace() {
       <SortieAudio />
       <Sonnerie />
       <EcouteVocale />
+      <PousserPourParler />
 
       {/* Sur petit ecran, la navigation recouvre la conversation : il faut un
           voile pour la refermer, et l'ecarter des lecteurs d'ecran quand elle
@@ -447,7 +451,9 @@ export function Workspace() {
       </div>
 
       <main className="main" id="conversation">
-        {suggestionsOpen && view === 'direct' ? (
+        {supportOpen && view === 'direct' ? (
+          <Support />
+        ) : suggestionsOpen && view === 'direct' ? (
           <Suggestions />
         ) : wavesOpen && view === 'direct' ? (
           <Waves />

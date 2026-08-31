@@ -11,6 +11,7 @@ import { SourcePicker } from './SourcePicker';
 /** Le selecteur natif n'existe que dans l'application de bureau. */
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 import { useSession } from '@/store/session';
+import { useUserAudio } from '@/store/userAudio';
 import { Icon } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
 import { formatDuration } from '@/lib/time';
@@ -153,6 +154,7 @@ export function VoiceStage({ channel }: { channel: Channel }) {
                 : (profiles[focused.userId]?.display_name ?? 'Partage')
             }
             focused
+            auteur={focused.userId}
             onToggleFocus={() => focusShare(null)}
           />
         </div>
@@ -167,6 +169,7 @@ export function VoiceStage({ channel }: { channel: Channel }) {
                   ? 'Votre ecran'
                   : (profiles[entry.userId]?.display_name ?? 'Partage')
               }
+              auteur={entry.userId}
               onToggleFocus={() => focusShare(entry.userId)}
             />
           ))}
@@ -470,11 +473,14 @@ function ScreenTile({
   label,
   focused = false,
   onToggleFocus,
+  auteur,
 }: {
   stream: MediaStream | undefined;
   label: string;
   focused?: boolean;
   onToggleFocus?: () => void;
+  /** Qui partage. Sans lui, le volume n'a personne a regler. */
+  auteur?: UUID;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const frameRef = useRef<HTMLElement>(null);
@@ -592,6 +598,18 @@ function ScreenTile({
         partage — souvent la seule facon de savoir de quelle fenetre il s'agit.
       */}
       <div className="screen-tile__actions">
+        {/*
+          Le volume du partage, la ou on le cherche.
+
+          Il n'existait que dans le menu contextuel de la personne — donc a
+          trois gestes d'un son trop fort, et seulement pour qui savait qu'il
+          etait la. Sur l'image qu'on regarde, il est au bon endroit.
+
+          Le bouton dit l'etat sans qu'on l'ouvre : barre quand le son est
+          coupe, plein sinon.
+        */}
+        {auteur ? <VolumePartage auteur={auteur} /> : null}
+
         <button
           type="button"
           className="screen-tile__action"
@@ -603,6 +621,53 @@ function ScreenTile({
         </button>
       </div>
     </figure>
+  );
+}
+
+/**
+ * Le volume d'un partage, replie derriere un bouton.
+ *
+ * Deroule au survol plutot qu'affiche en permanence : un curseur pose sur
+ * l'image la recouvre, et on ne regle le son qu'une fois — au debut, quand on
+ * decouvre que c'est trop fort.
+ */
+function VolumePartage({ auteur }: { auteur: UUID }) {
+  const volume = useUserAudio((state) => state.getStreamVolume(auteur));
+  const regler = useUserAudio((state) => state.setStreamVolume);
+  const aDuSon = useVoice((state) => Boolean(state.remoteScreenAudio[auteur]));
+
+  return (
+    <div className={'tuile-volume' + (aDuSon ? '' : ' is-muet')}>
+      <button
+        type="button"
+        className="screen-tile__action"
+        title={
+          aDuSon
+            ? `Volume du partage : ${volume} %`
+            : 'Ce partage n’envoie pas de son'
+        }
+        aria-label="Volume du partage"
+      >
+        <Icon name={aDuSon && volume > 0 ? 'volume' : 'mic-off'} size={16} />
+      </button>
+
+      <input
+        type="range"
+        className="tuile-volume__curseur"
+        min={0}
+        max={200}
+        step={1}
+        value={volume}
+        disabled={!aDuSon}
+        aria-label="Volume du partage d’ecran"
+        onChange={(event) => {
+          // Meme aimantation qu'ailleurs : soixante-quinze est le repos d'un
+          // partage, et le retrouver ne doit pas demander d'adresse.
+          const brut = Number(event.target.value);
+          regler(auteur, Math.abs(brut - 75) <= 4 ? 75 : brut);
+        }}
+      />
+    </div>
   );
 }
 

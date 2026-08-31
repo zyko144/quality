@@ -10,6 +10,7 @@ import { VoiceSettings, SwitchRow } from './VoiceSettings';
 import { useMajEtat } from '@/features/shell/MiseAJour';
 
 import { RechercheReglages } from './RechercheReglages';
+import { ReglageRaccourcis } from './ReglageRaccourcis';
 import {
   permissionState,
   requestPermission,
@@ -1133,12 +1134,6 @@ const SHORTCUTS: { groupe: string; keys: string[]; label: string }[] = [
   { groupe: 'Messages', keys: ['Entree'], label: 'Envoyer le message' },
   { groupe: 'Messages', keys: ['Maj', 'Entree'], label: 'Retour a la ligne' },
   { groupe: 'Messages', keys: ['Haut'], label: 'Modifier son dernier message' },
-
-  { groupe: 'Vocal', keys: ['Ctrl', 'Maj', 'M'], label: 'Couper ou reactiver le micro' },
-  { groupe: 'Vocal', keys: ['Ctrl', 'Maj', 'D'], label: 'Couper ou reactiver le son' },
-  { groupe: 'Vocal', keys: ['Ctrl', 'Maj', 'V'], label: 'Activer ou couper la camera' },
-  { groupe: 'Vocal', keys: ['Ctrl', 'Maj', 'S'], label: 'Partager ou arreter l’ecran' },
-  { groupe: 'Vocal', keys: ['Ctrl', 'Maj', 'H'], label: 'Quitter le salon vocal' },
 ];
 
 function ShortcutsSection() {
@@ -1146,7 +1141,9 @@ function ShortcutsSection() {
     <div className="settings__page">
       <h1 className="settings__title">Raccourcis</h1>
 
-      {['Navigation', 'Messages', 'Vocal'].map((groupe) => (
+      <ReglageRaccourcis />
+
+      {['Navigation', 'Messages'].map((groupe) => (
         <section className="settings__group" key={groupe}>
           <h2 className="settings__group-title">{groupe}</h2>
           <ul className="shortcuts">
@@ -1167,8 +1164,9 @@ function ShortcutsSection() {
       ))}
 
       <p className="settings__hint">
-        Les raccourcis vocaux ne repondent qu'une fois connecte a un salon, et
-        jamais pendant qu'on ecrit un message.
+        Ces raccourcis-la ne se changent pas : ils reprennent des combinaisons
+        que le systeme et le navigateur emploient deja partout, et les deplacer
+        couterait plus qu'il ne rapporterait.
       </p>
     </div>
   );

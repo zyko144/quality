@@ -1784,3 +1784,377 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 .dm-suggestions:hover {
   color: var(--warning, #f0b232);
 }
+
+/* ==========================================================================
+   Support
+   ==========================================================================
+   Le rouge distingue cet endroit des suggestions, qui sont en ambre. Les deux
+   menent a l'equipe, mais on n'y vient pas dans le meme etat d'esprit : une
+   idee peut attendre, un compte pirate non.
+   ========================================================================== */
+
+.support {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-8) var(--space-7) var(--space-9);
+}
+
+.support__entete,
+.support__formulaire,
+.support__barre,
+.support__liste,
+.support__detail,
+.support__vide,
+.support__limites,
+.support__erreur {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.support__entete {
+  margin-bottom: var(--space-7);
+}
+
+.support__titre {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.support__marque {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-lg);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.support__accroche {
+  margin: 0 0 var(--space-3);
+  max-width: 62ch;
+  color: var(--text-secondary);
+}
+
+/* La regle de visibilite, dite avant d'ecrire et non apres. */
+.support__confidentialite {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in oklab, var(--danger) 35%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--danger-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.support__confidentialite svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
+.support__erreur {
+  margin-bottom: var(--space-4);
+  color: var(--danger);
+}
+
+.support__barre {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
+}
+
+/* ------------------------------------------------------ Depot d'une demande */
+
+.support__formulaire {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+}
+
+.support__label {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+
+.support__label:first-child {
+  margin-top: 0;
+}
+
+.support__champ,
+.support__zone {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.support__zone {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.support__champ:focus-visible,
+.support__zone:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 1px;
+}
+
+.support__aide,
+.support__compte {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.support__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* ----------------------------------------------------------------- La liste */
+
+.support__liste {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.support-demande {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* L'equipe a parle en dernier : il y a quelque chose de neuf a lire. */
+.support-demande.is-repondue {
+  border-color: color-mix(in oklab, var(--danger) 45%, transparent);
+}
+
+.support-demande__corps {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.support-demande__sujet {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.support-demande__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.support-demande__neuf {
+  flex: none;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+}
+
+.support__statut {
+  flex: none;
+  padding: 2px var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.support__statut.is-ouverte {
+  border-color: color-mix(in oklab, var(--danger) 40%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.support__statut.is-en-cours {
+  border-color: color-mix(in oklab, var(--warning, #f0b232) 40%, transparent);
+  background: color-mix(in oklab, var(--warning, #f0b232) 14%, transparent);
+  color: var(--warning, #f0b232);
+}
+
+.support__statut.is-resolue {
+  border-color: color-mix(in oklab, var(--success, #23a559) 40%, transparent);
+  background: color-mix(in oklab, var(--success, #23a559) 14%, transparent);
+  color: var(--success, #23a559);
+}
+
+/* ----------------------------------------------------- Une demande ouverte */
+
+.support__retour {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.support__retour:hover {
+  color: var(--text-primary);
+}
+
+.support__fiche {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+}
+
+.support__fiche-tete {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.support__fiche-sujet {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.support__fiche-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.support__echange {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.support-message {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+/* Les deux voix se distinguent d'un coup d'oeil : relire un echange ou l'on ne
+   sait plus qui a dit quoi ne sert a rien. */
+.support-message--equipe {
+  border-color: color-mix(in oklab, var(--danger) 35%, transparent);
+  background: var(--danger-soft);
+}
+
+.support-message__qui {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+
+.support-message--equipe .support-message__qui {
+  color: var(--danger);
+}
+
+.support-message__texte {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.support-message__quand {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.support__close {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.support__repondre {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+}
+
+/* ------------------------------------------------------------ Etats de bord */
+
+.support__vide,
+.support__limites {
+  margin-top: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.support__vide {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+  text-align: center;
+  padding: var(--space-9) 0;
+}
+
+/* L'entree dans la liste, en rouge comme la page. */
+.dm-support.is-active,
+.dm-support:hover {
+  color: var(--danger);
+}

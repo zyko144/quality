@@ -1578,3 +1578,59 @@ button.voice-tile__name:hover {
   margin-top: 2px;
   color: var(--warning, #f0b232);
 }
+
+/* --------------------------------------------------------------------------
+   Le volume du partage, sur l'image
+   --------------------------------------------------------------------------
+   Replie derriere son bouton et deroule au survol : un curseur pose en
+   permanence recouvre ce qu'on regarde, alors qu'on ne regle le son qu'une
+   fois — au debut, quand on decouvre que c'est trop fort.
+   -------------------------------------------------------------------------- */
+
+.tuile-volume {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: 0;
+  border-radius: var(--radius-full);
+  transition: padding-right var(--duration-normal) var(--ease-out);
+}
+
+.tuile-volume__curseur {
+  width: 0;
+  opacity: 0;
+  accent-color: var(--accent);
+  transition:
+    width var(--duration-normal) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+
+.tuile-volume:hover,
+.tuile-volume:focus-within {
+  padding-right: var(--space-3);
+  background: color-mix(in oklab, #000 55%, transparent);
+}
+
+.tuile-volume:hover .tuile-volume__curseur,
+.tuile-volume:focus-within .tuile-volume__curseur {
+  width: 110px;
+  opacity: 1;
+}
+
+/* Sans son a regler, le bouton reste — pour dire pourquoi — mais le curseur ne
+   se deroule pas sur du vide. */
+.tuile-volume.is-muet .screen-tile__action {
+  opacity: 0.5;
+}
+
+.tuile-volume.is-muet:hover,
+.tuile-volume.is-muet:focus-within {
+  padding-right: 0;
+  background: none;
+}
+
+.tuile-volume.is-muet:hover .tuile-volume__curseur,
+.tuile-volume.is-muet:focus-within .tuile-volume__curseur {
+  width: 0;
+  opacity: 0;
+}
