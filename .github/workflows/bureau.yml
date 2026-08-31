@@ -139,8 +139,7 @@ jobs:
 
           {
             echo 'texte<<FIN_DES_NOTES'
-            printf '%s
-' "$texte"
+            echo "$texte"
             echo 'FIN_DES_NOTES'
           } >> "$GITHUB_OUTPUT"
 
