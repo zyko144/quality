@@ -12,6 +12,11 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.2.8
+
+- Un champ de recherche dans les parametres. Onze sections et une centaine de reglages : le classement est defendable, mais il suppose de partager le raisonnement de qui l'a range. Personne ne cherche « Voix et video » — on cherche « le truc qui enleve le bruit du clavier ». Taper « clavier » y mene.
+- Chaque resultat dit dans quelle section il se trouve : la fois suivante, on y va directement.
+
 ## 0.2.7
 
 - Le son des partages d'ecran n'arrivait toujours pas : la piste audio etait rangee selon une annonce qui voyage par un autre canal qu'elle, et rien ne garantit laquelle arrive d'abord. Quand l'audio precedait l'annonce, il etait pris pour une voix et ecrasait le micro. La presence d'une piste video dans le meme flux tranche desormais, sans dependre de l'ordre.

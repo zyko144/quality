@@ -9,6 +9,7 @@ import { LIMITS } from '@/constants';
 import { VoiceSettings, SwitchRow } from './VoiceSettings';
 import { useMajEtat } from '@/features/shell/MiseAJour';
 
+import { RechercheReglages } from './RechercheReglages';
 import {
   permissionState,
   requestPermission,
@@ -102,6 +103,16 @@ export function SettingsPage() {
       <nav className="settings__nav" aria-label="Sections des parametres">
         <div className="settings__nav-inner">
           <p className="settings__nav-title">Parametres</p>
+
+          {/*
+            Chercher plutot que parcourir.
+
+            Onze sections et une centaine de reglages : le classement est
+            defendable, mais il suppose de partager le raisonnement de qui l'a
+            range. Personne ne cherche « Voix et video », on cherche « le truc
+            qui enleve le bruit du clavier ».
+          */}
+          <RechercheReglages onChoisir={(cible) => openSettings(cible)} />
 
           {GROUPES.map((groupe) => (
             <div className="settings__nav-group" key={groupe.titre}>

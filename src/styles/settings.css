@@ -1271,3 +1271,86 @@
   line-height: 1.55;
   color: var(--text-secondary);
 }
+
+/* --------------------------------------------------------------------------
+   Chercher un reglage
+   -------------------------------------------------------------------------- */
+
+.reglages-recherche {
+  position: relative;
+  margin-bottom: var(--space-4);
+}
+
+.reglages-recherche__champ {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  height: 34px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+}
+
+.reglages-recherche__champ:focus-within {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.reglages-recherche__saisie {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  outline: none;
+}
+
+/* Les resultats flottent au-dessus de la navigation : les inserer pousserait
+   les sections vers le bas a chaque frappe. */
+.reglages-recherche__liste {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.reglages-recherche__resultat {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reglages-recherche__resultat:hover {
+  background: var(--bg-hover);
+}
+
+.reglages-recherche__section {
+  font-size: var(--text-2xs);
+  color: var(--accent-text);
+}
+
+.reglages-recherche__vide {
+  margin: var(--space-2) 0 0;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
