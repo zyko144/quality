@@ -22,6 +22,7 @@ import { Modals } from '@/features/settings/Modals';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { Vague } from '@/features/abonnement/Vague';
+import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
 import { Icon } from '@/components/Icon';
 import { useIsMobile } from '@/lib/useMediaQuery';
@@ -363,6 +364,40 @@ export function Workspace() {
    * drapeau.
    */
   if (!ready) return null;
+
+  /*
+   * Les regles passent avant tout le reste.
+   *
+   * Posees ici plutot que dans le parcours d'inscription : on arrive aussi par
+   * Google, par un lien de recuperation, ou avec un compte cree avant que ces
+   * regles existent. Un seul point de passage, celui par lequel tout le monde
+   * finit — l'espace de travail — vaut mieux que trois chemins a maintenir en
+   * accord.
+   *
+   * Le profil est deja charge a ce stade : `ready` en depend.
+   */
+  /*
+   * La barriere s'active d'elle-meme quand la base est prete.
+   *
+   * Tant que la migration n'est pas appliquee, la colonne n'existe pas et le
+   * profil ne porte pas la propriete — `undefined`, distinct de `null`. Traiter
+   * les deux de la meme facon enfermerait tout le monde dehors : l'ecran
+   * s'afficherait, et la fonction qui enregistre l'acceptation n'existerait pas
+   * encore pour en sortir.
+   *
+   * `undefined` signifie donc « la question ne se pose pas encore », et `null`
+   * « jamais accepte ». La difference vaut d'etre tenue : c'est elle qui evite
+   * de livrer une version qui bloque l'application sur une base non migree.
+   */
+  const conditionsConnues = profile !== null && profile.terms_accepted_at !== undefined;
+
+  if (
+    conditionsConnues &&
+    (profile.terms_accepted_at === null ||
+      (profile.terms_version ?? 0) < CONDITIONS_VERSION)
+  ) {
+    return <Conditions />;
+  }
 
   return (
     <div

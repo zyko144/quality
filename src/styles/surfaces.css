@@ -1649,3 +1649,156 @@
   padding-top: var(--space-6);
   border-top: 1px solid var(--border-subtle);
 }
+
+/* ==========================================================================
+   Les regles, avant d'entrer
+   ==========================================================================
+   Une page pleine plutot qu'une fenetre : ce n'est pas une interruption dans
+   un travail en cours, c'est le seuil. Une modale par-dessus l'application
+   laisserait voir ce a quoi on n'a pas encore acces, et donnerait envie de la
+   fermer plutot que de la lire.
+   ========================================================================== */
+
+.conditions {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--bg-app);
+}
+
+.conditions__boite {
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 100%);
+  max-height: min(760px, 92vh);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lg), var(--edge-light);
+  overflow: hidden;
+}
+
+.conditions__entete {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-7) var(--space-7) var(--space-5);
+  text-align: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.conditions__titre {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.conditions__sous-titre {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* La zone qui defile : c'est elle qui decide si le bouton s'active. */
+.conditions__texte {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-7);
+}
+
+.conditions__regle + .conditions__regle {
+  margin-top: var(--space-6);
+}
+
+.conditions__regle h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.conditions__numero {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+}
+
+.conditions__regle p {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--text-sm);
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+/* Elle marque le fond du texte, et confirme que le defilement a suffi. */
+.conditions__fin {
+  margin: var(--space-7) 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.conditions__pied {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-7) var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-sunken);
+}
+
+.conditions__indice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.conditions__case {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.conditions__case input { margin-top: 3px; }
+
+.conditions__erreur {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+/* Vert plutot qu'accent : c'est le seul bouton de l'application qui vaut
+   engagement, et il doit se distinguer de tout ce qui est reversible. */
+.conditions__bouton:not(:disabled) {
+  background: var(--success, #3ba55d);
+  color: #fff;
+}
+
+.conditions__bouton:not(:disabled):hover {
+  background: color-mix(in oklab, var(--success, #3ba55d) 85%, #000);
+}

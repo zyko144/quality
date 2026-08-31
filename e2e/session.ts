@@ -125,6 +125,17 @@ export const STATE_FILE = 'playwright/.auth/user.json';
  */
 export async function openApp(page: Page): Promise<void> {
   await page.goto('/');
+
+  /*
+   * Les regles, si elles sont demandees.
+   *
+   * Elles ne le sont que sur une base ou la migration correspondante est
+   * appliquee, et une seule fois par compte. Les accepter ici plutot que de
+   * les contourner fait passer les tests par le meme chemin que tout le
+   * monde — et signalerait un ecran qui refuse de se laisser franchir.
+   */
+  await accepterLesRegles(page);
+
   await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible({
     timeout: 20_000,
   });
@@ -140,4 +151,29 @@ export async function openApp(page: Page): Promise<void> {
       .or(page.locator('.main__empty'))
       .first(),
   ).toBeVisible({ timeout: 20_000 });
+}
+
+
+/**
+ * Franchit l'ecran des regles s'il se presente.
+ *
+ * Ne fait rien quand il ne s'affiche pas : c'est le cas courant, une fois les
+ * regles acceptees, et le cas de toute base ou la migration n'est pas encore
+ * appliquee.
+ */
+async function accepterLesRegles(page: Page): Promise<void> {
+  const ecran = page.locator('.conditions');
+
+  // Court : l'ecran parait avec l'application, ou pas du tout.
+  if (!(await ecran.isVisible({ timeout: 6_000 }).catch(() => false))) return;
+
+  // Le bouton n'apparait qu'une fois le texte parcouru : on defile vraiment,
+  // comme il est demande.
+  const texte = page.locator('.conditions__texte');
+  await texte.evaluate((noeud) => noeud.scrollTo({ top: noeud.scrollHeight }));
+
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: /Accepter et continuer/i }).click();
+
+  await expect(ecran).toHaveCount(0, { timeout: 15_000 });
 }

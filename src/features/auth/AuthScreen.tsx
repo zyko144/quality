@@ -4,6 +4,7 @@ import { Icon } from '@/components/Icon';
 import { QualityLogo } from '@/components/QualityLogo';
 import { navigate } from '@/lib/router';
 import { GoogleMark } from '@/components/GoogleMark';
+import { AntiRobot } from '@/features/onboarding/AntiRobot';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
@@ -19,6 +20,7 @@ export function AuthScreen() {
   const { signIn, signUp, signInWithGoogle, requestPasswordReset, error, clearError } =
     useSession();
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [robotOk, setRobotOk] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -60,6 +62,7 @@ export function AuthScreen() {
     setMode(next);
     clearError();
     setNotice(null);
+    setRobotOk(false);
   };
 
   const usernameIssue =
@@ -69,12 +72,22 @@ export function AuthScreen() {
 
   const emailLooksValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
 
+  /*
+   * L'epreuve garde la creation de compte et la demande de reinitialisation.
+   *
+   * Pas la connexion : quelqu'un qui connait deja son mot de passe a franchi
+   * une porte plus solide que n'importe quel calcul, et la lui redemander a
+   * chaque ouverture serait une nuisance sans contrepartie.
+   */
+  const epreuveRequise = mode === 'signup' || mode === 'forgot';
+
   const canSubmit =
-    mode === 'forgot'
+    (!epreuveRequise || robotOk) &&
+    (mode === 'forgot'
       ? emailLooksValid
       : emailLooksValid &&
         password.length >= 6 &&
-        (mode === 'signin' || (username.trim().length >= 2 && usernameIssue === null));
+        (mode === 'signin' || (username.trim().length >= 2 && usernameIssue === null)));
 
   return (
     <div className="auth">
@@ -250,6 +263,8 @@ export function AuthScreen() {
               {notice}
             </p>
           ) : null}
+
+          {epreuveRequise ? <AntiRobot key={mode} onChange={setRobotOk} /> : null}
 
           <button className="btn btn--primary btn--block" type="submit" disabled={!canSubmit || busy}>
             {busy ? <span className="spinner" /> : null}

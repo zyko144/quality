@@ -39,6 +39,15 @@ export interface Profile {
   custom_status: string | null;
   /** Faux tant que le pseudo a ete deduit de l'adresse plutot que choisi. */
   username_chosen: boolean;
+  /**
+   * Quand les regles ont ete acceptees, et pour quelle version.
+   *
+   * `null` signifie « jamais » ; une version inferieure a celle de
+   * l'application signifie « pour un texte qui n'est plus celui-ci ». Les deux
+   * ramenent a l'ecran d'acceptation.
+   */
+  terms_accepted_at: ISODate | null;
+  terms_version: number | null;
   created_at: ISODate;
 }
 

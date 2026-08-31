@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.1
+
+### Nouveau
+
+- Un ecran de regles avant d'entrer, a lire jusqu'en bas. Sept points, ce sont les seules choses qu'on ne peut pas decouvrir en se servant de l'application. Le bouton n'apparait qu'une fois le texte parcouru — cela ne garantit pas la lecture, seulement qu'on a vu qu'il y avait quelque chose a lire.
+- Une verification a la creation de compte et a la demande de nouveau mot de passe : une question de tete, pas une case a cocher. Pas a la connexion — qui connait deja son mot de passe a franchi une porte plus solide.
+
+### Ameliore
+
+- L'acceptation est consignee en base, avec une date posee par le serveur et un numero de version. Une date fournie par le navigateur ne vaudrait que ce que vaut la montre de qui la pose.
+
 ## 0.3.0
 
 ### Corrige
