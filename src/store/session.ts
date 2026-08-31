@@ -487,13 +487,20 @@ export const useSession = create<SessionState>((set, get) => ({
   signInWithGoogle: async () => {
     set({ error: null });
 
+    const origin =
+      typeof window !== 'undefined' &&
+      window.location.origin &&
+      !window.location.origin.includes('tauri')
+        ? window.location.origin
+        : 'https://qualityy.vercel.app';
+
+    const targetRedirect = `${origin.replace(/\/$/, '')}/app`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/app`,
+        redirectTo: targetRedirect,
         queryParams: {
-          // Redemande le choix du compte : sans cela, Google reconnecte
-          // silencieusement le dernier utilise, ce qui piege qui en a plusieurs.
           prompt: 'select_account',
         },
       },

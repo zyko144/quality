@@ -901,6 +901,8 @@ tbody tr:last-child th {
 /* ------------------------------------------------- Maquette du lecteur --- */
 
 .maquette {
+  /* Reference pour l'etiquette « Maquette », posee en absolu dans un coin. */
+  position: relative;
   display: grid;
   grid-template-columns: 62px 210px minmax(0, 1fr);
   height: clamp(400px, 62vh, 560px);
