@@ -55,25 +55,6 @@ export function SourcePicker({
   onClose: () => void;
   onStart: (source: Source | null) => void;
 }) {
-  /*
-   * A l'ouverture : on demande l'etat, et on reaffirme la preference.
-   *
-   * La reaffirmer a chaque fois plutot qu'au seul changement corrige le cas ou
-   * la preference vaut deja ce qu'on veut : cocher une case deja cochee
-   * n'ecrivait rien, et le lanceur restait sur son defaut.
-   */
-  useEffect(() => {
-    if (!open || !DANS_TAURI) return;
-
-    void import('@tauri-apps/api/core')
-      .then(async ({ invoke }) => {
-        await invoke('regler_son_systeme', {
-          actif: useDevices.getState().media.shareSystemAudio,
-        });
-
-      })
-      .catch(() => undefined);
-  }, [open]);
 
   const media = useDevices((state) => state.media);
   const setMedia = useDevices((state) => state.setMedia);
@@ -303,15 +284,7 @@ export function SourcePicker({
             <input
               type="checkbox"
               checked={media.shareSystemAudio}
-              onChange={(event) => {
-                const veut = event.target.checked;
-                setMedia('shareSystemAudio', veut);
-                // Note pour le prochain demarrage : c'est le lanceur qui pose
-                // ou non le drapeau, avant que la vue web n'existe.
-                void import('@tauri-apps/api/core')
-                  .then(({ invoke }) => invoke('regler_son_systeme', { actif: veut }))
-                  .catch(() => undefined);
-              }}
+              onChange={(event) => setMedia('shareSystemAudio', event.target.checked)}
             />
             Partager le son de l&rsquo;ordinateur
           </label>

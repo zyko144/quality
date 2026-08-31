@@ -109,99 +109,20 @@ mod capture;
 ///
 /// La variable doit etre posee avant que Tauri ne construise le WebView : une
 /// fois l'environnement cree, elle n'est plus relue.
-/// Chemin du fichier ou l'application note si elle veut le son du systeme.
-///
-/// Un fichier, et non un reglage lu depuis la page : le drapeau doit etre pose
-/// AVANT que WebView2 ne construise son environnement, c'est-a-dire avant que
-/// la moindre ligne de l'interface ne s'execute. A cet instant, rien du cote
-/// web n'est encore joignable.
-#[cfg(windows)]
-fn fichier_son_systeme() -> Option<std::path::PathBuf> {
-    let base = std::env::var_os("APPDATA")?;
-    Some(
-        std::path::PathBuf::from(base)
-            .join("app.quality.desktop")
-            .join("son-systeme"),
-    )
-}
-
-/// L'utilisateur a-t-il demande le son du systeme ?
-#[cfg(windows)]
-fn veut_le_son_systeme() -> bool {
-    fichier_son_systeme()
-        .and_then(|chemin| std::fs::read_to_string(chemin).ok())
-        .map(|contenu| contenu.trim() == "oui")
-        .unwrap_or(false)
-}
-
-/// Note le choix, pour le prochain demarrage.
-#[cfg(windows)]
-#[tauri::command]
-fn regler_son_systeme(actif: bool) -> Result<(), String> {
-    let chemin = fichier_son_systeme().ok_or("Dossier de configuration introuvable")?;
-
-    if let Some(dossier) = chemin.parent() {
-        std::fs::create_dir_all(dossier).map_err(|erreur| erreur.to_string())?;
-    }
-
-    std::fs::write(chemin, if actif { "oui" } else { "non" })
-        .map_err(|erreur| erreur.to_string())
-}
-
-#[cfg(not(windows))]
-#[tauri::command]
-fn regler_son_systeme(_actif: bool) -> Result<(), String> {
-    Ok(())
-}
-
-/// Le selecteur de Windows est-il en place pour cette execution ?
-///
-/// Fige au demarrage. L'interface a besoin de le savoir : c'est la seule facon
-/// de dire « il faut relancer » a bon escient, plutot que de comparer la
-/// preference a une valeur devinee. Deviner etait precisement le defaut —
-/// l'application supposait que le son etait demande par defaut, le lanceur
-/// supposait l'inverse, et le message n'apparaissait donc jamais.
-#[cfg(windows)]
-static SELECTEUR_WINDOWS: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
-
-/// Vrai si le son du systeme peut etre capture pendant cette execution.
-#[cfg(windows)]
-#[tauri::command]
-fn son_systeme_disponible() -> bool {
-    SELECTEUR_WINDOWS.load(std::sync::atomic::Ordering::Relaxed)
-}
-
-#[cfg(not(windows))]
-#[tauri::command]
-fn son_systeme_disponible() -> bool {
-    // Ailleurs, aucun drapeau n'est pose : le selecteur du systeme est celui
-    // qu'on obtient, avec ce qu'il propose.
-    true
-}
-
 #[cfg(windows)]
 fn desactiver_selecteur_webview() {
     /*
-     * Le son du systeme et notre selecteur s'excluent.
+     * Le drapeau est pose sans condition.
      *
-     * Le drapeau ci-dessous demande a Chromium de choisir la source lui-meme et
-     * de n'afficher aucune fenetre. C'est ce qui nous permet d'avoir notre
-     * propre selecteur — mais la case « partager aussi le son de l'onglet ou du
-     * systeme » vit precisement dans la fenetre qu'on supprime. Sans elle,
-     * Chromium n'accorde jamais la piste audio, quelle que soit la source
-     * choisie : ecran entier compris.
+     * Une version l'a rendu facultatif, pour recuperer le son du partage : la
+     * case « partager aussi l'audio systeme » vit dans la fenetre que ce
+     * drapeau supprime. C'etait une erreur — rendre cette fenetre, c'est rendre
+     * exactement ce qu'on avait entrepris de retirer, titre
+     * « http://tauri.localhost » compris.
      *
-     * Aucun reglage ne permet de garder les deux. On laisse donc le choix, et
-     * l'on pose le drapeau selon ce qui a ete demande au demarrage precedent.
-     * Il faut relancer pour en changer, parce que WebView2 lit cette variable
-     * une seule fois, avant d'exister.
+     * Le son se prend ailleurs, par le bouclage du systeme. Voir
+     * `sonSysteme.ts`.
      */
-    if veut_le_son_systeme() {
-        SELECTEUR_WINDOWS.store(true, std::sync::atomic::Ordering::Relaxed);
-        return;
-    }
-
     // `std::env::set_var` est marque `unsafe` a partir de l'edition 2024 ; en
     // 2021 il ne l'est pas, et l'appel a lieu avant tout fil supplementaire.
     std::env::set_var(
@@ -221,9 +142,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             capture::sources_partageables,
             capture::zone_source,
-            capture::masquer_barre_partage,
-            regler_son_systeme,
-            son_systeme_disponible
+            capture::masquer_barre_partage
         ])
         // Une seconde instance ne cree pas de fenetre : elle reveille celle qui
         // existe deja. Sans cela, cliquer deux fois sur l'icone ouvrirait deux

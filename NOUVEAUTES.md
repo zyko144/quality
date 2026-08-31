@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.6
+
+### Corrige
+
+- La fenetre de selection de Windows est de nouveau supprimee, pour de bon. C'est moi qui l'avais fait revenir : le mecanisme cense rendre le son reaffirmait la preference a chaque ouverture du selecteur, et comme la case est cochee par defaut, le lanceur cessait de poser le drapeau. Le mecanisme entier est retire — il n'avait pas lieu d'exister.
+- Le son du partage est desormais pris uniquement par le bouclage du systeme, sans aucune fenetre.
+
 ## 0.3.5
 
 ### Corrige
