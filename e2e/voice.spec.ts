@@ -324,4 +324,39 @@ test.describe('Salon vocal', () => {
     await page.getByRole('button', { name: 'Masquer la discussion' }).click();
     await expect(page.locator('.scene__fil')).toHaveCount(0);
   });
+
+  /*
+   * Entrer et sortir plusieurs fois d'affilee.
+   *
+   * C'est le scenario ou le vocal lachait « des fois » : chaque entree fermait
+   * puis rouvrait tous les canaux d'observation, et la signalisation du salon
+   * se retrouvait en concurrence avec eux. Quand elle perdait la course, on
+   * entrait dans un salon ou personne ne s'entendait.
+   *
+   * Un aller-retour unique ne l'aurait pas montre — il faut repeter pour
+   * accumuler les canaux et voir la course se produire.
+   */
+  test('trois entrees de suite aboutissent toutes', async ({ page }) => {
+    test.setTimeout(120_000);
+    if (!(await openVoiceChannel(page))) return;
+
+    const erreurs: string[] = [];
+    page.on('pageerror', (e) => erreurs.push(e.message));
+
+    for (let essai = 1; essai <= 3; essai += 1) {
+      await page.getByRole('button', { name: 'Rejoindre le salon vocal' }).click();
+
+      // La barre de commandes n'existe que dans un salon reellement etabli.
+      await expect(page.locator('.voice-controls'), `entree n°${essai}`).toBeVisible({
+        timeout: 25_000,
+      });
+
+      await page.locator('.voice-controls .btn--danger').first().click();
+      await expect(page.getByRole('button', { name: 'Rejoindre le salon vocal' })).toBeVisible({
+        timeout: 20_000,
+      });
+    }
+
+    expect(erreurs, 'aucune exception ne doit remonter').toEqual([]);
+  });
 });

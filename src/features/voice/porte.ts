@@ -8,35 +8,51 @@
  * ou personne ne parle.
  *
  * Une porte ferme le micro sous un certain niveau. Ce n'est pas un traitement
- * savant : c'est un interrupteur rapide, et c'est ce qui manquait. Le silence
- * devient vraiment silencieux, ce qui compte plus que d'assainir la voix
- * elle-meme.
+ * savant : c'est un interrupteur rapide, et c'est ce qui manquait.
  *
- * Deux precautions rendent la chose supportable :
+ * Elle vit sur le fil audio, pas dans la page
+ * ---------------------------------------------
+ * La premiere version mesurait le niveau depuis la page, par `setInterval`
+ * toutes les vingt-cinq millisecondes. Cela marchait tant que la fenetre etait
+ * au premier plan — et cessait de marcher des qu'on basculait ailleurs, le
+ * navigateur ralentissant les minuteries des pages masquees a une execution par
+ * seconde. Or basculer ailleurs, en vocal, c'est le cas normal : on parle en
+ * jouant. La porte restait donc fermee des secondes entieres et les autres
+ * n'entendaient plus rien.
  *
- *  - L'ouverture est immediate et la fermeture lente. L'inverse couperait le
- *    debut des mots — le defaut classique des portes mal reglees, ou l'on
- *    entend « ...onjour » au lieu de « bonjour ».
- *  - Une retenue apres la derniere syllabe evite que la porte batte pendant
- *    les pauses courtes d'une phrase.
+ * `AudioWorklet` s'execute sur le fil audio, qui n'est jamais ralenti par
+ * l'etat de la fenetre. Le calcul se fait par blocs de 128 echantillons, soit
+ * environ toutes les 2,7 millisecondes, quoi qu'il arrive a l'ecran.
  *
- * La mesure se fait sur le signal d'entree, jamais sur la sortie : lire apres
- * la porte donnerait un silence qui se referme sur lui-meme et ne rouvrirait
- * jamais.
+ * Elle echoue ouverte
+ * -------------------
+ * A chaque etape — worklet indisponible, contexte suspendu, chargement du
+ * module refuse — on rend le flux brut plutot qu'un flux ferme. Une porte qui
+ * echoue en silence est indiagnosticable depuis l'autre bout de la ligne :
+ * l'autre ne dit pas « ta porte de bruit ne marche pas », il dit « je ne
+ * t'entends plus », et personne ne pense au reglage.
  */
 
 export interface Porte {
   /** Flux a emettre, en lieu et place du micro brut. */
   flux: MediaStream;
+  /** Change le seuil sans refaire le graphe. */
+  reglerSeuil: (db: number) => void;
+  /** Neutralise ou reactive la porte, micro inchange. */
+  activer: (actif: boolean) => void;
   /** Coupe la porte et rend les ressources. Le micro brut n'est pas ferme. */
   arreter: () => void;
 }
 
-/** Duree pendant laquelle la porte reste ouverte apres le dernier son utile. */
-const RETENUE_MS = 320;
-
-export function ouvrirPorte(source: MediaStream, seuilDb: number): Porte | null {
-  const Contexte = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+/**
+ * Ouvre une porte sur ce flux.
+ *
+ * Rend `null` quand rien ne peut etre fait — l'appelant emet alors le micro
+ * brut, ce qui est le comportement d'avant la porte, pas une panne.
+ */
+export async function ouvrirPorte(source: MediaStream, seuilDb: number): Promise<Porte | null> {
+  const Contexte =
+    window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Contexte) return null;
 
   let ctx: AudioContext;
@@ -46,56 +62,76 @@ export function ouvrirPorte(source: MediaStream, seuilDb: number): Porte | null 
     return null;
   }
 
-  const entree = ctx.createMediaStreamSource(source);
-  const analyseur = ctx.createAnalyser();
-  analyseur.fftSize = 512;
-  analyseur.smoothingTimeConstant = 0.2;
-
-  const porte = ctx.createGain();
-  porte.gain.value = 0;
-
-  const sortie = ctx.createMediaStreamDestination();
-
-  entree.connect(analyseur);
-  entree.connect(porte).connect(sortie);
-
-  const echantillons = new Float32Array(analyseur.fftSize);
-  let ouverteJusqua = 0;
-  let vivante = true;
-
-  const mesurer = () => {
-    if (!vivante) return;
-
-    analyseur.getFloatTimeDomainData(echantillons);
-
-    let somme = 0;
-    for (const valeur of echantillons) somme += valeur * valeur;
-    const niveauDb = 20 * Math.log10(Math.sqrt(somme / echantillons.length) + 1e-8);
-
-    const maintenant = performance.now();
-    const now = ctx.currentTime;
-
-    if (niveauDb > seuilDb) {
-      ouverteJusqua = maintenant + RETENUE_MS;
-      // Huit millisecondes : assez court pour ne pas manger l'attaque d'une
-      // consonne, assez long pour ne pas claquer.
-      porte.gain.cancelScheduledValues(now);
-      porte.gain.setTargetAtTime(1, now, 0.008);
-    } else if (maintenant > ouverteJusqua) {
-      // La fermeture prend son temps : une coupure nette s'entend plus qu'un
-      // fond continu.
-      porte.gain.cancelScheduledValues(now);
-      porte.gain.setTargetAtTime(0, now, 0.06);
-    }
+  const abandonner = () => {
+    void ctx.close().catch(() => undefined);
+    return null;
   };
 
-  const minuterie = window.setInterval(mesurer, 25);
+  // Sans `AudioWorklet`, on renonce : la version a minuterie que cela
+  // remplacerait est precisement celle qui posait probleme.
+  if (!ctx.audioWorklet) return abandonner();
+
+  try {
+    await ctx.audioWorklet.addModule(new URL('./porte-worklet.js', import.meta.url));
+  } catch {
+    return abandonner();
+  }
+
+  /*
+   * Le contexte doit tourner.
+   *
+   * Les navigateurs ouvrent tout `AudioContext` a l'arret tant qu'un geste ne
+   * l'a pas autorise. Suspendu, le graphe ne traite rien : le flux de sortie
+   * serait un silence parfait, et l'on aurait un micro « ouvert » qui n'emet
+   * rien.
+   */
+  if (ctx.state === 'suspended') {
+    await ctx.resume().catch(() => undefined);
+  }
+  if (ctx.state !== 'running') return abandonner();
+
+  let entree: MediaStreamAudioSourceNode;
+  let porte: AudioWorkletNode;
+  let sortie: MediaStreamAudioDestinationNode;
+
+  try {
+    entree = ctx.createMediaStreamSource(source);
+    porte = new AudioWorkletNode(ctx, 'porte-de-bruit');
+    sortie = ctx.createMediaStreamDestination();
+    entree.connect(porte).connect(sortie);
+  } catch {
+    return abandonner();
+  }
+
+  const seuil = porte.parameters.get('seuilDb');
+  const actif = porte.parameters.get('active');
+  seuil?.setValueAtTime(seuilDb, ctx.currentTime);
+
+  /*
+   * Le contexte peut se suspendre en cours de route.
+   *
+   * Cela arrive a la mise en veille, ou quand le systeme reprend la main sur
+   * le peripherique. Le graphe s'arrete alors de traiter, et le flux emis
+   * devient muet sans que rien ne le signale. On le relance ; si l'on n'y
+   * arrive pas, mieux vaut que la porte s'efface — c'est ce que fait
+   * `activer(false)`, qui laisse tout passer.
+   */
+  const surEtat = () => {
+    if (ctx.state !== 'suspended') return;
+
+    void ctx.resume().catch(() => {
+      actif?.setValueAtTime(0, ctx.currentTime);
+    });
+  };
+
+  ctx.addEventListener('statechange', surEtat);
 
   return {
     flux: sortie.stream,
+    reglerSeuil: (db) => seuil?.setValueAtTime(db, ctx.currentTime),
+    activer: (marche) => actif?.setValueAtTime(marche ? 1 : 0, ctx.currentTime),
     arreter: () => {
-      vivante = false;
-      window.clearInterval(minuterie);
+      ctx.removeEventListener('statechange', surEtat);
       try {
         entree.disconnect();
         porte.disconnect();

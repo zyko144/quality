@@ -380,7 +380,7 @@ function MicrophoneTest({ media }: { media: MediaPreferences }) {
      * demander a quelqu'un de rester en ligne.
      */
     const porte = useDevices.getState().media.noiseGate
-      ? ouvrirPorte(stream, useDevices.getState().media.speakingThreshold)
+      ? await ouvrirPorte(stream, useDevices.getState().media.speakingThreshold)
       : null;
 
     let retour: HTMLAudioElement | null = null;

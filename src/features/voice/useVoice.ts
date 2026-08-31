@@ -264,7 +264,11 @@ async function capturerMicro(): Promise<MediaStream> {
 
   // Le seuil de la porte suit celui du detecteur de parole, deja regle par
   // l'utilisateur : deux curseurs pour la meme question se contrediraient.
-  const porte = ouvrirPorte(brut, media.speakingThreshold);
+  //
+  // L'attente est courte — charger un module de worklet — et elle est du bon
+  // cote : mieux vaut trois cents millisecondes de plus a l'entree qu'un micro
+  // emis sans la porte, puis remplace une seconde apres.
+  const porte = await ouvrirPorte(brut, media.speakingThreshold);
   if (!porte) {
     microBrut = brut;
     return brut;
@@ -663,6 +667,20 @@ export const useVoice = create<VoiceState>((set, get) => {
 
     let aReessayer = false;
 
+    /*
+     * Les adhesions sont etalees dans le temps.
+     *
+     * Realtime limite le rythme auquel un client peut rejoindre des canaux. En
+     * ouvrir vingt d'un coup — ce qui arrive au demarrage, ou en rejoignant un
+     * espace bien fourni — sature ce budget, et la seule adhesion qui compte
+     * vraiment, celle du salon ou l'on parle, se retrouve en concurrence avec
+     * dix-neuf autres qui ne servent qu'a colorer une pastille.
+     *
+     * Quatre-vingts millisecondes entre deux suffisent a lisser la rafale sans
+     * que l'affichage paraisse arriver en retard.
+     */
+    let rang = 0;
+
     for (const id of voulus) {
       if (observateurs.has(id)) continue;
 
@@ -693,7 +711,21 @@ export const useVoice = create<VoiceState>((set, get) => {
               participantsByChannel: { ...state.participantsByChannel, [id]: participants },
             }));
           })
-          .subscribe();
+          ;
+
+        // Le premier part tout de suite, les suivants s'echelonnent.
+        const attente = rang * 80;
+        rang += 1;
+
+        if (attente === 0) {
+          canal.subscribe();
+        } else {
+          window.setTimeout(() => {
+            // Le salon a pu etre rejoint ou ferme entre-temps : on ne
+            // s'abonne qu'a ce qui est encore voulu.
+            if (observateurs.get(id) === canal) canal.subscribe();
+          }, attente);
+        }
       } catch {
         // Ceinture et bretelles : savoir qui discute ou est un confort, jamais
         // une raison de faire tomber l'application.

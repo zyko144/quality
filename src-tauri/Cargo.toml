@@ -1,6 +1,6 @@
 [package]
 name = "orbit"
-version = "0.2.2"
+version = "0.2.3"
 description = "Orbit - discussion d'equipe en temps reel"
 edition = "2021"
 rust-version = "1.77"
@@ -23,6 +23,9 @@ base64 = "0.22"
 png = "0.17"
 tauri-plugin-updater = "2.0.0-rc.4"
 tauri-plugin-process = "2.0.0-rc.1"
+# Ouvrir un lien dans le navigateur du systeme. Sans lui, `target="_blank"` ne
+# fait rien dans la vue web : les liens des messages etaient inertes.
+tauri-plugin-opener = "2"
 
 # Win32 sert a deux choses : masquer la fenetre technique du greffon d'instance
 # unique, et surtout enumerer les fenetres partageables avec leur vignette —

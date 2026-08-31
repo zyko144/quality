@@ -144,6 +144,11 @@ pub fn run() {
         // l'application une fois l'archive posee.
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // Les liens des messages partent vers le navigateur du systeme. Sans
+        // ce greffon, `target="_blank"` ne fait rien dans la vue web, et un
+        // lien ouvert dans la fenetre de l'application afficherait un site
+        // tiers sans barre d'adresse — on ne saurait plus ou l'on est.
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             // Le greffon a deja cree sa fenetre a ce stade : la masquer plus

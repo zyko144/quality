@@ -22,6 +22,7 @@ import './styles/depth.css';
 // En dernier : les regles mobiles surchargent celles des grands ecrans.
 import './styles/mobile.css';
 import { useSession } from '@/store/session';
+import { suivreLesLiens } from './lib/liens';
 
 // Le volume des signaux est lu au demarrage : sans cela, le reglage
 // enregistre ne prendrait effet qu'apres avoir rouvert les parametres.
@@ -92,6 +93,9 @@ function dismissSplash(): void {
     }),
   );
 }
+
+// Les liens sortants partent vers le navigateur du systeme : voir `liens.ts`.
+suivreLesLiens();
 
 void root().then((screen) => {
   createRoot(container).render(<StrictMode>{screen}</StrictMode>);

@@ -26,8 +26,11 @@ import { useVoice } from './useVoice';
  * en ferait autant, pour une pastille. Au-dela, on renonce aux derniers plutot
  * que de peser sur la connexion — la liste etant triee, ce sont les espaces les
  * plus anciens qui passent en premier.
+ *
+ * Vingt-quatre plutot que quarante : le confort d'une pastille ne doit jamais
+ * disputer sa bande passante a la signalisation du salon ou l'on parle.
  */
-const PLAFOND = 40;
+const PLAFOND = 24;
 
 export function EcouteVocale() {
   const channels = useChat((state) => state.channels);
@@ -43,10 +46,30 @@ export function EcouteVocale() {
     [channels],
   );
 
+  /*
+   * Pas de nettoyage a chaque changement — c'etait la panne.
+   *
+   * `observerSalons` reconcilie deja : il ouvre ce qui manque et ferme ce qui
+   * n'a plus lieu d'etre. Rendre `() => observerSalons([])` defaisait
+   * exactement ce travail. Comme l'effet depend du salon rejoint, entrer en
+   * vocal fermait TOUS les canaux observes puis les rouvrait — quarante
+   * fermetures et trente-neuf ouvertures, a l'instant precis ou le salon
+   * essayait d'etablir sa propre signalisation.
+   *
+   * Realtime limite le rythme des adhesions. La signalisation se retrouvait
+   * donc en concurrence avec quatre-vingts operations sans interet, et quand
+   * elle perdait, aucune offre n'etait echangee : on entrait dans un salon ou
+   * personne ne s'entendait, et ou les partages n'arrivaient pas. « Des fois »,
+   * parce que cela dependait de qui gagnait la course.
+   *
+   * Le nettoyage ne vaut plus que pour le demontage reel du composant, c'est-a-
+   * dire la fermeture de l'application.
+   */
   useEffect(() => {
     observerSalons(salons);
-    return () => observerSalons([]);
   }, [salons, salonRejoint, observerSalons]);
+
+  useEffect(() => () => observerSalons([]), [observerSalons]);
 
   return null;
 }
