@@ -437,7 +437,27 @@ export function screenBitrate(media: MediaPreferences): number {
   // images consecutives se ressemblent, et l'encodeur ne transmet que l'ecart.
   const facteur = media.screenFrameRate >= 60 ? 1 : media.screenFrameRate >= 30 ? 0.65 : 0.4;
 
-  return Math.round(base * facteur);
+  /*
+   * Un jeu rapide demande plus que le compte.
+   *
+   * Le raisonnement ci-dessus — deux images consecutives se ressemblent —
+   * s'effondre precisement la ou l'on en aurait le plus besoin : dans un jeu
+   * ou l'on tourne la camera, TOUTE l'image change d'une trame a l'autre, et
+   * l'encodeur n'a plus d'ecart a transmettre, seulement des images entieres.
+   * Un plafond calcule pour du bureau donne alors une bouillie de blocs des
+   * qu'on bouge, ce qui est le moment ou l'on regarde.
+   *
+   * La majoration ne vaut qu'a soixante images et en priorite fluidite : c'est
+   * la signature d'un partage de jeu. Un partage de document a soixante images
+   * n'existe pas en pratique.
+   *
+   * C'est un plafond, pas une reservation : la couche de congestion descend
+   * d'elle-meme si la liaison ne suit pas. Le risque d'etre trop genereux est
+   * donc faible ; celui d'etre trop avare se voit a l'oeil nu.
+   */
+  const jeu = media.screenFrameRate >= 60 && media.screenPriority === 'motion' ? 1.4 : 1;
+
+  return Math.round(base * facteur * jeu);
 }
 
 /** Debit vise pour la camera. Une webcam n'a pas besoin du meme budget. */

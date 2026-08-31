@@ -10,6 +10,8 @@ import type { Channel } from '@/types/db';
 
 export function ChannelHeader({ channel }: { channel: Channel }) {
   const panel = useUI((state) => state.panel);
+  const chatVocalOuvert = useUI((state) => state.voiceChatOpen);
+  const toggleVoiceChat = useUI((state) => state.toggleVoiceChat);
   const togglePanel = useUI((state) => state.togglePanel);
   const setPaletteOpen = useUI((state) => state.setPaletteOpen);
   const toggleSidebar = useUI((state) => state.toggleSidebar);
@@ -111,6 +113,29 @@ export function ChannelHeader({ channel }: { channel: Channel }) {
             <Icon name={inThisVoice ? 'phone-off' : 'phone'} size={20} />
           )}
           <span className="visually-hidden">{inThisVoice ? 'Raccrocher' : 'Appeler'}</span>
+        </button>
+      ) : null}
+
+      {/*
+        Le fil ecrit du salon vocal.
+
+        La scene prend toute la place quand on est dans un salon vocal, et son
+        fil devenait inatteignable : impossible de coller un lien a quelqu'un a
+        qui l'on est en train de parler sans quitter le salon. Le bouton n'a de
+        sens que la — ailleurs, le fil est deja a l'ecran.
+      */}
+      {channel.kind === 'voice' ? (
+        <button
+          type="button"
+          className={'icon-btn channel-header__action' + (chatVocalOuvert ? ' is-active' : '')}
+          onClick={() => toggleVoiceChat()}
+          aria-pressed={chatVocalOuvert}
+          title={chatVocalOuvert ? 'Masquer la discussion' : 'Afficher la discussion'}
+        >
+          <Icon name="inbox" size={17} />
+          <span className="visually-hidden">
+            {chatVocalOuvert ? 'Masquer la discussion' : 'Afficher la discussion'}
+          </span>
         </button>
       ) : null}
 

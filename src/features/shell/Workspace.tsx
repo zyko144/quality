@@ -53,6 +53,7 @@ export function Workspace() {
   const selectChannel = useUI((state) => state.selectChannel);
   const setPaletteOpen = useUI((state) => state.setPaletteOpen);
   const paletteOpen = useUI((state) => state.paletteOpen);
+  const chatVocalOuvert = useUI((state) => state.voiceChatOpen);
   const togglePanel = useUI((state) => state.togglePanel);
 
   const userId = session?.user.id;
@@ -423,7 +424,24 @@ export function Workspace() {
               les messages reviennent des qu'on raccroche.
             */}
             {channel.kind === 'voice' || voiceChannelId === channel.id ? (
-              <VoiceStage channel={channel} />
+              /*
+               * La scene, et son fil ecrit a cote quand on le demande.
+               *
+               * Cote a cote plutot que l'un a la place de l'autre : on ouvre
+               * la discussion pendant qu'on parle, souvent pour y coller un
+               * lien dont on discute justement. La masquer pour la lire n'a
+               * pas de sens.
+               */
+              <div className={'scene' + (chatVocalOuvert ? ' scene--avec-fil' : '')}>
+                <VoiceStage channel={channel} />
+
+                {chatVocalOuvert ? (
+                  <aside className="scene__fil" aria-label={`Discussion de ${channel.name}`}>
+                    <MessageList channelId={channel.id} />
+                    <Composer channelId={channel.id} />
+                  </aside>
+                ) : null}
+              </div>
             ) : (
               <>
                 <MessageList channelId={channel.id} />

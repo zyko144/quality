@@ -299,4 +299,29 @@ test.describe('Salon vocal', () => {
     await page.getByRole('button', { name: 'Arreter le test' }).click();
     await expect(page.getByRole('button', { name: 'Verifions' })).toBeVisible();
   });
+
+  test('le fil ecrit du salon vocal s ouvre a cote de la scene', async ({ page }) => {
+    if (!(await openVoiceChannel(page))) return;
+
+    // Ferme au depart : la scene doit rester la vue par defaut d'un salon
+    // vocal, le fil n'etant utile qu'a la demande.
+    await expect(page.locator('.scene__fil')).toHaveCount(0);
+
+    const bouton = page.getByRole('button', { name: 'Afficher la discussion' });
+    await expect(bouton).toBeVisible();
+    await bouton.click();
+
+    const fil = page.locator('.scene__fil');
+    await expect(fil).toBeVisible();
+
+    // Les deux cohabitent : ouvrir le fil ne doit pas escamoter la scene, c'est
+    // tout l'interet de le poser a cote.
+    await expect(page.locator('.scene .voice-stage')).toBeVisible();
+
+    // De quoi ecrire, sans quoi le fil ne servirait qu'a lire.
+    await expect(fil.getByRole('textbox').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Masquer la discussion' }).click();
+    await expect(page.locator('.scene__fil')).toHaveCount(0);
+  });
 });

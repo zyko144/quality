@@ -61,6 +61,14 @@ interface UIState {
   activeThreadId: UUID | null;
 
   panel: SidePanel;
+  /**
+   * Le fil ecrit du salon vocal, ouvert a cote de la scene.
+   *
+   * Un salon vocal a son fil comme les autres, mais la scene prenait toute la
+   * place et il devenait inatteignable : on ne pouvait pas coller un lien a
+   * quelqu'un a qui l'on est en train de parler sans quitter le salon.
+   */
+  voiceChatOpen: boolean;
   modal: Modal;
   paletteOpen: boolean;
 
@@ -89,6 +97,7 @@ interface UIState {
   openThread: (threadId: UUID) => void;
   closeThread: () => void;
   setPanel: (panel: SidePanel) => void;
+  toggleVoiceChat: () => void;
   togglePanel: (panel: SidePanel) => void;
   openModal: (modal: Modal) => void;
   closeModal: () => void;
@@ -110,6 +119,7 @@ export const useUI = create<UIState>((set, get) => ({
   activeThreadId: null,
 
   panel: 'none',
+  voiceChatOpen: false,
   modal: { kind: 'none' },
   paletteOpen: false,
 
@@ -187,6 +197,8 @@ export const useUI = create<UIState>((set, get) => ({
       panel: state.panel === panel ? 'none' : panel,
       activeThreadId: panel === 'thread' ? state.activeThreadId : null,
     })),
+
+  toggleVoiceChat: () => set((state) => ({ voiceChatOpen: !state.voiceChatOpen })),
 
   openModal: (modal) => set({ modal }),
   closeModal: () => set({ modal: { kind: 'none' } }),
