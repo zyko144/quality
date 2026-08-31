@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, errorMessage, isSessionFailure } from '@/lib/supabase';
 import type { Profile, PresenceStatus } from '@/types/db';
+import { setNePasDeranger as setSonsSilencieux } from '@/lib/sounds';
+import { setNePasDeranger as setNotificationsSilencieuses } from '@/lib/notify';
 
 /* -------------------------------------------------------------------------- */
 /* Preferences d'affichage                                                     */
@@ -597,3 +599,23 @@ export const useSession = create<SessionState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+
+/*
+ * « Ne pas deranger » fait taire l'application.
+ *
+ * Pose ici plutot que dans `setStatus` : le statut arrive aussi par le
+ * chargement du profil au demarrage et par la synchronisation, et un reglage
+ * qui ne vaudrait que pour le chemin du menu serait faux la moitie du temps.
+ */
+let dernierStatut: string | null = null;
+
+useSession.subscribe((etat) => {
+  const statut = etat.profile?.status ?? null;
+  if (statut === dernierStatut) return;
+  dernierStatut = statut;
+
+  const silence = statut === 'dnd';
+  setSonsSilencieux(silence);
+  setNotificationsSilencieuses(silence);
+});

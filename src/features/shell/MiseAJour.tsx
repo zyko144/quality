@@ -90,7 +90,7 @@ export function MiseAJour() {
 
     let annule = false;
 
-    void (async () => {
+    const chercher = async () => {
       try {
         const { check } = await import('@tauri-apps/plugin-updater');
         const mise = await check();
@@ -140,10 +140,28 @@ export function MiseAJour() {
         console.error('Recherche de mise a jour :', cause);
         useMajEtat.getState().signaler(String(cause));
       }
-    })();
+    };
+
+    void chercher();
+
+    /*
+     * On cherche aussi pendant que l'application tourne.
+     *
+     * Une seule recherche au demarrage suffit a qui redemarre souvent. Pour
+     * une application qu'on laisse ouverte des journees entieres — c'est le
+     * cas d'une messagerie — elle revient a n'annoncer une version que le
+     * lendemain. Un quart d'heure entre deux essais est indolore : la
+     * requete pese quelques centaines d'octets.
+     */
+    const minuterie = window.setInterval(() => {
+      // Inutile d'interrompre une installation deja proposee.
+      if (annule) return;
+      void chercher();
+    }, 15 * 60 * 1000);
 
     return () => {
       annule = true;
+      window.clearInterval(minuterie);
     };
   }, []);
 

@@ -9,6 +9,9 @@ import {
   screenConstraints,
   screenBitrate,
   cameraBitrate,
+  audioBitrate,
+  applyAudioEncoding,
+  ameliorerOpus,
   applyEncodingWithRetry,
   preferVideoCodec,
 } from '@/store/devices';
@@ -167,6 +170,8 @@ interface VoiceState {
   focusShare: (userId: UUID | null) => void;
   /** Demande a quelqu'un de quitter le salon. Voir `Deconnexion`. */
   deconnecter: (userId: UUID) => void;
+  /** Ecoute la presence des salons vocaux donnes, sans y entrer. */
+  observerSalons: (channelIds: UUID[]) => void;
   /** Ouvre ou ferme le partage de quelqu'un. Ferme, il n'est plus decode. */
   toggleWatch: (userId: UUID) => void;
 }
@@ -174,6 +179,30 @@ interface VoiceState {
 /* -------------------------------------------------------------------------- */
 /* Ressources hors etat React                                                  */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Fin du suivi des reglages du micro, ou `null` hors salon.
+ *
+ * Voir `suivreReglagesMicro` : les traitements du micro ne se changent pas sur
+ * une piste deja ouverte, il faut la recapturer.
+ */
+let arretSuiviMicro: (() => void) | null = null;
+
+/**
+ * Canaux ecoutes sans y entrer, un par salon vocal visible.
+ *
+ * On y lit la presence sans jamais publier la sienne : c'est ce qui permet de
+ * voir qui discute dans un salon ou l'on n'est pas, et de le voir avant de
+ * decider d'y aller. Le salon qu'on a rejoint, lui, a deja son propre canal —
+ * il est exclu de la liste pour ne pas ouvrir deux abonnements au meme endroit.
+ */
+const observateurs = new Map<UUID, RealtimeChannel>();
+
+/** Derniere liste demandee. Voir `reconcilierObservateurs`. */
+let salonsVoulus: UUID[] = [];
+
+/** Minuterie d'un second essai, quand un sujet etait encore occupe. */
+let reconciliation: number | null = null;
 
 /** Tout ce qu'il faut retenir d'un pair pour negocier avec lui. */
 interface Peer {
@@ -425,6 +454,160 @@ export const useVoice = create<VoiceState>((set, get) => {
    * Le seuil est volontairement haut afin qu'un bruit de clavier ne declenche
    * pas le halo.
    */
+  /*
+   * Les reglages du micro s'appliquent en cours d'appel.
+   *
+   * C'est le defaut que l'on prenait pour « la reduction de bruit ne marche
+   * pas » : elle marchait, mais seulement pour qui la reglait avant d'entrer.
+   * Une fois la piste ouverte, cocher la case ne changeait plus rien — ni tout
+   * de suite, ni au salon suivant tant qu'on n'avait pas quitte l'application.
+   *
+   * `applyConstraints` ne suffit pas : les moteurs acceptent l'appel puis
+   * ignorent l'annulation d'echo et la reduction de bruit, qui sont posees a
+   * l'ouverture du peripherique. On recapture donc le micro et on echange la
+   * piste dans les connexions en cours — `replaceTrack` le fait sans
+   * renegocier, donc sans coupure audible pour personne.
+   */
+  function suivreReglagesMicro(): void {
+    const interessant = (media: ReturnType<typeof useDevices.getState>['media']) =>
+      [
+        media.microphoneId,
+        media.echoCancellation,
+        media.noiseSuppression,
+        media.voiceIsolation,
+        media.autoGainControl,
+        media.audioQuality,
+      ].join('|');
+
+    let precedent = interessant(useDevices.getState().media);
+
+    arretSuiviMicro = useDevices.subscribe((etat) => {
+      const suivant = interessant(etat.media);
+      if (suivant === precedent) return;
+      precedent = suivant;
+      void reprendreLeMicro();
+    });
+  }
+
+  async function reprendreLeMicro(): Promise<void> {
+    const { channelId, userId, localStream, muted, deafened } = get();
+    if (!channelId || !userId) return;
+
+    const media = useDevices.getState().media;
+
+    let remplacant: MediaStream;
+    try {
+      remplacant = await capturer({ audio: audioConstraints(media), video: false });
+    } catch {
+      // Le micro precedent continue de servir : mieux vaut un reglage qui ne
+      // prend pas qu'un salon devenu muet.
+      return;
+    }
+
+    // Le salon a pu se fermer pendant la capture.
+    if (get().channelId !== channelId) {
+      for (const piste of remplacant.getTracks()) piste.stop();
+      return;
+    }
+
+    const piste = remplacant.getAudioTracks()[0];
+    if (!piste) return;
+
+    // L'etat du micro se transporte : reprendre la parole parce qu'on a coche
+    // une case serait une mauvaise surprise.
+    piste.enabled = !muted && !deafened;
+
+    const debit = audioBitrate(media);
+    for (const peer of peers.values()) {
+      if (!peer.micSender) continue;
+      void peer.micSender.replaceTrack(piste);
+      void applyAudioEncoding(peer.micSender, debit);
+    }
+
+    set({ localStream: remplacant });
+    attachAnalyser(userId, remplacant);
+
+    for (const ancienne of localStream?.getTracks() ?? []) ancienne.stop();
+  }
+
+  /**
+   * Ouvre ce qui manque, ferme ce qui n'a plus lieu d'etre.
+   *
+   * Un detail a coute cher : `supabase.channel(sujet)` ne cree pas toujours un
+   * canal neuf — il rend celui qui porte deja ce sujet. Poser un ecouteur sur
+   * un canal deja souscrit leve une exception, et comme l'appel partait d'un
+   * effet React, elle emportait toute l'interface : ecran noir en quittant un
+   * salon, au moment precis ou l'on reouvrait l'ecoute de celui qu'on venait
+   * de laisser, sa fermeture n'etant pas encore terminee.
+   *
+   * On laisse donc passer les sujets occupes, et l'on repasse un peu plus tard.
+   */
+  function reconcilierObservateurs(): void {
+    const rejoint = get().channelId;
+    const voulus = new Set(salonsVoulus.filter((id) => id !== rejoint));
+
+    for (const [id, canal] of observateurs) {
+      if (voulus.has(id)) continue;
+      void supabase.removeChannel(canal);
+      observateurs.delete(id);
+
+      set((state) => {
+        const participantsByChannel = { ...state.participantsByChannel };
+        delete participantsByChannel[id];
+        return { participantsByChannel };
+      });
+    }
+
+    let aReessayer = false;
+
+    for (const id of voulus) {
+      if (observateurs.has(id)) continue;
+
+      const sujet = `orbit:voice:${id}`;
+
+      // Sujet deja pris : par le salon qu'on vient de quitter, le temps que sa
+      // fermeture aboutisse. On repassera.
+      if (supabase.getChannels().some((canal) => canal.topic.endsWith(sujet))) {
+        aReessayer = true;
+        continue;
+      }
+
+      const canal = supabase.channel(sujet);
+      observateurs.set(id, canal);
+
+      try {
+        canal
+          .on('presence', { event: 'sync' }, () => {
+            const participants = dedupliquer(
+              Object.values(canal.presenceState<VoiceParticipant>())
+                .flat()
+                .filter((entry): entry is VoiceParticipant & { presence_ref: string } =>
+                  Boolean(entry && typeof entry === 'object' && 'user_id' in entry),
+                ),
+            );
+
+            set((state) => ({
+              participantsByChannel: { ...state.participantsByChannel, [id]: participants },
+            }));
+          })
+          .subscribe();
+      } catch {
+        // Ceinture et bretelles : savoir qui discute ou est un confort, jamais
+        // une raison de faire tomber l'application.
+        observateurs.delete(id);
+        void supabase.removeChannel(canal);
+        aReessayer = true;
+      }
+    }
+
+    if (!aReessayer || reconciliation !== null) return;
+
+    reconciliation = window.setTimeout(() => {
+      reconciliation = null;
+      reconcilierObservateurs();
+    }, 800);
+  }
+
   function attachAnalyser(peerId: UUID, stream: MediaStream): void {
     try {
       audioContext ??= new AudioContext();
@@ -637,6 +820,18 @@ export const useVoice = create<VoiceState>((set, get) => {
 
     for (const track of localStream.getAudioTracks()) {
       peer.micSender = connection.addTrack(track, localStream);
+
+      // La voix a droit au meme soin que l'image. Sans ce reglage, Opus reste
+      // au debit de telephone que WebRTC lui donne par defaut, et l'on entend
+      // surtout cela quand on trouve que « le son est mauvais ».
+      const sender = peer.micSender;
+      void (async () => {
+        for (const attente of [0, 120, 400, 1200]) {
+          if (attente > 0) await new Promise((r) => setTimeout(r, attente));
+          if (!sender.track) return;
+          if (await applyAudioEncoding(sender, audioBitrate(useDevices.getState().media))) return;
+        }
+      })();
     }
 
     // Si un partage ou une camera sont deja actifs, le nouvel arrivant doit
@@ -707,7 +902,12 @@ export const useVoice = create<VoiceState>((set, get) => {
         await connection.setLocalDescription();
         const self = get().userId;
         if (self && connection.localDescription?.sdp) {
-          send({ kind: 'offer', from: self, to: peerId, sdp: connection.localDescription.sdp });
+          send({
+            kind: 'offer',
+            from: self,
+            to: peerId,
+            sdp: ameliorerOpus(connection.localDescription.sdp, useDevices.getState().media),
+          });
         }
       } catch {
         // Une negociation avortee sera relancee par le prochain changement.
@@ -774,7 +974,7 @@ export const useVoice = create<VoiceState>((set, get) => {
               kind: 'answer',
               from: self,
               to: signal.from,
-              sdp: connection.localDescription.sdp,
+              sdp: ameliorerOpus(connection.localDescription.sdp, useDevices.getState().media),
             });
           }
         }
@@ -852,6 +1052,15 @@ export const useVoice = create<VoiceState>((set, get) => {
         await new Promise((resoudre) => setTimeout(resoudre, 120));
       }
 
+      // On ecoutait peut-etre ce salon de loin : deux abonnements au meme
+      // endroit se marcheraient dessus, et le second publierait une presence
+      // que le premier ignore.
+      const observateur = observateurs.get(channelId);
+      if (observateur) {
+        void supabase.removeChannel(observateur);
+        observateurs.delete(channelId);
+      }
+
       set({ connecting: true, error: null });
 
       let localStream: MediaStream;
@@ -874,6 +1083,7 @@ export const useVoice = create<VoiceState>((set, get) => {
       // captait quoi que ce soit.
       attachAnalyser(userId, localStream);
       startSpeechDetection();
+      suivreReglagesMicro();
 
       playCue('join');
 
@@ -930,7 +1140,12 @@ export const useVoice = create<VoiceState>((set, get) => {
 
       stopSpeechDetection();
       stopStats();
+      arretSuiviMicro?.();
+      arretSuiviMicro = null;
       teardownPeers();
+      // Le salon qu'on laisse redevient un salon comme un autre : on veut y
+      // voir qui reste. Sa fermeture n'est pas finie, d'ou le report.
+      window.setTimeout(reconcilierObservateurs, 800);
       streamPurposes.clear();
       pendingStreams.clear();
 
@@ -1266,6 +1481,22 @@ export const useVoice = create<VoiceState>((set, get) => {
 
       set({ cameraOn: true, localCamera: camera });
       publishState();
+    },
+
+    /*
+     * Ecoute les salons vocaux d'un espace sans y entrer.
+     *
+     * La presence n'etait lue que pour le salon rejoint : partout ailleurs la
+     * liste paraissait vide, et l'on ne pouvait savoir si quelqu'un attendait
+     * dans un salon qu'en s'y connectant — c'est-a-dire en faisant du bruit
+     * pour rien.
+     *
+     * L'appelant redonne la liste entiere a chaque changement ; on n'ouvre que
+     * ce qui manque et on ferme ce qui n'y est plus.
+     */
+    observerSalons: (channelIds) => {
+      salonsVoulus = channelIds;
+      reconcilierObservateurs();
     },
 
     focusShare: (userId) => set({ focusedShare: userId }),

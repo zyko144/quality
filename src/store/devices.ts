@@ -33,6 +33,20 @@ export interface MediaPreferences {
   voiceIsolation: boolean;
   autoGainControl: boolean;
 
+  /**
+   * Qualite du son de la voix.
+   *
+   * WebRTC ouvre Opus a environ trente kilobits par seconde — un reglage pense
+   * pour la telephonie sur des reseaux incertains, et qui s'entend : les voix
+   * graves passent mal, les consonnes bavent. Sur une connexion domestique,
+   * doubler ce budget ne coute rien de perceptible et change beaucoup.
+   *
+   * `musique` monte a cent vingt-huit kilobits en stereo, et coupe les
+   * traitements du micro : l'annulation d'echo et la reduction de bruit sont
+   * faites pour la parole, et massacrent un instrument ou un morceau.
+   */
+  audioQuality: 'voix' | 'haute' | 'musique';
+
   /** Volume applique aux voix distantes, de 0 a 1. */
   outputVolume: number;
   /** Sensibilite du detecteur de parole, en dB (de -100 a 0). */
@@ -71,6 +85,9 @@ const DEFAULTS: MediaPreferences = {
   noiseSuppression: true,
   voiceIsolation: true,
   autoGainControl: true,
+  // « haute » par defaut : le debit double celui de WebRTC sans mettre en peril
+  // une connexion ordinaire, et c'est la difference que l'on entend le plus.
+  audioQuality: 'haute',
   outputVolume: 1,
   speakingThreshold: -50,
   videoQuality: '720p',
@@ -267,13 +284,104 @@ export const useDevices = create<DeviceState>((set, get) => ({
  * sur la reduction de bruit ordinaire.
  */
 export function audioConstraints(media: MediaPreferences): MediaTrackConstraints {
+  /*
+   * Le mode musique coupe la chaine de traitement.
+   *
+   * Ce n'est pas un raffinement : l'annulation d'echo de Chromium ramene le
+   * signal en mono et lui applique un filtrage taille pour la parole. Laisser
+   * ces traitements en place tout en demandant du stereo a cent vingt-huit
+   * kilobits reviendrait a promettre une qualite que le moteur a deja detruite
+   * en amont de l'encodeur.
+   */
+  const musique = media.audioQuality === 'musique';
+
   return {
     ...(media.microphoneId ? { deviceId: { ideal: media.microphoneId } } : {}),
-    echoCancellation: media.echoCancellation,
-    noiseSuppression: media.noiseSuppression,
-    autoGainControl: media.autoGainControl,
-    ...(media.voiceIsolation ? { voiceIsolation: { ideal: true } } : {}),
+    echoCancellation: musique ? false : media.echoCancellation,
+    noiseSuppression: musique ? false : media.noiseSuppression,
+    autoGainControl: musique ? false : media.autoGainControl,
+    ...(media.voiceIsolation && !musique ? { voiceIsolation: { ideal: true } } : {}),
+    // 48 kHz est le taux natif d'Opus : le demander evite un reechantillonnage
+    // de plus entre le micro et l'encodeur.
+    sampleRate: { ideal: 48000 },
+    channelCount: { ideal: musique ? 2 : 1 },
   } as MediaTrackConstraints;
+}
+
+/** Debit vise pour la voix, en bits par seconde. */
+export function audioBitrate(media: MediaPreferences): number {
+  return media.audioQuality === 'musique' ? 128_000 : media.audioQuality === 'haute' ? 64_000 : 32_000;
+}
+
+/**
+ * Impose un debit a la voix sortante.
+ *
+ * Distinct de `applyEncoding` : `degradationPreference` et
+ * `scaleResolutionDownBy` n'ont aucun sens pour du son, et certains moteurs
+ * rejettent l'objet entier si on les leur donne sur une piste audio.
+ */
+export async function applyAudioEncoding(sender: RTCRtpSender, bitrate: number): Promise<boolean> {
+  try {
+    const parameters = sender.getParameters();
+    if (!parameters.encodings || parameters.encodings.length === 0) return false;
+
+    for (const encoding of parameters.encodings) encoding.maxBitrate = bitrate;
+
+    await sender.setParameters(parameters);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Demande a l'autre bout de mieux nous parler.
+ *
+ * `setParameters` regle ce que l'on emet ; les parametres Opus de la SDP
+ * reglent ce que l'on accepte de recevoir. Les deux sont necessaires, et c'est
+ * la seconde moitie qui manquait : chacun s'appliquait a bien emettre pendant
+ * que son pair, faute d'avoir ete prevenu, continuait d'encoder au debit de
+ * telephone.
+ *
+ * `usedtx=0` merite un mot : la detection de silence coupe l'emission entre
+ * deux mots pour economiser du debit. Elle fonctionne, mais on entend le fond
+ * sonore apparaitre et disparaitre a chaque phrase, ce qui fatigue plus qu'un
+ * fond continu.
+ */
+export function ameliorerOpus(sdp: string, media: MediaPreferences): string {
+  const rtpmap = sdp.match(/^a=rtpmap:(\d+) opus\/48000\/2/m);
+  if (!rtpmap) return sdp;
+
+  const pt = rtpmap[1];
+  const stereo = media.audioQuality === 'musique' ? 1 : 0;
+
+  const reglages = [
+    `stereo=${stereo}`,
+    `sprop-stereo=${stereo}`,
+    `maxaveragebitrate=${audioBitrate(media)}`,
+    'maxplaybackrate=48000',
+    'useinbandfec=1',
+    'usedtx=0',
+  ];
+
+  const connus = /^(stereo|sprop-stereo|maxaveragebitrate|maxplaybackrate|useinbandfec|usedtx)=/;
+  const fmtp = new RegExp(`^a=fmtp:${pt} (.*)$`, 'm');
+
+  if (fmtp.test(sdp)) {
+    // Les autres parametres negocies par le moteur sont conserves : on ne
+    // remplace que ceux dont on a une opinion.
+    return sdp.replace(fmtp, (_ligne, existant: string) => {
+      const garde = existant
+        .split(';')
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0 && !connus.test(part));
+      return `a=fmtp:${pt} ${[...garde, ...reglages].join(';')}`;
+    });
+  }
+
+  // Le saut de ligne est ecrit en echappement : une vraie coupure dans un
+  // gabarit serait normalisee en simple LF, alors que la SDP se lit en CRLF.
+  return sdp.replace(rtpmap[0], `${rtpmap[0]}\r\na=fmtp:${pt} ${reglages.join(';')}`);
 }
 
 export function videoConstraints(media: MediaPreferences): MediaTrackConstraints {

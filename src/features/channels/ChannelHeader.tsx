@@ -92,7 +92,10 @@ export function ChannelHeader({ channel }: { channel: Channel }) {
       {isDirect ? (
         <button
           type="button"
-          className={'icon-btn channel-header__action' + (inThisVoice ? ' is-active' : '')}
+          className={
+            'icon-btn channel-header__action channel-header__call' +
+            (inThisVoice ? ' is-active' : '')
+          }
           onClick={() => {
             if (!profile) return;
             if (inThisVoice) void leaveVoice();
@@ -105,7 +108,7 @@ export function ChannelHeader({ channel }: { channel: Channel }) {
           {connecting ? (
             <span className="spinner" />
           ) : (
-            <Icon name={inThisVoice ? 'phone-off' : 'volume'} size={17} />
+            <Icon name={inThisVoice ? 'phone-off' : 'phone'} size={20} />
           )}
           <span className="visually-hidden">{inThisVoice ? 'Raccrocher' : 'Appeler'}</span>
         </button>

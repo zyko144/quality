@@ -28,6 +28,21 @@
  */
 const GAMME = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25];
 
+/**
+ * « Ne pas deranger » ne derange pas.
+ *
+ * Le statut coupait bien les notifications de bureau, mais pas les sons : on
+ * se declarait indisponible et l'application continuait de sonner dans la
+ * piece. Le drapeau est pose ici plutot que teste par chaque appelant, pour
+ * qu'aucun son nouveau ne puisse oublier de le consulter.
+ */
+let silence = false;
+
+export function setNePasDeranger(actif: boolean): void {
+  silence = actif;
+  if (actif) stopRing();
+}
+
 export type Cue =
   | 'mute'
   | 'unmute'
@@ -155,7 +170,7 @@ export function setCueVolume(valeur: number): void {
  * exponentielle, qui est la facon dont un son s'eteint dans la nature.
  */
 export function playCue(cue: Cue): void {
-  if (volume <= 0) return;
+  if (volume <= 0 || silence) return;
 
   const ctx = obtenirContexte();
   if (!ctx) return;
@@ -185,4 +200,69 @@ export function playCue(cue: Cue): void {
     oscillateur.start(t0);
     oscillateur.stop(t1 + 0.02);
   }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Sonnerie d'appel                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * La sonnerie, seul son qui insiste.
+ *
+ * Les autres signaux passent une fois et s'oublient : un appel, non — on peut
+ * etre a l'autre bout de la piece. Elle se repete donc jusqu'a ce qu'on
+ * decroche, que l'autre renonce, ou qu'on la fasse taire.
+ *
+ * Deux notes alternees plutot qu'une seule tenue : une note continue devient
+ * penible en trois secondes, et se confond avec une alarme.
+ */
+let sonnerie: number | null = null;
+
+const MOTIF: Note[] = [
+  { degre: 3, debut: 0, duree: 0.22, gain: 0.42 },
+  { degre: 5, debut: 0.26, duree: 0.3, gain: 0.42 },
+];
+
+function jouerMotif(): void {
+  const ctx = obtenirContexte();
+  if (!ctx) return;
+
+  const depart = ctx.currentTime;
+
+  for (const note of MOTIF) {
+    const oscillateur = ctx.createOscillator();
+    const enveloppe = ctx.createGain();
+
+    oscillateur.type = 'triangle';
+    oscillateur.frequency.value = GAMME[note.degre] ?? GAMME[0]!;
+
+    const t0 = depart + note.debut;
+    const t1 = t0 + note.duree;
+    const crete = note.gain * volume;
+
+    enveloppe.gain.setValueAtTime(0.0001, t0);
+    enveloppe.gain.exponentialRampToValueAtTime(crete, t0 + 0.02);
+    enveloppe.gain.exponentialRampToValueAtTime(0.0001, t1);
+
+    oscillateur.connect(enveloppe).connect(ctx.destination);
+    oscillateur.start(t0);
+    oscillateur.stop(t1 + 0.02);
+  }
+}
+
+/** Fait sonner jusqu'a `stopRing`. Un second appel ne cumule pas. */
+export function startRing(): void {
+  if (sonnerie !== null || volume <= 0 || silence) return;
+
+  jouerMotif();
+  // Deux secondes entre deux motifs : le rythme d'un telephone, assez espace
+  // pour qu'on puisse s'entendre parler entre deux.
+  sonnerie = window.setInterval(jouerMotif, 2000);
+}
+
+export function stopRing(): void {
+  if (sonnerie === null) return;
+  window.clearInterval(sonnerie);
+  sonnerie = null;
 }

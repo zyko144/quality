@@ -1340,3 +1340,99 @@ button.voice-tile__name:hover {
   aspect-ratio: auto;
   border-radius: 0;
 }
+
+/* ==========================================================================
+   Plein ecran : rien d'autre que l'image
+   ==========================================================================
+   Il restait une bande en bas — l'etiquette du partage, posee par-dessus le
+   contenu, et le fond de la scene qui depassait. En plein ecran on ne regarde
+   qu'une chose ; tout ce qui la borde est du bruit.
+   ========================================================================== */
+
+.screen-tile.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: #000;
+  box-shadow: none;
+}
+
+.screen-tile.is-fullscreen .screen-tile__video {
+  width: 100%;
+  height: 100%;
+}
+
+/* L'etiquette dit de qui vient l'image. En plein ecran, la question ne se pose
+   plus : on vient d'aller la chercher. */
+.screen-tile.is-fullscreen .screen-tile__label {
+  display: none;
+}
+
+/* La sortie, elle, doit rester atteignable — et se montrer sans qu'on ait a
+   deviner qu'elle est la. */
+.screen-tile.is-fullscreen .screen-tile__actions {
+  opacity: 1;
+  bottom: var(--space-5);
+  right: var(--space-5);
+}
+
+/* La barre de commandes du salon n'a rien a faire par-dessus un plein ecran :
+   elle appartient a la scene, restee derriere. */
+.voice-stage:has(.screen-tile.is-fullscreen) .voice-controls,
+.voice-stage:has(.screen-tile.is-fullscreen) .voice-grid,
+.voice-stage:has(.screen-tile.is-fullscreen) .voice-stage__replier {
+  display: none;
+}
+
+/* ==========================================================================
+   Seul dans le salon, la photo garde une taille humaine
+   ==========================================================================
+   La carte s'etale quand on est seul — c'est voulu, elle ne peut pas rester
+   dans un coin. Mais la photo suivait l'etalement et finissait en portrait de
+   deux cents pixels au milieu de l'ecran, ce qui est ridicule a cote d'un
+   partage en cours.
+   ========================================================================== */
+
+.voice-grid:has(> :only-child) .voice-tile .avatar {
+  width: 96px !important;
+  height: 96px !important;
+  min-width: 96px !important;
+  min-height: 96px !important;
+  max-width: 96px !important;
+  max-height: 96px !important;
+}
+
+/* Un partage occupe la scene : la carte solitaire cesse de s'etaler, elle n'a
+   plus la place. */
+.voice-stage:has(.voice-stage__screens) .voice-grid:has(> :only-child),
+.voice-stage:has(.voice-stage__focus) .voice-grid:has(> :only-child) {
+  grid-template-columns: minmax(0, 380px);
+}
+
+.voice-stage:has(.voice-stage__focus) .voice-grid:has(> :only-child) {
+  grid-template-columns: minmax(0, 240px);
+}
+
+.voice-stage:has(.voice-stage__focus) .voice-grid:has(> :only-child) .voice-tile .avatar {
+  width: 60px !important;
+  height: 60px !important;
+  min-width: 60px !important;
+  min-height: 60px !important;
+  max-width: 60px !important;
+  max-height: 60px !important;
+}
+
+.voice-stage:has(.voice-stage__screens):not(:has(.voice-stage__focus))
+  .voice-grid:has(> :only-child)
+  .voice-tile
+  .avatar {
+  width: 84px !important;
+  height: 84px !important;
+  min-width: 84px !important;
+  min-height: 84px !important;
+  max-width: 84px !important;
+  max-height: 84px !important;
+}

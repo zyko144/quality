@@ -2012,3 +2012,85 @@ button.userbar__voice-info:hover {
 .sidebar__channels li[draggable='true']:active .channel {
   cursor: grabbing;
 }
+
+/* --------------------------------------------------------------------------
+   Appeler
+   --------------------------------------------------------------------------
+   Le bouton d'appel n'est pas une commande parmi d'autres dans l'en-tete :
+   c'est la seule qui demarre quelque chose. Il est plus grand que ses voisins,
+   et porte un combine plutot qu'un haut-parleur — lequel disait « du son »,
+   pas « appeler ».
+   -------------------------------------------------------------------------- */
+
+.channel-header__call {
+  width: 42px;
+  height: 42px;
+}
+
+.channel-header__call:not(.is-active) {
+  background: color-mix(in oklab, var(--positive, #3ba55d) 18%, transparent);
+  color: var(--positive, #3ba55d);
+}
+
+.channel-header__call:not(.is-active):hover {
+  background: color-mix(in oklab, var(--positive, #3ba55d) 30%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Appel entrant
+   --------------------------------------------------------------------------
+   Posee en bas a gauche, a l'oppose de la banniere de mise a jour : les deux
+   peuvent apparaitre en meme temps, et se recouvrir ferait perdre celle qui
+   presse.
+   -------------------------------------------------------------------------- */
+
+.sonnerie {
+  position: fixed;
+  left: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lg), var(--edge-light);
+  animation: maj-entre var(--duration-normal) var(--spring);
+}
+
+/* La photo bat au rythme de la sonnerie : de quoi reconnaitre l'appel du coin
+   de l'oeil, sans lire. */
+.sonnerie__halo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  animation: sonnerie-pulse 2s ease-out infinite;
+}
+
+@keyframes sonnerie-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent); }
+  70%  { box-shadow: 0 0 0 12px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+[data-motion='reduced'] .sonnerie__halo,
+:root[data-perf='on'] .sonnerie__halo {
+  animation: none;
+}
+
+.sonnerie__corps { min-width: 0; }
+
+.sonnerie__titre {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sonnerie__note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}

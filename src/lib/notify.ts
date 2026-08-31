@@ -82,7 +82,22 @@ export interface NotifyOptions {
   onClick?: () => void;
 }
 
+/**
+ * « Ne pas deranger ».
+ *
+ * Pose par le magasin de session a chaque changement de statut. Comme pour les
+ * sons, le test vit ici : un appelant qui l'oublierait rendrait le reglage
+ * faux sans que rien ne le signale.
+ */
+let silence = false;
+
+export function setNePasDeranger(actif: boolean): void {
+  silence = actif;
+}
+
 export async function notify({ title, body, tag, onClick }: NotifyOptions): Promise<void> {
+  if (silence) return;
+
   // Une notification pour un message deja sous les yeux est une nuisance.
   if (typeof document !== 'undefined' && document.visibilityState === 'visible') return;
 

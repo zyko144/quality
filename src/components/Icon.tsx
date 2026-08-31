@@ -60,6 +60,10 @@ const PATHS = {
   'headphones-off':
     'M2 2l20 20 M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3Z M3 18v-6a9 9 0 0 1 13.5-7.8',
   screen: 'M2 4h20v12H2Z M8 20h8 M12 16v4',
+  // Combine classique : le microtelephone incline. Trace dans le meme style
+  // que `phone-off`, dont il est le pendant, pour que les deux etats du bouton
+  // d'appel ne changent pas d'epaisseur en basculant.
+  phone: 'M15.5 21A16 16 0 0 1 3 8.5 3 3 0 0 1 6 5h1.5a1 1 0 0 1 1 .85l.6 3a1 1 0 0 1-.4 1L7.5 11a13 13 0 0 0 5.5 5.5l1.15-1.2a1 1 0 0 1 1-.4l3 .6a1 1 0 0 1 .85 1V18a3 3 0 0 1-3.5 3Z',
   'phone-off': 'M2 2l20 20 M10.7 5.3A16 16 0 0 1 12 5a2 2 0 0 1 2 2v1.5 M5.4 9.6A16 16 0 0 0 5 12c0 4.4 5.2 8 9 8 .8 0 1.6-.1 2.4-.4',
   video: 'M22 8l-6 4 6 4V8Z M2 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2Z',
   // Appareil photo, distinct du camescope `video` : celui-ci sert a changer

@@ -185,8 +185,32 @@ export function VoiceSettings() {
           onChange={(value) => setMedia('autoGainControl', value)}
         />
         <p className="settings__hint">
-          Ces reglages sont appliques par le navigateur a l’ouverture du micro :
-          un changement prend effet a votre prochaine entree en vocal.
+          Ces reglages sont poses a l’ouverture du micro. Les changer en cours
+          d’appel rouvre le micro et remplace la piste sans coupure audible :
+          l’effet est immediat, pour vous comme pour les autres.
+        </p>
+      </section>
+
+      <section className="settings__group">
+        <h2 className="settings__group-title">Qualite du son</h2>
+
+        <Choice
+          label="Debit de la voix"
+          value={media.audioQuality}
+          options={[
+            { value: 'voix', label: 'Voix' },
+            { value: 'haute', label: 'Haute' },
+            { value: 'musique', label: 'Musique' },
+          ]}
+          onChange={(value) => setMedia('audioQuality', value)}
+        />
+
+        <p className="settings__hint">
+          {media.audioQuality === 'musique'
+            ? '128 kb/s en stereo. Les traitements du micro sont coupes : ils sont faits pour la parole et abiment un instrument ou un morceau. A reserver a une bonne connexion.'
+            : media.audioQuality === 'haute'
+              ? '64 kb/s — le double de ce que WebRTC donne par defaut. Les voix graves passent, les consonnes cessent de baver, et la charge reseau reste negligeable.'
+              : '32 kb/s, le reglage de la telephonie. Tient sur une connexion difficile, au prix d’une voix mate.'}
         </p>
       </section>
 

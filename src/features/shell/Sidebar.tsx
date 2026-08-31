@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { useSession } from '@/store/session';
@@ -91,6 +91,43 @@ export function Sidebar() {
     () => categories.filter((category) => category.space_id === activeSpaceId),
     [categories, activeSpaceId],
   );
+
+  /*
+   * Qui parle, et ou, avant meme d'y entrer.
+   *
+   * La presence n'etait lue que pour le salon rejoint : ailleurs, la liste
+   * paraissait vide, et le seul moyen de savoir si quelqu'un attendait quelque
+   * part etait d'aller voir — c'est-a-dire de s'y connecter, avec le bruit
+   * d'arrivee que cela suppose.
+   *
+   * L'ecoute suit le salon rejoint : en entrant quelque part, ce salon sort de
+   * la liste observee, son propre canal prenant le relais.
+   */
+  const observerSalons = useVoice((state) => state.observerSalons);
+  const salonRejoint = useVoice((state) => state.channelId);
+
+  const salonsVocaux = useMemo(
+    () => [
+      ...spaceChannels.filter((channel) => channel.kind === 'voice').map((channel) => channel.id),
+      /*
+       * Les conversations privees sont ecoutees en permanence.
+       *
+       * Une privee est un salon vocal comme un autre : quelqu'un qui y entre
+       * appelle. Sans cette ecoute, la sonnerie ne se declencherait que pour la
+       * conversation deja ouverte a l'ecran — c'est-a-dire quand on n'a pas
+       * besoin d'etre prevenu.
+       */
+      ...channels.filter((channel) => channel.space_id === null).map((channel) => channel.id),
+    ],
+    [spaceChannels, channels],
+  );
+
+  useEffect(() => {
+    observerSalons(salonsVocaux);
+    // Quitter l'espace ferme les ecoutes : rien ne sert d'entendre les salons
+    // d'un serveur qu'on ne regarde plus.
+    return () => observerSalons([]);
+  }, [salonsVocaux, salonRejoint, observerSalons]);
 
   // Fils encore ouverts de cet espace, les plus recents en premier. C'est la
   // section qui remplace la chasse au message perdu dans l'historique.

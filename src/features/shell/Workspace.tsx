@@ -13,6 +13,7 @@ import { WindowControls } from '@/components/WindowControls';
 import { QualityLogo } from '@/components/QualityLogo';
 import { MiseAJour } from './MiseAJour';
 import { SortieAudio } from '@/features/voice/SortieAudio';
+import { Sonnerie } from '@/features/voice/Sonnerie';
 import { MessageList } from '@/features/messages/MessageList';
 import { Composer } from '@/features/messages/Composer';
 import { VoiceStage } from '@/features/voice/VoiceStage';
@@ -383,6 +384,7 @@ export function Workspace() {
       {/* Le son des autres, monte une fois pour toutes : il ne doit pas
           dependre de l'ecran qu'on regarde. */}
       <SortieAudio />
+      <Sonnerie />
 
       {/* Sur petit ecran, la navigation recouvre la conversation : il faut un
           voile pour la refermer, et l'ecarter des lecteurs d'ecran quand elle
