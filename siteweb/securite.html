@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Securite — Qualityz</title>
+<meta name="description" content="Les mesures de securite de Quality : chiffrement en transit, cloisonnement des donnees, mises a jour signees, media en pair-a-pair. Et comment nous signaler une faille.">
+<meta name="theme-color" content="#0b0b0d">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<a class="saut-contenu" href="#contenu">Aller au contenu</a>
+
+<header class="entete">
+  <div class="enveloppe entete__barre">
+    <a class="marque" href="index.html">
+      <svg class="marque__glyphe" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M 50 8 C 26.8 8 8 26.8 8 50 C 8 59.8 11.4 68.8 17.1 76 L 10 94 L 29.4 87.5 C 35.6 90.9 42.6 92.8 50 92.8 C 73.2 92.8 92 74 92 50 C 92 26.8 73.2 8 50 8 Z M 50 84 C 43.8 84 38 82.4 32.8 79.5 L 30 78 L 19 81.7 L 23 71.4 L 21.2 68.6 C 16.7 61.9 14.2 56.2 14.2 50 C 14.2 30.2 30.2 14.2 50 14.2 C 69.8 14.2 85.8 30.2 85.8 50 C 85.8 69.8 69.8 84 50 84 Z"/>
+        <path d="M 28 58 C 38 58 46 47 57 38 C 66 30 76 33 80 44 C 74 44 69 49 65 55 C 58 64 47 67 36 67 C 32 67 29 63 28 58 Z"/>
+        <path d="M 38 72 C 48 72 58 65 67 56 C 73 50 79 50 83 56 C 77 60 70 66 61 71 C 53 76 45 76 38 72 Z"/>
+      </svg>
+      Qualityz
+    </a>
+
+    <button class="bascule-nav" type="button" aria-expanded="false" aria-controls="nav-principale">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+      </svg>
+      Menu
+    </button>
+
+    <nav class="nav" id="nav-principale" aria-label="Navigation principale">
+      <a href="index.html">Accueil</a>
+      <a href="telecharger.html">Telecharger</a>
+      <a href="player.html">Lecteur web</a>
+      <a href="securite.html" aria-current="page">Securite</a>
+      <a class="bouton bouton--principal" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">Telecharger</a>
+    </nav>
+  </div>
+</header>
+
+<main id="contenu">
+
+  <section class="enveloppe section">
+    <div class="section__intro">
+      <span class="surtitre">Securite</span>
+      <h1>Ce que nous protegeons, et comment</h1>
+      <p>
+        La meilleure donnee est celle que personne ne detient. Quality en garde le
+        moins possible : les conversations vocales ne passent pas par nos serveurs,
+        et ce qui reste est cloisonne, chiffre en transit, et mis a jour
+        automatiquement.
+      </p>
+      <h2 id="titre-mesures">Les mesures en place</h2>
+    </div>
+
+    <div class="grille grille--2" data-apparition>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+          </svg>
+        </div>
+        <h3>Chiffrement en transit</h3>
+        <p>Tous les echanges entre l'application et nos services passent par des liaisons chiffrees. L'application ne se connecte qu'a une liste fermee de domaines, declaree dans sa politique de securite de contenu.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <path d="M12 3l7 3v6c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6l7-3Z"/><path d="m9.5 12.2 1.9 1.9 3.6-3.7"/>
+          </svg>
+        </div>
+        <h2>Mots de passe et sessions</h2>
+        <p>Les mots de passe ne sont jamais stockes en clair : seule une empreinte cryptographique est conservee, par un service d'authentification dedie. Les sessions sont porteuses de jetons a duree limitee, renouveles automatiquement.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>
+          </svg>
+        </div>
+        <h2>Cloisonnement des donnees</h2>
+        <p>Les regles d'acces sont appliquees dans la base elle-meme, ligne par ligne, et non seulement dans l'interface. Un compte ne peut lire que les espaces dont il est membre, meme si une requete est forgee a la main.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>
+          </svg>
+        </div>
+        <h2>Voix et video en pair-a-pair</h2>
+        <p>Les flux audio, video et de partage d'ecran sont etablis directement entre les participants, via WebRTC, et chiffres par ce protocole. Nos serveurs ne les recoivent pas et ne peuvent donc ni les ecouter ni les conserver.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <path d="M12 3 4 6.5v5c0 4.5 3.4 8.3 8 9.5 4.6-1.2 8-5 8-9.5v-5L12 3Z"/><path d="M12 11v4"/><path d="M12 8h.01"/>
+          </svg>
+        </div>
+        <h2>Mises a jour signees</h2>
+        <p>Chaque mise a jour est signee avec une cle privee que nous seuls detenons. L'application embarque la cle publique correspondante et refuse d'installer un paquet dont la signature ne correspond pas.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/>
+          </svg>
+        </div>
+        <h2>Une surface d'attaque reduite</h2>
+        <p>Quality n'embarque pas son propre navigateur : elle s'appuie sur le moteur de rendu du systeme, tenu a jour par celui-ci. Moins de code embarque, c'est moins de failles heritees a corriger nous-memes.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- Le pendant honnete des promesses ci-dessus. -->
+  <section class="enveloppe section--serre" aria-labelledby="titre-limites">
+    <div class="encart encart--avertissement" role="note">
+      <h2 class="encart__titre" id="titre-limites">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.5M12 17.5h.01"/>
+        </svg>
+        Ce que nous ne promettons pas
+      </h2>
+      <p>
+        <strong>Le pair-a-pair a une contrepartie.</strong> Une liaison directe
+        suppose que les deux machines connaissent leurs adresses reseau : dans un
+        salon vocal, votre adresse IP peut donc etre visible des autres
+        participants. Lorsqu'une liaison directe est impossible, un serveur de
+        relais prend le relais et masque cette adresse, sans pouvoir dechiffrer
+        les flux.
+      </p>
+      <p>
+        <strong>Les messages ecrits ne sont pas chiffres de bout en bout.</strong>
+        Ils sont chiffres en transit et cloisonnes dans la base, mais ils y sont
+        stockes de facon lisible par le service — c'est ce qui permet de les
+        retrouver d'un appareil a l'autre et de les rechercher. Ne confiez pas a
+        un salon ce que vous ne confieriez pas a un hebergeur.
+      </p>
+      <p>
+        <strong>Aucun audit externe n'a ete conduit a ce jour.</strong> Ce qui est
+        decrit ici correspond a la conception du logiciel, non au resultat d'une
+        certification.
+      </p>
+    </div>
+  </section>
+
+  <section class="enveloppe section" aria-labelledby="titre-conseils">
+    <div class="section__intro">
+      <h2 id="titre-conseils">De votre cote</h2>
+    </div>
+    <ul>
+      <li>Utilisez un mot de passe long et propre a Quality ; un gestionnaire de mots de passe s'en charge mieux que la memoire.</li>
+      <li>Avant de partager votre ecran, fermez ce qui n'a rien a y faire : messagerie personnelle, gestionnaire de mots de passe, documents ouverts.</li>
+      <li>Ne rejoignez un espace que sur invitation d'une personne que vous connaissez, et mefiez-vous des fichiers envoyes par des inconnus.</li>
+      <li>Ne telechargez l'application que depuis <a href="telecharger.html">cette page</a> ou depuis la page officielle des publications.</li>
+      <li>Gardez les mises a jour automatiques activees : c'est par elles qu'arrivent les correctifs de securite.</li>
+    </ul>
+  </section>
+
+  <section class="enveloppe section" aria-labelledby="titre-signaler">
+    <div class="section__intro">
+      <span class="surtitre">Divulgation responsable</span>
+      <h2 id="titre-signaler">Signaler une faille</h2>
+      <p>
+        Si vous pensez avoir trouve une vulnerabilite, ecrivez-nous avant d'en
+        parler publiquement. Nous prenons chaque signalement au serieux et nous
+        vous repondrons, meme si le probleme s'avere finalement sans gravite.
+      </p>
+    </div>
+
+    <div class="encart encart--accent encart--espace" id="signaler">
+      <h3 class="encart__titre">Ou ecrire</h3>
+      <p>
+        Adresse dediee : <span class="a-completer">[Email de securite]</span>.
+        A defaut, <span class="a-completer">[Email de contact]</span>.
+        Si vous souhaitez chiffrer votre message, notre cle publique est
+        disponible sur demande a la meme adresse.
+      </p>
+    </div>
+
+    <h3>Ce que votre message devrait contenir</h3>
+    <ul>
+      <li>une description de la vulnerabilite et de son impact possible ;</li>
+      <li>les etapes precises permettant de la reproduire ;</li>
+      <li>la version de l'application et le systeme d'exploitation utilises ;</li>
+      <li>toute capture, journal ou extrait de code utile ;</li>
+      <li>la maniere dont vous souhaitez etre credite, si vous le souhaitez.</li>
+    </ul>
+
+    <h3>Nos engagements</h3>
+    <ol class="etapes" data-apparition>
+      <li><strong>Accuse de reception sous 72 heures.</strong> Nous confirmons avoir recu votre message et ouvrons un suivi.</li>
+      <li><strong>Premiere analyse sous 7 jours.</strong> Nous vous disons si la faille est confirmee, et son niveau de gravite.</li>
+      <li><strong>Correction, puis publication.</strong> Nous corrigeons dans un delai proportionne a la gravite, puis publions une version corrigee. Nous vous tenons informe de l'avancement.</li>
+      <li><strong>Divulgation coordonnee sous 90 jours.</strong> Passe ce delai, ou plus tot d'un commun accord, vous etes libre de publier vos conclusions.</li>
+    </ol>
+
+    <h3>Perimetre</h3>
+    <p>
+      Sont concernes : l'application de bureau Quality, ce site, et les services
+      qui les soutiennent. Ne relevent pas de cette procedure les vulnerabilites
+      propres aux services de nos prestataires, qui disposent de leurs propres
+      canaux de signalement, ainsi que les rapports issus de simples outils
+      automatises sans impact demontre.
+    </p>
+
+    <h3>Ce que nous vous demandons</h3>
+    <ul>
+      <li>N'accedez qu'a vos propres comptes et donnees, et arretez-vous des que vous avez la preuve du probleme.</li>
+      <li>Ne degradez pas le service : pas de deni de service, pas de test de charge, pas d'hameconnage envers d'autres utilisateurs.</li>
+      <li>Ne conservez, ne modifiez ni ne diffusez aucune donnee appartenant a un tiers ; supprimez ce que vous auriez pu recuperer.</li>
+      <li>Laissez-nous le temps de corriger avant toute publication.</li>
+    </ul>
+    <p>
+      Une recherche menee de bonne foi et dans ces limites ne donnera lieu a
+      aucune action de notre part. Il n'existe pas de programme de recompense
+      remunere ; nous creditons volontiers, avec votre accord, celles et ceux qui
+      nous aident.
+    </p>
+  </section>
+
+</main>
+
+<footer class="pied">
+  <div class="enveloppe">
+    <div class="pied__grille">
+      <div>
+        <a class="pied__marque" href="index.html">
+          <svg class="marque__glyphe" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true" focusable="false">
+            <path d="M 50 8 C 26.8 8 8 26.8 8 50 C 8 59.8 11.4 68.8 17.1 76 L 10 94 L 29.4 87.5 C 35.6 90.9 42.6 92.8 50 92.8 C 73.2 92.8 92 74 92 50 C 92 26.8 73.2 8 50 8 Z M 50 84 C 43.8 84 38 82.4 32.8 79.5 L 30 78 L 19 81.7 L 23 71.4 L 21.2 68.6 C 16.7 61.9 14.2 56.2 14.2 50 C 14.2 30.2 30.2 14.2 50 14.2 C 69.8 14.2 85.8 30.2 85.8 50 C 85.8 69.8 69.8 84 50 84 Z"/>
+            <path d="M 28 58 C 38 58 46 47 57 38 C 66 30 76 33 80 44 C 74 44 69 49 65 55 C 58 64 47 67 36 67 C 32 67 29 63 28 58 Z"/>
+            <path d="M 38 72 C 48 72 58 65 67 56 C 73 50 79 50 83 56 C 77 60 70 66 61 71 C 53 76 45 76 38 72 Z"/>
+          </svg>
+          Qualityz
+        </a>
+        <p class="pied__accroche">La discussion d'equipe, avec la voix qui passe directement d'un membre a l'autre.</p>
+      </div>
+
+      <div>
+        <h2>Produit</h2>
+        <ul>
+          <li><a href="index.html">Accueil</a></li>
+          <li><a href="telecharger.html">Telecharger</a></li>
+          <li><a href="player.html">Lecteur web</a></li>
+          <li><a href="securite.html">Securite</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>Juridique</h2>
+        <ul>
+          <li><a href="cgu.html">Conditions generales</a></li>
+          <li><a href="confidentialite.html">Confidentialite</a></li>
+          <li><a href="mentions-legales.html">Mentions legales</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>Ressources</h2>
+        <ul>
+          <li><a href="https://github.com/zyko144/quality/releases/latest">Versions publiees</a></li>
+          <li><a href="securite.html#signaler">Signaler une faille</a></li>
+          <li><a href="confidentialite.html#droits">Exercer vos droits</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pied__bas">
+      <p>&copy; <span data-annee>2026</span> Qualityz — edite par <span class="a-completer">[Nom de l'editeur]</span>.</p>
+      <p>Quality n'est affilie a aucun editeur tiers.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

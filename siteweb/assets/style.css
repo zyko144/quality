@@ -680,6 +680,11 @@ hr {
   margin-bottom: 0;
 }
 
+/* Respiration avant le bloc suivant, quand l'encart ouvre une page. */
+.encart--espace {
+  margin-bottom: 2.25rem;
+}
+
 .encart__titre {
   display: flex;
   align-items: center;
@@ -816,7 +821,16 @@ thead th {
   font-weight: 600;
 }
 
-tbody tr:last-child td {
+/* En-tetes de ligne : utilises dans les mentions legales, ou chaque ligne est
+   une information nommee plutot qu'une valeur dans une colonne. */
+tbody th {
+  width: 38%;
+  color: var(--text);
+  font-weight: 600;
+}
+
+tbody tr:last-child td,
+tbody tr:last-child th {
   border-bottom: 0;
 }
 

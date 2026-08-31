@@ -4,8 +4,23 @@
     {
       "name": "orbit",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "siteweb",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "serve",
+        "siteweb",
+        "-l",
+        "4321"
+      ],
+      "port": 4321
     }
   ]
 }
