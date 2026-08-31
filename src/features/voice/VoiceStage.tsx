@@ -321,8 +321,10 @@ export function VoiceStage({ channel }: { channel: Channel }) {
       {partageSansSon ? (
         <p className="voice-stage__note" role="status">
           <Icon name="volume" size={14} />
-          Votre partage part sans le son. Windows ne le permet que pour un ecran
-          entier ou un onglet, jamais pour une fenetre seule.
+          Votre partage part sans le son. C&rsquo;est notre selecteur de source
+          qui l&rsquo;empeche : la case qui autorise le son vit dans la fenetre
+          de Windows que nous remplacons. Cochez « Partager le son de
+          l&rsquo;ordinateur » dans le selecteur, puis relancez Quality.
         </p>
       ) : null}
 

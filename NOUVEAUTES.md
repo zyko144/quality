@@ -12,6 +12,21 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.2
+
+### Corrige
+
+- Le son du partage n'etait jamais capture, quelle que soit la source choisie. La cause n'etait pas Windows mais nous : le drapeau qui supprime la fenetre de selection du systeme — celui qui nous permet d'avoir notre propre selecteur — supprime aussi la case « partager aussi le son » qu'elle contient. Sans cette case, Chromium n'accorde jamais la piste audio.
+- Le message affiche pendant un partage muet accusait Windows. Il dit desormais la vraie cause, et ce qu'il faut faire.
+
+### Nouveau
+
+- Le choix vous revient : cocher « Partager le son de l'ordinateur » et relancer rend la fenetre de Windows a la place de notre selecteur, en echange du son. Les deux ne peuvent pas coexister — la case est dans la fenetre qu'on supprime.
+
+### Ameliore
+
+- L'abonnement s'appelle Waves.
+
 ## 0.3.1
 
 ### Nouveau

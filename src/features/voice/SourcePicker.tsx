@@ -46,6 +46,23 @@ function surEcranPrincipal(source: Source): boolean {
 
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
+/**
+ * Ce que valait le reglage au lancement.
+ *
+ * Fige au chargement du module : c'est l'etat sur lequel le drapeau a ete pose,
+ * et donc la seule reference pour savoir si relancer changerait quelque chose.
+ * Le comparer au reglage courant evite d'annoncer un redemarrage a qui coche
+ * puis decoche.
+ */
+const SON_AU_DEMARRAGE = (() => {
+  try {
+    const brut = localStorage.getItem('orbit:media');
+    return brut ? (JSON.parse(brut) as { shareSystemAudio?: boolean }).shareSystemAudio !== false : true;
+  } catch {
+    return true;
+  }
+})();
+
 export function SourcePicker({
   open,
   onClose,
@@ -59,6 +76,8 @@ export function SourcePicker({
   const setMedia = useDevices((state) => state.setMedia);
 
   const [sources, setSources] = useState<Source[] | null>(null);
+  const sonAuDemarrage = SON_AU_DEMARRAGE;
+  const [relanceRequise, setRelanceRequise] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [onglet, setOnglet] = useState<'ecran' | 'fenetre'>('ecran');
   const [choisie, setChoisie] = useState<string | null>(null);
@@ -267,14 +286,58 @@ export function SourcePicker({
             </div>
           </div>
 
+          {/*
+            Le son du systeme demande de renoncer a ce selecteur.
+
+            Ce n'est pas un caprice de reglage : la case « partager aussi le
+            son » vit dans la fenetre de Windows que nous supprimons justement
+            pour afficher celle-ci. Chromium n'accorde la piste audio que si
+            cette case a ete cochee — donc jamais tant que la fenetre n'existe
+            pas, quelle que soit la source choisie, ecran entier compris.
+
+            Le dire ici, au moment ou l'on coche, evite de decouvrir un partage
+            muet une fois lance.
+          */}
           <label className="picker__son">
             <input
               type="checkbox"
               checked={media.shareSystemAudio}
-              onChange={(event) => setMedia('shareSystemAudio', event.target.checked)}
+              onChange={(event) => {
+                const veut = event.target.checked;
+                setMedia('shareSystemAudio', veut);
+                setRelanceRequise(veut !== sonAuDemarrage);
+
+                // Note pour le prochain demarrage : c'est Rust qui pose ou non
+                // le drapeau, avant que la vue web n'existe.
+                void import('@tauri-apps/api/core')
+                  .then(({ invoke }) => invoke('regler_son_systeme', { actif: veut }))
+                  .catch(() => undefined);
+              }}
             />
             Partager le son de l&rsquo;ordinateur
           </label>
+
+          {relanceRequise ? (
+            <p className="picker__avertissement" role="status">
+              <Icon name="refresh" size={14} />
+              <span>
+                {media.shareSystemAudio ? (
+                  <>
+                    Relancez Quality pour que le son parte avec l&rsquo;image.
+                    Windows n&rsquo;accorde le son que par sa propre fenetre de
+                    selection : celle-ci reviendra donc a la place de cette
+                    liste. C&rsquo;est l&rsquo;un ou l&rsquo;autre, et le choix
+                    vous appartient.
+                  </>
+                ) : (
+                  <>
+                    Relancez Quality pour retrouver ce selecteur a la place de
+                    la fenetre de Windows.
+                  </>
+                )}
+              </span>
+            </p>
+          ) : null}
         </div>
       </div>
     </Modal>

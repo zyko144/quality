@@ -1557,3 +1557,24 @@ button.voice-tile__name:hover {
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
+
+/* L'avertissement du selecteur : un compromis a annoncer, pas une erreur. */
+.picker__avertissement {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in oklab, var(--warning, #f0b232) 40%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--warning, #f0b232) 12%, transparent);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.picker__avertissement svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--warning, #f0b232);
+}
