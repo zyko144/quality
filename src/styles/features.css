@@ -1390,3 +1390,27 @@ a.attachment:hover {
 .espace-images__icone img {
   pointer-events: none;
 }
+
+/* --------------------------------------------------------------------------
+   `@everyone` et `@here` dans la liste des mentions
+   --------------------------------------------------------------------------
+   Elles n'ont pas de photo : un rond a l'arobase tient la place, pour que les
+   noms restent alignes avec ceux des personnes plus bas dans la liste.
+   -------------------------------------------------------------------------- */
+
+.mention-list__globe {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* Un fin trait sous la derniere globale separe « tout le monde » des personnes :
+   ce ne sont pas des choses du meme ordre. */
+.mention-list__item--globale + .mention-list__item:not(.mention-list__item--globale),
+li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)) {
+  border-top: 1px solid var(--border-subtle);
+}

@@ -389,4 +389,34 @@ test.describe('Parcours authentifies', () => {
       page.getByRole('button', { name: 'Nouvelle conversation' }).first(),
     ).toBeVisible();
   });
+
+  /*
+   * `@everyone` doit se voir sans qu'on sache qu'elle existe.
+   *
+   * C'est tout l'objet de la liste : une mention qu'il faut taper en entier
+   * pour la decouvrir n'existe, en pratique, que pour qui l'a lue ailleurs.
+   */
+  test('taper une arobase propose everyone avant les personnes', async ({ page }) => {
+    await openApp(page);
+
+    const zone = page.getByRole('textbox', { name: /message/i }).first();
+    await zone.click();
+    await zone.fill('@');
+
+    const liste = page.locator('.mention-list__item');
+    await expect(liste.first()).toBeVisible();
+
+    const entrees = await liste.allTextContents();
+    expect(entrees.join(' ')).toContain('@everyone');
+
+    // En tete : les globales passent avant les personnes tant que rien ne les
+    // contredit.
+    expect(entrees[0]).toContain('@everyone');
+
+    // Ce qu'on tape ensuite les ecarte des qu'elles ne correspondent plus.
+    await zone.fill('@zzzz');
+    await expect(page.locator('.mention-list__item--globale')).toHaveCount(0);
+
+    await zone.fill('');
+  });
 });

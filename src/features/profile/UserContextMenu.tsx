@@ -7,6 +7,7 @@ import { useSession } from '@/store/session';
 import { useUI } from '@/store/ui';
 import { useUserAudio } from '@/store/userAudio';
 import { useVoice } from '@/features/voice/useVoice';
+import { useModeration } from '@/store/moderation';
 import type { UUID } from '@/types/db';
 
 /**
@@ -106,6 +107,18 @@ export function UserContextMenu({
 
   const openModal = useUI((state) => state.openModal);
   const deconnecter = useVoice((state) => state.deconnecter);
+  const deplacer = useVoice((state) => state.deplacer);
+  const channels = useChat((state) => state.channels);
+  const ranks = useChat((state) => state.ranks);
+  const espaceCourant = useUI((state) => state.activeSpaceId);
+
+  const kick = useModeration((state) => state.kick);
+  const ban = useModeration((state) => state.ban);
+  const timeout = useModeration((state) => state.timeout);
+
+  // Admin ou plus. La base revalide chaque action : ce test n'evite qu'un
+  // bouton qui echouerait.
+  const peutModerer = espaceCourant ? (ranks[espaceCourant] ?? 0) >= 2 : false;
   const salonVocal = useVoice((state) => state.channelId);
   const participants = useVoice((state) =>
     salonVocal ? state.participantsByChannel[salonVocal] : undefined,
@@ -115,6 +128,18 @@ export function UserContextMenu({
   // une chance d'aboutir.
   const dansMonVocal =
     userId !== me?.id && (participants ?? []).some((p) => p.user_id === userId);
+
+  /*
+   * Les autres salons vocaux du meme espace.
+   *
+   * Le salon courant est exclu : « deplacer vers le salon ou l'on est deja »
+   * n'a pas de sens, et l'ecarter vaut mieux que de le griser.
+   */
+  const autresSalonsVocaux = channels.filter((salon) => {
+    if (salon.kind !== 'voice' || salon.id === salonVocal) return false;
+    const courant = channels.find((item) => item.id === salonVocal);
+    return salon.space_id !== null && salon.space_id === courant?.space_id;
+  });
   const selectChannel = useUI((state) => state.selectChannel);
   const showDirectMessages = useUI((state) => state.showDirectMessages);
   const openSettings = useUI((state) => state.openSettings);
@@ -200,12 +225,78 @@ export function UserContextMenu({
      */
     if (dansMonVocal) {
       entrees.push({ id: 'sep-vocal', separator: true });
+
+      /*
+       * Deplacer quelqu'un d'un salon a l'autre.
+       *
+       * Un salon par entree plutot qu'un sous-menu : ils sont rarement plus de
+       * trois ou quatre, et un sous-menu demanderait un geste de plus pour un
+       * choix qui tient a l'ecran.
+       *
+       * Comme la deconnexion, c'est une demande : le client vise la recoit et
+       * change de salon de lui-meme. Voir `Deplacement` dans `useVoice`.
+       */
+      for (const salon of autresSalonsVocaux) {
+        entrees.push({
+          id: `deplacer-${salon.id}`,
+          label: `Deplacer vers ${salon.name}`,
+          icon: <Icon name="volume" size={15} />,
+          onSelect: () => deplacer(userId, salon.id),
+        });
+      }
+
       entrees.push({
         id: 'deconnecter',
         label: 'Deconnecter du vocal',
         icon: <Icon name="phone-off" size={15} />,
         danger: true,
         onSelect: () => deconnecter(userId),
+      });
+    }
+
+    /*
+     * La moderation, la ou l'on regarde la personne.
+     *
+     * Ces actions existaient deja, mais uniquement dans un panneau qu'il faut
+     * ouvrir, puis ou il faut retrouver la personne dans une seconde liste. On
+     * decide d'exclure quelqu'un en le regardant, pas en parcourant un tableau.
+     *
+     * Le rang commande : `peutModerer` vaut a partir d'admin, et la base
+     * revalide de toute facon — ce test n'evite qu'un bouton qui echouerait.
+     * Personne ne peut se moderer soi-meme.
+     */
+    if (peutModerer && !estMoi && espaceCourant) {
+      entrees.push({ id: 'sep-moderation', separator: true });
+
+      entrees.push({
+        id: 'reduire-silence',
+        label: 'Reduire au silence 10 minutes',
+        icon: <Icon name="mic-off" size={15} />,
+        onSelect: () => void timeout(espaceCourant, userId, 10, 'Depuis le menu contextuel'),
+      });
+
+      entrees.push({
+        id: 'exclure',
+        label: 'Exclure de l’espace',
+        icon: <Icon name="user-x" size={15} />,
+        danger: true,
+        onSelect: () => void kick(espaceCourant, userId, 'Depuis le menu contextuel'),
+      });
+
+      entrees.push({
+        id: 'bannir-7',
+        label: 'Bannir 7 jours',
+        icon: <Icon name="shield" size={15} />,
+        danger: true,
+        onSelect: () => void ban(espaceCourant, userId, 'Depuis le menu contextuel', 7),
+      });
+
+      entrees.push({
+        id: 'bannir-toujours',
+        label: 'Bannir definitivement',
+        icon: <Icon name="shield" size={15} />,
+        danger: true,
+        onSelect: () => void ban(espaceCourant, userId, 'Depuis le menu contextuel', null),
       });
     }
 

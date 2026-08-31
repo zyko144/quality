@@ -39,6 +39,23 @@ interface MentionQuery {
   term: string;
 }
 
+/** Une mention qui ne vise personne en particulier. */
+interface Globale {
+  id: 'everyone' | 'here';
+  nom: string;
+  detail: string;
+}
+
+const GLOBALES: Globale[] = [
+  { id: 'everyone', nom: '@everyone', detail: 'Tout le monde dans cet espace' },
+  { id: 'here', nom: '@here', detail: 'Les personnes connectees en ce moment' },
+];
+
+/** Une entree de la liste : une personne, ou une mention globale. */
+type Suggestion =
+  | { genre: 'personne'; profil: Profile }
+  | { genre: 'globale'; entree: Globale };
+
 export function Composer({ channelId, threadId = null, placeholder, autoFocus }: ComposerProps) {
   const [value, setValue] = useState('');
   const [mention, setMention] = useState<MentionQuery | null>(null);
@@ -109,6 +126,24 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
 
   /* ------------------------------------------------------- Autocompletion */
 
+  /*
+   * `@everyone` et `@here` figurent dans la liste comme n'importe qui.
+   *
+   * Il fallait les taper en entier, et donc savoir qu'elles existaient. Les
+   * poser dans la meme liste que les personnes evite d'avoir a l'apprendre :
+   * on tape `@`, on les voit.
+   *
+   * Elles restent en tete, mais uniquement tant qu'on n'a rien tape apres le
+   * `@` ou que ce qu'on tape leur correspond — sans quoi elles s'intercaleraient
+   * devant la personne qu'on cherche.
+   */
+  const globales = useMemo((): Globale[] => {
+    if (!mention || !channel?.space_id) return [];
+
+    const terme = mention.term.toLowerCase();
+    return GLOBALES.filter((entree) => entree.id.startsWith(terme));
+  }, [mention, channel]);
+
   const candidates = useMemo((): Profile[] => {
     if (!mention || !channel) return [];
 
@@ -130,6 +165,15 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
       .slice(0, 6);
   }, [mention, profiles, members, channel]);
 
+  /** Ce que la liste propose, dans l'ordre : les globales, puis les personnes. */
+  const suggestions = useMemo(
+    (): Suggestion[] => [
+      ...globales.map((entree) => ({ genre: 'globale' as const, entree })),
+      ...candidates.map((profil) => ({ genre: 'personne' as const, profil })),
+    ],
+    [globales, candidates],
+  );
+
   useEffect(() => setHighlighted(0), [mention?.term]);
 
   /**
@@ -149,18 +193,20 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
   }, []);
 
   const applyMention = useCallback(
-    (chosen: Profile) => {
+    (chosen: Suggestion) => {
       if (!mention) return;
+
+      const nom = chosen.genre === 'personne' ? chosen.profil.username : chosen.entree.id;
 
       const node = textareaRef.current;
       const caret = node?.selectionStart ?? value.length;
-      const next = value.slice(0, mention.start) + `@${chosen.username} ` + value.slice(caret);
+      const next = value.slice(0, mention.start) + `@${nom} ` + value.slice(caret);
 
       setValue(next);
       setMention(null);
 
       requestAnimationFrame(() => {
-        const position = mention.start + chosen.username.length + 2;
+        const position = mention.start + nom.length + 2;
         node?.focus();
         node?.setSelectionRange(position, position);
       });
@@ -310,20 +356,20 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
   ]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (mention && candidates.length > 0) {
+    if (mention && suggestions.length > 0) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
-        setHighlighted((index) => (index + 1) % candidates.length);
+        setHighlighted((index) => (index + 1) % suggestions.length);
         return;
       }
       if (event.key === 'ArrowUp') {
         event.preventDefault();
-        setHighlighted((index) => (index - 1 + candidates.length) % candidates.length);
+        setHighlighted((index) => (index - 1 + suggestions.length) % suggestions.length);
         return;
       }
       if (event.key === 'Enter' || event.key === 'Tab') {
         event.preventDefault();
-        const chosen = candidates[highlighted];
+        const chosen = suggestions[highlighted];
         if (chosen) applyMention(chosen);
         return;
       }
@@ -441,24 +487,49 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
         </p>
       ) : null}
 
-      {mention && candidates.length > 0 ? (
+      {mention && suggestions.length > 0 ? (
         <ul className="mention-list surface" role="listbox" aria-label="Suggestions de mention">
-          {candidates.map((candidate, index) => (
-            <li key={candidate.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={index === highlighted}
-                className={'mention-list__item' + (index === highlighted ? ' is-active' : '')}
-                onMouseEnter={() => setHighlighted(index)}
-                onClick={() => applyMention(candidate)}
-              >
-                <Avatar profile={candidate} size={22} />
-                <span className="mention-list__name">{candidate.display_name}</span>
-                <span className="mention-list__handle">@{candidate.username}</span>
-              </button>
-            </li>
-          ))}
+          {suggestions.map((suggestion, index) => {
+            const cle =
+              suggestion.genre === 'personne' ? suggestion.profil.id : suggestion.entree.id;
+
+            return (
+              <li key={cle}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={index === highlighted}
+                  className={
+                    'mention-list__item' +
+                    (index === highlighted ? ' is-active' : '') +
+                    (suggestion.genre === 'globale' ? ' mention-list__item--globale' : '')
+                  }
+                  onMouseEnter={() => setHighlighted(index)}
+                  onClick={() => applyMention(suggestion)}
+                >
+                  {suggestion.genre === 'personne' ? (
+                    <>
+                      <Avatar profile={suggestion.profil} size={22} />
+                      <span className="mention-list__name">
+                        {suggestion.profil.display_name}
+                      </span>
+                      <span className="mention-list__handle">
+                        @{suggestion.profil.username}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mention-list__globe" aria-hidden="true">
+                        <Icon name="at" size={13} />
+                      </span>
+                      <span className="mention-list__name">{suggestion.entree.nom}</span>
+                      <span className="mention-list__handle">{suggestion.entree.detail}</span>
+                    </>
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 

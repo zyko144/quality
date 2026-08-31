@@ -225,12 +225,14 @@ jobs:
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
           releaseBody: |
+            L'entree en vocal est plus rapide : le micro s'ouvre pendant qu'on libere le canal, au lieu d'attendre son tour.
+            Taper une arobase propose @everyone et @here, au lieu d'exiger de savoir qu'elles existent.
+            Le clic droit sur quelqu'un porte enfin la moderation : reduire au silence, exclure, bannir 7 jours ou definitivement.
+            On peut deplacer quelqu'un d'un salon vocal a un autre, depuis le meme menu.
             Un seul ecran de demarrage au lieu de deux, avec le logo qui tourne, un peu plus grand.
-            Le selecteur d'emojis ne passe plus sous les messages : chaque message se contenait lui-meme et le retenait a l'interieur.
-            Cliquer un salon vocal alors qu'on est deja en ligne y bascule, au lieu d'exiger de quitter puis de rejoindre.
-            Le curseur de volume s'aimante sur cent pour cent et la valeur devient un bouton pour y revenir.
-            L'arobase du champ pseudo cesse de recouvrir les premieres lettres.
-            Les signaux sonores descendent d'une quinte : moins de bip d'appareil menager, plus de « toc » sourd.
+            Le selecteur d'emojis ne passe plus sous les messages.
+            Cliquer un salon vocal alors qu'on est deja en ligne y bascule.
+            Le curseur de volume s'aimante sur cent pour cent et la valeur ramene au normal d'un clic.
 
       - uses: actions/upload-artifact@v4
         if: steps.version.outputs.publier == 'oui'

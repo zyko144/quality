@@ -74,7 +74,22 @@ interface Refus {
   to: UUID;
 }
 
-type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion | Refus;
+/**
+ * Demande de deplacement vers un autre salon.
+ *
+ * Meme nature que `Deconnexion` — une demande, pas une contrainte — et meme
+ * reserve : un client modifie peut l'ignorer. Elle porte simplement le salon
+ * d'arrivee, faute de quoi la personne se retrouverait dehors sans savoir ou
+ * aller.
+ */
+interface Deplacement {
+  kind: 'deplacement';
+  from: UUID;
+  to: UUID;
+  salon: UUID;
+}
+
+type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion | Refus | Deplacement;
 
 /**
  * Salons vocaux en WebRTC maille.
@@ -194,6 +209,8 @@ interface VoiceState {
   observerSalons: (channelIds: UUID[]) => void;
   /** Dit non a un appel : l'appelant raccroche. Voir `Refus`. */
   refuserAppel: (channelId: UUID, appelant: UUID) => void;
+  /** Demande a quelqu'un de passer dans un autre salon. Voir `Deplacement`. */
+  deplacer: (userId: UUID, salon: UUID) => void;
   /** Ouvre ou ferme le partage de quelqu'un. Ferme, il n'est plus decode. */
   toggleWatch: (userId: UUID) => void;
 }
@@ -1037,6 +1054,7 @@ export const useVoice = create<VoiceState>((set, get) => {
     // couvrir si un nouveau chemin l'oublie.
     if ('kind' in signal && signal.kind === 'deconnexion') return;
     if ('kind' in signal && signal.kind === 'refus') return;
+    if ('kind' in signal && signal.kind === 'deplacement') return;
 
     // Annonce du role d'un flux : on l'enregistre, puis on reclasse la piste
     // si elle etait deja arrivee.
@@ -1148,6 +1166,8 @@ export const useVoice = create<VoiceState>((set, get) => {
     join: async (channelId, userId) => {
       if (get().channelId === channelId) return;
 
+      set({ connecting: true, error: null });
+
       if (get().channelId) {
         await get().leave();
         // Le systeme ne rend pas le micro instantanement : le redemander
@@ -1156,6 +1176,29 @@ export const useVoice = create<VoiceState>((set, get) => {
         // laisser la liberation aboutir.
         await new Promise((resoudre) => setTimeout(resoudre, 120));
       }
+
+      /*
+       * Le micro s'ouvre pendant qu'on libere le sujet, pas apres.
+       *
+       * Les deux attentes n'ont rien a voir l'une avec l'autre : demander le
+       * micro au systeme prend de cent a cinq cents millisecondes, fermer et
+       * rouvrir un canal Realtime autant, et on les payait l'une apres l'autre.
+       * Menees de front, on ne paie plus que la plus longue.
+       *
+       * Precapturer le micro AVANT le clic aurait supprime la premiere
+       * entierement, mais au prix du voyant d'enregistrement allume en
+       * permanence — un micro ouvert en permanence pour gagner un tiers de
+       * seconde est un mauvais echange.
+       *
+       * La promesse est lancee ici, et attendue plus bas : entre les deux, le
+       * reste du travail avance.
+       */
+      const captureEnCours = capturerMicro();
+
+      // Une promesse rejetee sans personne pour l'ecouter fait un
+      // « unhandled rejection ». L'echec est traite au moment ou on l'attend ;
+      // ce gestionnaire ne sert qu'a le signaler comme deja pris en charge.
+      captureEnCours.catch(() => undefined);
 
       /*
        * Le sujet doit etre libre AVANT d'ouvrir le salon.
@@ -1184,11 +1227,9 @@ export const useVoice = create<VoiceState>((set, get) => {
         await supabase.removeChannel(reste);
       }
 
-      set({ connecting: true, error: null });
-
       let localStream: MediaStream;
       try {
-        localStream = await capturerMicro();
+        localStream = await captureEnCours;
       } catch (cause) {
         set({ connecting: false, error: messageDeCapture(cause, 'micro') });
         return;
@@ -1219,6 +1260,12 @@ export const useVoice = create<VoiceState>((set, get) => {
           if ('kind' in message && message.kind === 'deconnexion') {
             set({ error: 'Vous avez ete deconnecte du salon vocal.' });
             void get().leave();
+            return;
+          }
+
+          if ('kind' in message && message.kind === 'deplacement') {
+            const moi = get().userId;
+            if (moi) void get().join(message.salon, moi);
             return;
           }
 
@@ -1630,6 +1677,20 @@ export const useVoice = create<VoiceState>((set, get) => {
      * s'y connecte pas : refuser un appel ne doit pas allumer son micro, ne
      * serait-ce qu'une seconde.
      */
+    /*
+     * Deplace quelqu'un vers un autre salon vocal.
+     *
+     * Le message passe par le canal du salon d'ou l'on part — celui ou les deux
+     * se trouvent. Le client vise rejoint le salon d'arrivee, ce qui le fait
+     * quitter le premier au passage : `join` s'occupe deja de la sortie.
+     */
+    deplacer: (userId, salon) => {
+      const moi = get().userId;
+      if (!moi || userId === moi) return;
+
+      send({ kind: 'deplacement', from: moi, to: userId, salon });
+    },
+
     refuserAppel: (channelId, appelant) => {
       const moi = get().userId;
       const canal = observateurs.get(channelId);
