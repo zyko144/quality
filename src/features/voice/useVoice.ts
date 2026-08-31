@@ -163,6 +163,18 @@ interface VoiceState {
   watchedShares: Record<UUID, boolean>;
   /** Flux audio distants, indexes par identifiant d'utilisateur. */
   remoteAudio: Record<UUID, MediaStream>;
+  /**
+   * Son des partages d'ecran, range a part de la voix.
+   *
+   * Les deux arrivaient dans le meme casier, et le dernier ecrasait le premier :
+   * partager son ecran avec le son faisait disparaitre la voix de qui partage,
+   * ou le son du partage n'arrivait jamais — selon l'ordre des pistes. C'est
+   * pourquoi « il n'y a pas le son du stream ».
+   *
+   * Range a part, chacun garde son volume : on baisse un jeu sans baisser la
+   * personne qui commente.
+   */
+  remoteScreenAudio: Record<UUID, MediaStream>;
   /** Flux de partage d'ecran distants, indexes de la meme facon. */
   remoteScreens: Record<UUID, MediaStream>;
   /** Personnes qui parlent, detectees par analyse du niveau sonore. */
@@ -878,13 +890,16 @@ export const useVoice = create<VoiceState>((set, get) => {
 
     set((state) => {
       const remoteAudio = { ...state.remoteAudio };
+      const remoteScreenAudio = { ...state.remoteScreenAudio };
       const remoteScreens = { ...state.remoteScreens };
       const remoteCameras = { ...state.remoteCameras };
       delete remoteAudio[peerId];
+      delete remoteScreenAudio[peerId];
       delete remoteScreens[peerId];
       delete remoteCameras[peerId];
       return {
         remoteAudio,
+        remoteScreenAudio,
         remoteScreens,
         remoteCameras,
         focusedShare: state.focusedShare === peerId ? null : state.focusedShare,
@@ -1032,7 +1047,37 @@ export const useVoice = create<VoiceState>((set, get) => {
           });
         });
       } else {
+        /*
+         * Voix ou son de partage ?
+         *
+         * Le flux porte deja la reponse : `streamPurposes` est renseigne par
+         * l'annonce qui accompagne tout partage. Une piste audio arrivant sur
+         * un flux annonce comme ecran est le son de ce qui est montre, pas la
+         * voix de qui le montre.
+         *
+         * Sans cette distinction, les deux se rangeaient au meme endroit et le
+         * second effacait le premier.
+         */
+        if (streamPurposes.get(stream.id) === 'screen') {
+          set((state) => ({
+            remoteScreenAudio: { ...state.remoteScreenAudio, [peerId]: stream },
+          }));
+
+          event.track.addEventListener('ended', () => {
+            set((state) => {
+              const remoteScreenAudio = { ...state.remoteScreenAudio };
+              delete remoteScreenAudio[peerId];
+              return { remoteScreenAudio };
+            });
+          });
+
+          return;
+        }
+
         set((state) => ({ remoteAudio: { ...state.remoteAudio, [peerId]: stream } }));
+
+        // Seule la voix alimente le detecteur de parole : un jeu bruyant
+        // allumerait la pastille de qui ne dit rien.
         attachAnalyser(peerId, stream);
       }
     };
@@ -1177,6 +1222,7 @@ export const useVoice = create<VoiceState>((set, get) => {
     localCamera: null,
     cameraOn: false,
     remoteAudio: {},
+    remoteScreenAudio: {},
     remoteScreens: {},
     remoteCameras: {},
     focusedShare: null,

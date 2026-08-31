@@ -16,14 +16,27 @@ import type { UUID } from '@/types/db';
  * Le volume va de 0 a 200 % : au-dela de 100 le gain numerique amplifie le
  * flux, ce qui peut saturer — c'est le meme compromis que Discord propose.
  */
-function VolumeSlider({ userId }: { userId: UUID }) {
-  const volume = useUserAudio((s) => s.getVolume(userId));
-  const setVolume = useUserAudio((s) => s.setVolume);
+function VolumeSlider({
+  userId,
+  genre = 'voix',
+}: {
+  userId: UUID;
+  genre?: 'voix' | 'partage';
+}) {
+  const volumeVoix = useUserAudio((s) => s.getVolume(userId));
+  const volumePartage = useUserAudio((s) => s.getStreamVolume(userId));
+  const reglerVoix = useUserAudio((s) => s.setVolume);
+  const reglerPartage = useUserAudio((s) => s.setStreamVolume);
+
+  const volume = genre === 'voix' ? volumeVoix : volumePartage;
+  const setVolume = genre === 'voix' ? reglerVoix : reglerPartage;
+  const repos = genre === 'voix' ? 100 : 75;
+
   const [local, setLocal] = useState(volume);
 
   return (
     <div className="ctx-volume">
-      <Icon name="volume" size={14} />
+      <Icon name={genre === 'voix' ? 'volume' : 'screen'} size={14} />
       <input
         type="range"
         className="ctx-volume__slider"
@@ -46,25 +59,25 @@ function VolumeSlider({ userId }: { userId: UUID }) {
            * regler a 97 d'y arriver en deux mouvements.
            */
           const brut = Number(e.target.value);
-          const v = Math.abs(brut - 100) <= 4 ? 100 : brut;
+          const v = Math.abs(brut - repos) <= 4 ? repos : brut;
           setLocal(v);
           setVolume(userId, v);
         }}
         onDoubleClick={() => {
-          setLocal(100);
-          setVolume(userId, 100);
+          setLocal(repos);
+          setVolume(userId, repos);
         }}
-        title="Double-clic pour revenir a 100 %"
-        aria-label="Volume de l'utilisateur"
+        title={`Double-clic pour revenir a ${repos} %`}
+        aria-label={genre === 'voix' ? "Volume de la voix" : "Volume du partage d'ecran"}
       />
       <button
         type="button"
-        className={'ctx-volume__value' + (local === 100 ? '' : ' is-modifie')}
+        className={'ctx-volume__value' + (local === repos ? '' : ' is-modifie')}
         onClick={() => {
-          setLocal(100);
-          setVolume(userId, 100);
+          setLocal(repos);
+          setVolume(userId, repos);
         }}
-        title={local === 100 ? 'Volume normal' : 'Revenir a 100 %'}
+        title={local === repos ? 'Volume normal' : `Revenir a ${repos} %`}
       >
         {local} %
       </button>
@@ -128,6 +141,10 @@ export function UserContextMenu({
   // une chance d'aboutir.
   const dansMonVocal =
     userId !== me?.id && (participants ?? []).some((p) => p.user_id === userId);
+
+  // Un son de partage recu de cette personne : c'est la seule situation ou un
+  // curseur pour ce son a quelque chose a regler.
+  const partageEnCours = useVoice((state) => Boolean(state.remoteScreenAudio[userId]));
 
   /*
    * Les autres salons vocaux du meme espace.
@@ -208,6 +225,20 @@ export function UserContextMenu({
     });
 
     // Slider de volume individuel (toujours visible, comme Discord)
+    /*
+     * Le son du partage a son propre curseur, et seulement quand il y a un
+     * partage.
+     *
+     * L'afficher en permanence donnerait deux curseurs identiques dont l'un ne
+     * ferait rien la plupart du temps — et l'on reglerait le mauvais.
+     */
+    if (partageEnCours) {
+      entrees.push({
+        id: 'volume-partage',
+        custom: <VolumeSlider userId={userId} genre="partage" />,
+      });
+    }
+
     entrees.push({
       id: 'volume-slider',
       custom: <VolumeSlider userId={userId} />,
