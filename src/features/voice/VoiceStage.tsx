@@ -177,8 +177,11 @@ export function VoiceStage({ channel }: { channel: Channel }) {
         Quand on regarde un partage, les visages ne servent plus qu'a savoir
         qui est la — information qu'on a deja apres deux secondes. La fleche
         rend leur place a l'image, et la rappelle d'un second clic.
+
+        Elle n'apparait qu'a ce moment-la : partage range, il ne reste qu'une
+        vignette, et masquer les participants ne laisserait presque rien.
       */}
-      {screenShares.length > 0 ? (
+      {focused ? (
         <button
           type="button"
           className="voice-stage__replier"
@@ -457,6 +460,8 @@ function ScreenTile({
   const ref = useRef<HTMLVideoElement>(null);
   const frameRef = useRef<HTMLElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  /** Cette vignette etait-elle celle en plein ecran ? Voir l'ecouteur global. */
+  const etaitPleinEcran = useRef(false);
 
   useEffect(() => {
     const node = ref.current;
@@ -471,22 +476,58 @@ function ScreenTile({
    * Mettre la balise video en plein ecran rend la main au lecteur du
    * navigateur : on perd le nom de la personne, le bouton de sortie et le
    * reste de l'interface. En agrandissant le cadre, tout reste a sa place.
+   *
+   * La fenetre suit. `requestFullscreen` pousse l'element jusqu'aux bords de
+   * la vue — c'est-a-dire de la fenetre. Quand celle-ci n'occupe pas tout
+   * l'ecran, on obtenait un agrandissement leger qui n'avait rien d'un plein
+   * ecran : l'element etait bien « plein », mais plein d'une fenetre petite.
    */
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     const frame = frameRef.current;
     if (!frame) return;
 
-    if (document.fullscreenElement === frame) {
-      void document.exitFullscreen().catch(() => undefined);
-    } else {
-      void frame.requestFullscreen?.().catch(() => undefined);
+    const sortir = document.fullscreenElement === frame;
+
+    try {
+      if (sortir) await document.exitFullscreen();
+      else await frame.requestFullscreen?.();
+    } catch {
+      // Refuse par le moteur de rendu : la fenetre, elle, peut encore suivre.
+    }
+
+    if (!DANS_TAURI) return;
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().setFullscreen(!sortir);
+    } catch {
+      // Sur le web, ou si la permission manque : l'element plein ecran suffit.
+      // Ce n'est pas une panne a signaler pour un confort d'affichage.
     }
   };
 
   // La sortie peut venir d'Echap ou du systeme : suivre l'evenement evite de
   // garder un bouton qui annonce le contraire de l'etat reel.
   useEffect(() => {
-    const onChange = () => setFullscreen(document.fullscreenElement === frameRef.current);
+    /*
+     * Chaque vignette ecoute, mais une seule doit reagir.
+     *
+     * L'evenement est global. Sans cette memoire, entrer en plein ecran sur une
+     * vignette faisait reagir toutes les autres — qui, se voyant hors plein
+     * ecran, remettaient aussitot la fenetre a sa taille et annulaient le geste.
+     */
+    const onChange = () => {
+      const actif = document.fullscreenElement === frameRef.current;
+      setFullscreen(actif);
+
+      if (!actif && etaitPleinEcran.current && DANS_TAURI) {
+        void import('@tauri-apps/api/window')
+          .then(({ getCurrentWindow }) => getCurrentWindow().setFullscreen(false))
+          .catch(() => undefined);
+      }
+
+      etaitPleinEcran.current = actif;
+    };
+
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
@@ -520,32 +561,26 @@ function ScreenTile({
       </figcaption>
 
       {/*
-        Les commandes passent en bas a droite.
-        En haut, elles recouvraient la barre de titre de ce qui est partage —
-        souvent la seule facon de savoir de quelle fenetre il s'agit. En bas, le
-        coin est presque toujours vide.
+        Un seul bouton, en bas a droite : le plein ecran.
+
+        Il y en avait deux, et le carre — celui qu'on vise pour agrandir — ne
+        faisait que mettre le partage en avant : un agrandissement d'un cran,
+        la ou l'on attendait tout l'ecran. Le geste d'agrandir appartient
+        desormais a l'image elle-meme, qui bascule entre grand et vignette. Le
+        bouton ne garde que ce qu'aucun clic ne peut faire.
+
+        En haut, ces commandes recouvraient la barre de titre de ce qui est
+        partage — souvent la seule facon de savoir de quelle fenetre il s'agit.
       */}
       <div className="screen-tile__actions">
-        {onToggleFocus ? (
-          <button
-            type="button"
-            className="screen-tile__action"
-            onClick={onToggleFocus}
-            title={focused ? 'Reduire' : 'Agrandir'}
-            aria-label={focused ? 'Reduire le partage' : 'Agrandir le partage'}
-          >
-            <Icon name={focused ? 'minus' : 'expand'} size={15} />
-          </button>
-        ) : null}
-
         <button
           type="button"
           className="screen-tile__action"
-          onClick={toggleFullscreen}
+          onClick={() => void toggleFullscreen()}
           title={fullscreen ? 'Quitter le plein ecran' : 'Plein ecran'}
           aria-label={fullscreen ? 'Quitter le plein ecran' : 'Afficher en plein ecran'}
         >
-          <Icon name={fullscreen ? 'minus' : 'monitor'} size={15} />
+          <Icon name={fullscreen ? 'minus' : 'expand'} size={16} />
         </button>
       </div>
     </figure>

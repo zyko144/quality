@@ -225,11 +225,11 @@ jobs:
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
           releaseBody: |
-            Chercher une mise a jour repond visiblement, meme quand la reponse ne change pas : la ligne s'efface et revient horodatee.
-            La construction macOS repart : le decodage de la cle de signature employait une option qui n'existe pas sur ce systeme.
-            Une fleche entre le partage et les participants replie les visages et rend leur place a l'image.
-            Un bouton en bas a droite du partage l'agrandit ; il ne recouvre plus la barre de titre de ce qui est montre.
-            Les commandes du salon vocal grandissent, et la barre qui les porte se resserre et passe au verre.
+            Un clic sur un partage le range en vignette et rend aux participants leur pleine taille ; un clic sur la vignette le rappelle.
+            Le bouton carre passe vraiment en plein ecran : la fenetre s'agrandit avec l'image, au lieu de la tendre dans une fenetre restee petite.
+            Les cartes des participants sont plus grandes, la photo aussi.
+            La barre de commandes du salon vocal s'affine d'un cran.
+            Chercher une mise a jour repond visiblement, meme quand la reponse ne change pas.
 
       - uses: actions/upload-artifact@v4
         if: steps.version.outputs.publier == 'oui'
