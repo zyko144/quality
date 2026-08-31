@@ -64,20 +64,20 @@ function FriendsEntry() {
  * Elle porte sa mention « bientot » plutot que de laisser decouvrir apres coup
  * qu'il n'y a rien a acheter : c'est ce qui la distingue d'un appel a payer.
  */
-function VagueEntry() {
-  const vagueOpen = useUI((state) => state.vagueOpen);
-  const showVague = useUI((state) => state.showVague);
+function WavesEntry() {
+  const wavesOpen = useUI((state) => state.wavesOpen);
+  const showWaves = useUI((state) => state.showWaves);
 
   return (
     <button
       type="button"
-      className={'dm-friends dm-vague' + (vagueOpen ? ' is-active' : '')}
-      onClick={showVague}
-      aria-current={vagueOpen ? 'page' : undefined}
+      className={'dm-friends dm-waves' + (wavesOpen ? ' is-active' : '')}
+      onClick={showWaves}
+      aria-current={wavesOpen ? 'page' : undefined}
     >
       <Icon name="sparkles" size={19} />
-      Vague
-      <span className="dm-vague__bientot">Bientot</span>
+      Waves
+      <span className="dm-waves__bientot">Bientot</span>
     </button>
   );
 }
@@ -144,7 +144,7 @@ export function DirectMessageList() {
 
       <div className="sidebar__scroll scroll">
         <FriendsEntry />
-      <VagueEntry />
+      <WavesEntry />
 
         {hasAny ? (
           <div className="dm-search">

@@ -21,7 +21,7 @@ import { CommandPalette } from '@/features/palette/CommandPalette';
 import { Modals } from '@/features/settings/Modals';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { FriendsPage } from '@/features/friends/FriendsPage';
-import { Vague } from '@/features/abonnement/Vague';
+import { Waves } from '@/features/abonnement/Waves';
 import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
 import { Icon } from '@/components/Icon';
@@ -43,7 +43,7 @@ export function Workspace() {
 
   const view = useUI((state) => state.view);
   const friendsOpen = useUI((state) => state.friendsOpen);
-  const vagueOpen = useUI((state) => state.vagueOpen);
+  const wavesOpen = useUI((state) => state.wavesOpen);
   const settings = useUI((state) => state.settings);
   const activeSpaceId = useUI((state) => state.activeSpaceId);
   const activeChannelId = useUI((state) => state.activeChannelId);
@@ -445,8 +445,8 @@ export function Workspace() {
       </div>
 
       <main className="main" id="conversation">
-        {vagueOpen && view === 'direct' ? (
-          <Vague />
+        {wavesOpen && view === 'direct' ? (
+          <Waves />
         ) : friendsOpen && view === 'direct' ? (
           <FriendsPage />
         ) : channel ? (

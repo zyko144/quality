@@ -7,14 +7,14 @@ import { openApp } from './session';
  * Nommee pour tomber dans le projet « authentifie » : elle vit sous la liste
  * des conversations privees.
  */
-test.describe('Vague', () => {
+test.describe('Waves', () => {
   test('s ouvre depuis la liste et annonce sans vendre', async ({ page }) => {
     await openApp(page);
 
     // On passe en messages prives, ou vit l'entree.
     await page.locator('.rail__button--home, .rail__button').first().click();
 
-    const entree = page.getByRole('button', { name: /Vague/ });
+    const entree = page.getByRole('button', { name: /Waves/ });
     await expect(entree).toBeVisible({ timeout: 15_000 });
 
     // La mention « bientot » figure sur l'entree elle-meme : on ne decouvre pas
@@ -22,7 +22,7 @@ test.describe('Vague', () => {
     await expect(entree).toContainText('Bientot');
 
     await entree.click();
-    await expect(page.getByRole('heading', { name: 'Vague', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Waves', level: 1 })).toBeVisible();
 
     // Le bouton n'est pas cliquable : aucun paiement n'existe.
     const bouton = page.getByRole('button', { name: /Bientot disponible/i });

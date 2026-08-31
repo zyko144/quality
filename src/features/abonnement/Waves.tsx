@@ -2,11 +2,11 @@ import { Icon, type IconName } from '@/components/Icon';
 import { QualityLogo } from '@/components/QualityLogo';
 
 /**
- * Vague — l'abonnement de Quality.
+ * Waves — l'abonnement de Quality.
  *
- * Le nom vient du logo, une vague en spirale. Il dit aussi ce que
- * l'abonnement est : ce qui pousse l'application en avant, pas un peage pose
- * devant ce qui existe deja.
+ * Le nom vient du logo, une vague en spirale — au pluriel, parce qu'il y en
+ * aura d'autres. Il dit aussi ce que l'abonnement est : ce qui pousse
+ * l'application en avant, pas un peage pose devant ce qui existe deja.
  *
  * Cette page annonce, elle ne vend pas. Rien n'est encaissable aujourd'hui :
  * il n'y a ni paiement, ni compte marchand, ni conditions de vente. Un bouton
@@ -63,18 +63,18 @@ const AVANTAGES: Avantage[] = [
   },
 ];
 
-export function Vague() {
+export function Waves() {
   return (
-    <div className="vague">
-      <section className="vague__entete">
-        <span className="vague__logo" aria-hidden="true">
+    <div className="waves">
+      <section className="waves__entete">
+        <span className="waves__logo" aria-hidden="true">
           <QualityLogo size={64} />
         </span>
 
-        <p className="vague__annonce">Prochainement</p>
-        <h1 className="vague__titre">Vague</h1>
+        <p className="waves__annonce">Prochainement</p>
+        <h1 className="waves__titre">Waves</h1>
 
-        <p className="vague__accroche">
+        <p className="waves__accroche">
           Cinq euros par mois pour soutenir Quality et essayer ce qui arrive
           avant les autres.
         </p>
@@ -84,30 +84,30 @@ export function Vague() {
           Il n'y a pas de paiement aujourd'hui : rien ne serait encaisse, et
           l'on ne l'apprendrait qu'apres avoir clique.
         */}
-        <button type="button" className="btn btn--primary vague__bouton" disabled>
+        <button type="button" className="btn btn--primary waves__bouton" disabled>
           Bientot disponible
         </button>
 
-        <p className="vague__note">
+        <p className="waves__note">
           Aucun paiement n&rsquo;est ouvert pour l&rsquo;instant, et rien de ce
           que vous utilisez aujourd&rsquo;hui ne deviendra payant.
         </p>
       </section>
 
-      <ul className="vague__liste">
+      <ul className="waves__liste">
         {AVANTAGES.map((avantage) => (
-          <li className="vague__carte" key={avantage.titre}>
-            <span className="vague__icone" aria-hidden="true">
+          <li className="waves__carte" key={avantage.titre}>
+            <span className="waves__icone" aria-hidden="true">
               <Icon name={avantage.icone} size={18} />
             </span>
-            <h2 className="vague__carte-titre">{avantage.titre}</h2>
-            <p className="vague__carte-detail">{avantage.detail}</p>
+            <h2 className="waves__carte-titre">{avantage.titre}</h2>
+            <p className="waves__carte-detail">{avantage.detail}</p>
           </li>
         ))}
       </ul>
 
-      <section className="vague__promesse">
-        <h2 className="vague__promesse-titre">Ce que Vague ne fera jamais</h2>
+      <section className="waves__promesse">
+        <h2 className="waves__promesse-titre">Ce que Waves ne fera jamais</h2>
         <ul>
           <li>
             Rendre payant ce qui est gratuit aujourd&rsquo;hui. Les salons, la

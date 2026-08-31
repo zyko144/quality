@@ -1435,21 +1435,21 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 }
 
 /* ==========================================================================
-   Vague — la page de l'abonnement
+   Waves — la page de l'abonnement
    ==========================================================================
    Elle annonce, elle ne vend pas : le ton reste celui du reste de
    l'application, sans degrade criard ni compte a rebours. Ce qui la distingue
    d'une page ordinaire, c'est la lumiere derriere le logo, et rien d'autre.
    ========================================================================== */
 
-.vague {
+.waves {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-9) var(--space-7) var(--space-10);
 }
 
-.vague__entete {
+.waves__entete {
   display: grid;
   justify-items: center;
   gap: var(--space-3);
@@ -1460,7 +1460,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 
 /* Le halo vient de la teinte d'accent : la page suit le theme choisi plutot
    que d'imposer ses propres couleurs. */
-.vague__logo {
+.waves__logo {
   display: grid;
   place-items: center;
   padding: var(--space-5);
@@ -1472,7 +1472,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   );
 }
 
-.vague__annonce {
+.waves__annonce {
   margin: 0;
   font-size: var(--text-2xs);
   font-weight: var(--weight-semibold);
@@ -1481,7 +1481,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--accent-text);
 }
 
-.vague__titre {
+.waves__titre {
   margin: 0;
   font-size: var(--text-3xl, 2rem);
   font-weight: var(--weight-bold);
@@ -1489,7 +1489,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--text-primary);
 }
 
-.vague__accroche {
+.waves__accroche {
   margin: 0;
   max-width: 44ch;
   font-size: var(--text-md);
@@ -1497,19 +1497,19 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--text-secondary);
 }
 
-.vague__bouton {
+.waves__bouton {
   margin-top: var(--space-2);
   min-width: 220px;
 }
 
-.vague__note {
+.waves__note {
   margin: 0;
   max-width: 46ch;
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
 
-.vague__liste {
+.waves__liste {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: var(--space-4);
@@ -1519,7 +1519,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   list-style: none;
 }
 
-.vague__carte {
+.waves__carte {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-5);
@@ -1528,7 +1528,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   background: var(--bg-raised);
 }
 
-.vague__icone {
+.waves__icone {
   display: grid;
   place-items: center;
   width: 38px;
@@ -1538,14 +1538,14 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--accent-text);
 }
 
-.vague__carte-titre {
+.waves__carte-titre {
   margin: 0;
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }
 
-.vague__carte-detail {
+.waves__carte-detail {
   margin: 0;
   font-size: var(--text-sm);
   line-height: 1.55;
@@ -1554,7 +1554,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 
 /* Les engagements sont poses a part, sur un fond sobre : ce sont eux qui
    tiennent la page, pas la liste d'avantages. */
-.vague__promesse {
+.waves__promesse {
   max-width: 720px;
   margin: 0 auto;
   padding: var(--space-6);
@@ -1563,14 +1563,14 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   background: var(--bg-sunken);
 }
 
-.vague__promesse-titre {
+.waves__promesse-titre {
   margin: 0 0 var(--space-4);
   font-size: var(--text-md);
   font-weight: var(--weight-bold);
   color: var(--text-primary);
 }
 
-.vague__promesse ul {
+.waves__promesse ul {
   display: grid;
   gap: var(--space-3);
   margin: 0;
@@ -1581,7 +1581,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 }
 
 /* L'entree dans la liste des conversations. */
-.dm-vague__bientot {
+.dm-waves__bientot {
   margin-left: auto;
   padding: 1px var(--space-2);
   border-radius: var(--radius-full);
