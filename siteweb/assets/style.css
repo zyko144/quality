@@ -1689,3 +1689,76 @@ tbody tr:last-child th {
     color: #000;
   }
 }
+
+/* ------------------------------------------- Support Indisponible Badge --- */
+
+.nav__item-indisponible {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-discret, rgba(255, 255, 255, 0.45));
+  cursor: not-allowed;
+  user-select: none;
+  font-size: 0.95rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.texte-barre {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.badge-croix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.bandeau-indisponible {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  color: var(--text);
+}
+
+.bandeau-indisponible__icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  font-weight: 800;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.bandeau-indisponible strong {
+  display: block;
+  color: #fca5a5;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.bandeau-indisponible p {
+  margin: 0;
+  color: var(--text-discret, rgba(255, 255, 255, 0.7));
+  font-size: 0.95rem;
+}

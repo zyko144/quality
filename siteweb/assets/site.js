@@ -1,5 +1,5 @@
-/* ==========================================================================
-   Qualityz — le peu de JavaScript dont le site a besoin.
+﻿/* ==========================================================================
+   Echow — le peu de JavaScript dont le site a besoin.
 
    Trois choses, pas une de plus : le menu sur petit ecran, l'annee du pied de
    page, et une apparition discrete au defilement. Le site fonctionne
@@ -20,7 +20,7 @@
      volontairement pas de troisieme etat : un formulaire qui a l'air d'envoyer
      sans rien envoyer vaut moins que pas de formulaire.
      ---------------------------------------------------------------------- */
-  var ADRESSE_CONTACT = 'contactqualityz@gmail.com';
+  var ADRESSE_CONTACT = 'contactEchow@gmail.com';
 
   // On signale que le script tourne. Les styles d'apparition sont conditionnes
   // a cette classe, pour qu'un blocage du JavaScript ne laisse pas la page
@@ -250,3 +250,4 @@
     });
   }
 })();
+

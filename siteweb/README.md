@@ -1,4 +1,4 @@
-# Qualityz — site vitrine
+﻿# Echow — site vitrine
 
 Site statique : du HTML, une feuille de style, un fichier de script. Aucune
 dependance, aucun outil de construction, rien a compiler. On ouvre
@@ -8,7 +8,7 @@ dependance, aucun outil de construction, rien a compiler. On ouvre
 
 | Fichier | Role |
 | --- | --- |
-| `index.html` | Accueil : ce qu'est Quality, et le bouton de telechargement. |
+| `index.html` | Accueil : ce qu'est Echow, et le bouton de telechargement. |
 | `telecharger.html` | Windows disponible ; macOS et Linux annonces. |
 | `player.html` | Maquette de l'interface. Ce n'est pas l'application, et la page le dit. |
 | `aide.html` | Centre d'aide : une quarantaine de reponses rangees par sujet, une recherche, un formulaire de contact. |
@@ -62,7 +62,7 @@ pas.
 L'adresse tient en une ligne, en tete de `assets/site.js` :
 
 ```js
-var ADRESSE_CONTACT = 'contactqualityz@gmail.com';
+var ADRESSE_CONTACT = 'contactEchow@gmail.com';
 ```
 
 La vider desactive le formulaire, qui l'annonce alors franchement plutot que de
@@ -90,8 +90,9 @@ n'en charge aucune, ce qui rend cette regle gratuite.
 Il pointe vers la derniere version publiee sur GitHub :
 
 ```
-https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe
+https://github.com/zyko144/Echow/releases/latest/download/Echow-setup.exe
 ```
 
 Cette adresse ne change jamais : `latest` suit les publications. Rien a
 modifier ici a chaque version.
+

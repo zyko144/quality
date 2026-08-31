@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lecteur web — Qualityz</title>
-<meta name="description" content="Une version navigateur de Quality est en preparation. Cette page en montre une maquette statique, dessinee en HTML et CSS : ce n'est pas l'application.">
+<title>Lecteur web — Echow</title>
+<meta name="description" content="Une version navigateur de Echow est en preparation. Cette page en montre une maquette statique, dessinee en HTML et CSS : ce n'est pas l'application.">
 <meta name="theme-color" content="#0b0b0d">
-<link rel="icon" href="assets/quality-logo.png" type="image/png">
+<link rel="icon" href="assets/Echow-logo.png" type="image/png">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -16,8 +16,8 @@
 <header class="entete">
   <div class="enveloppe entete__barre">
     <a class="marque" href="index.html">
-      <img class="marque__glyphe" src="assets/quality-logo.png" alt="" width="26" height="26" decoding="async">
-      Qualityz
+      <img class="marque__glyphe" src="assets/Echow-logo.png" alt="" width="26" height="26" decoding="async">
+      Echow
     </a>
 
     <button class="bascule-nav" type="button" aria-expanded="false" aria-controls="nav-principale">
@@ -31,9 +31,9 @@
       <a href="index.html">Accueil</a>
       <a href="telecharger.html">Telecharger</a>
       <a href="player.html" aria-current="page">Lecteur web</a>
-      <a href="aide.html">Aide</a>
+      <span class="nav__item-indisponible" title="Support actuellement indisponible"><span class="texte-barre">Support</span> <span class="badge-croix">✕</span></span>
       <a href="securite.html">Securite</a>
-      <a class="bouton bouton--principal" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">Telecharger</a>
+      <a class="bouton bouton--principal" href="https://github.com/zyko144/Echow/releases/latest/download/Echow-setup.exe">Telecharger</a>
     </nav>
   </div>
 </header>
@@ -45,7 +45,7 @@
       <span class="surtitre">En preparation</span>
       <h1>Le lecteur web arrive</h1>
       <p>
-        Ouvrir Quality dans un onglet, sans rien installer : c'est la prochaine
+        Ouvrir Echow dans un onglet, sans rien installer : c'est la prochaine
         etape. En attendant, voici a quoi ressemble l'interface.
       </p>
     </div>
@@ -62,13 +62,13 @@
       <p>
         Ce qui suit est une image fixe dessinee en HTML et CSS. Rien n'y est
         cliquable, aucun message n'est reel, aucune connexion n'est etablie. Pour
-        utiliser Quality aujourd'hui, il faut
+        utiliser Echow aujourd'hui, il faut
         <a href="telecharger.html">l'application de bureau</a>.
       </p>
     </div>
 
     <figure class="figure" data-apparition>
-      <div class="maquette" role="img" aria-label="Maquette de l'interface de Quality : a gauche une colonne d'espaces, au centre la liste des salons ecrits et vocaux de l'espace Atelier, a droite le fil du salon annonces avec trois messages et un champ de saisie.">
+      <div class="maquette" role="img" aria-label="Maquette de l'interface de Echow : a gauche une colonne d'espaces, au centre la liste des salons ecrits et vocaux de l'espace Atelier, a droite le fil du salon annonces avec trois messages et un champ de saisie.">
 
         <span class="maquette__etiquette" aria-hidden="true">Maquette</span>
 
@@ -186,7 +186,7 @@
       <h2>En attendant, l'application existe deja</h2>
       <p>Elle pese moins de 3 Mo et se met a jour toute seule.</p>
       <div class="groupe-boutons">
-        <a class="bouton bouton--principal bouton--grand" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">Telecharger pour Windows</a>
+        <a class="bouton bouton--principal bouton--grand" href="https://github.com/zyko144/Echow/releases/latest/download/Echow-setup.exe">Telecharger pour Windows</a>
       </div>
     </div>
   </section>
@@ -198,8 +198,8 @@
     <div class="pied__grille">
       <div>
         <a class="pied__marque" href="index.html">
-          <img class="marque__glyphe" src="assets/quality-logo.png" alt="" width="26" height="26" decoding="async">
-          Qualityz
+          <img class="marque__glyphe" src="assets/Echow-logo.png" alt="" width="26" height="26" decoding="async">
+          Echow
         </a>
         <p class="pied__accroche">La discussion d'equipe, avec la voix qui passe directement d'un membre a l'autre.</p>
       </div>
@@ -210,7 +210,7 @@
           <li><a href="index.html">Accueil</a></li>
           <li><a href="telecharger.html">Telecharger</a></li>
           <li><a href="player.html">Lecteur web</a></li>
-          <li><a href="aide.html">Centre d'aide</a></li>
+          <li><span class="nav__item-indisponible" style="padding:0;" title="Support actuellement indisponible"><span class="texte-barre">Support</span> <span class="badge-croix">✕</span></span></li>
           <li><a href="securite.html">Securite</a></li>
         </ul>
       </div>
@@ -227,7 +227,7 @@
       <div>
         <h2>Ressources</h2>
         <ul>
-          <li><a href="https://github.com/zyko144/quality/releases/latest">Versions publiees</a></li>
+          <li><a href="https://github.com/zyko144/Echow/releases/latest">Versions publiees</a></li>
           <li><a href="securite.html#signaler">Signaler une faille</a></li>
           <li><a href="confidentialite.html#droits">Exercer vos droits</a></li>
         </ul>
@@ -235,8 +235,8 @@
     </div>
 
     <div class="pied__bas">
-      <p>&copy; <span data-annee>2026</span> Qualityz — edite a titre non professionnel. <a href="mentions-legales.html">Mentions legales</a>.</p>
-      <p>Quality n'est affilie a aucun editeur tiers.</p>
+      <p>&copy; <span data-annee>2026</span> Echow — edite a titre non professionnel. <a href="mentions-legales.html">Mentions legales</a>.</p>
+      <p>Echow n'est affilie a aucun editeur tiers.</p>
     </div>
   </div>
 </footer>
@@ -244,3 +244,6 @@
 <script src="assets/site.js"></script>
 </body>
 </html>
+
+
+
