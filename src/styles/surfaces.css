@@ -1530,3 +1530,64 @@
   background: var(--bg-hover);
   color: var(--text-primary);
 }
+
+/* --------------------------------------------------------------------------
+   Attribuer un role depuis la fiche
+   -------------------------------------------------------------------------- */
+
+.membre-roles__zone {
+  position: relative;
+}
+
+.membre-roles__aucun {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}
+
+.membre-role--ajouter {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.membre-role--ajouter:hover {
+  border-style: solid;
+  color: var(--text-primary);
+}
+
+/* Le menu est pose en absolu sous le bouton : la fiche a une hauteur fixe, et
+   pousser son contenu vers le bas ferait sauter tout ce qui suit. */
+.membre-roles__menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  min-width: 220px;
+  max-height: 260px;
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.membre-roles__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.membre-roles__option:hover {
+  background: var(--bg-hover);
+}

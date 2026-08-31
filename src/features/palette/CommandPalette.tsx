@@ -19,6 +19,8 @@ const THEME_LABELS: Record<Theme, string> = {
 import { useSession, type Theme } from '@/store/session';
 import { Icon, type IconName } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
+import { useVoice } from '@/features/voice/useVoice';
+import { useDevices } from '@/store/devices';
 
 interface Command {
   id: string;
@@ -57,7 +59,24 @@ export function CommandPalette() {
 
   const preferences = useSession((state) => state.preferences);
   const setPreference = useSession((state) => state.setPreference);
+  const setStatus = useSession((state) => state.setStatus);
   const signOut = useSession((state) => state.signOut);
+  const moi = useSession((state) => state.profile);
+
+  const openDm = useChat((state) => state.openDm);
+  const showDirectMessages = useUI((state) => state.showDirectMessages);
+  const openSettings = useUI((state) => state.openSettings);
+
+  const salonVocal = useVoice((state) => state.channelId);
+  const rejoindreVocal = useVoice((state) => state.join);
+  const quitterVocal = useVoice((state) => state.leave);
+  const basculerMicro = useVoice((state) => state.toggleMute);
+  const basculerSon = useVoice((state) => state.toggleDeafen);
+  const basculerPartage = useVoice((state) => state.toggleScreenShare);
+  const basculerCamera = useVoice((state) => state.toggleCamera);
+
+  const media = useDevices((state) => state.media);
+  const setMedia = useDevices((state) => state.setMedia);
 
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
@@ -118,6 +137,33 @@ export function CommandPalette() {
             selectChannel(channel.id);
           },
         });
+
+        /*
+         * Un salon vocal se rejoint.
+         *
+         * L'entree ci-dessus ne fait que l'afficher — ce qui a du sens pour
+         * voir qui s'y trouve. Mais quand on tape le nom d'un salon vocal, on
+         * veut neuf fois sur dix y entrer, et il fallait encore viser un
+         * bouton apres coup.
+         *
+         * Deux entrees plutot qu'une seule qui rejoindrait : regarder sans
+         * ouvrir son micro doit rester possible.
+         */
+        if (channel.kind === 'voice' && channel.id !== salonVocal && moi) {
+          list.push({
+            id: `rejoindre:${channel.id}`,
+            label: `Rejoindre ${channel.name}`,
+            hint: space.name,
+            icon: 'phone',
+            group: 'Salons',
+            keywords: `vocal parler entrer connecter ${space.name}`,
+            run: () => {
+              selectSpace(space.id);
+              selectChannel(channel.id);
+              void rejoindreVocal(channel.id, moi.id);
+            },
+          });
+        }
       }
     }
 
@@ -142,6 +188,20 @@ export function CommandPalette() {
         keywords: profile.username,
         run: () => openModal({ kind: 'profile', userId: profile.id }),
       });
+
+      // Ecrire a quelqu'un est ce qu'on veut faire le plus souvent apres
+      // l'avoir cherche ; ouvrir sa fiche vient ensuite.
+      if (profile.id !== moi?.id) {
+        list.push({
+          id: `dm:${profile.id}`,
+          label: `Ecrire a ${profile.display_name}`,
+          hint: `@${profile.username}`,
+          icon: 'send',
+          group: 'Personnes',
+          keywords: `message prive conversation dm ${profile.username}`,
+          run: () => void openDm(profile.id),
+        });
+      }
     }
 
     list.push(
@@ -237,6 +297,258 @@ export function CommandPalette() {
         keywords: 'bannir exclure silence signalement',
         run: () => openModal({ kind: 'moderation', spaceId: activeSpaceId }),
       });
+    }
+
+    /*
+     * Les commandes du salon vocal.
+     *
+     * Elles n'ont de sens qu'en ligne : proposer « couper le micro » a qui n'a
+     * pas de micro ouvert donnerait une commande sans effet, et l'on douterait
+     * ensuite de celles qui en ont un.
+     */
+    if (salonVocal) {
+      list.push(
+        {
+          id: 'voix:micro',
+          label: 'Couper ou reactiver le micro',
+          icon: 'mic-off',
+          group: 'Voix',
+          keywords: 'muet sourdine mute silence',
+          run: () => basculerMicro(),
+        },
+        {
+          id: 'voix:son',
+          label: 'Couper ou reactiver le son',
+          icon: 'headphones-off',
+          group: 'Voix',
+          keywords: 'sourd casque deafen',
+          run: () => basculerSon(),
+        },
+        {
+          id: 'voix:partage',
+          label: 'Partager ou arreter le partage d ecran',
+          icon: 'screen',
+          group: 'Voix',
+          keywords: 'stream diffuser ecran jeu',
+          run: () => void basculerPartage(),
+        },
+        {
+          id: 'voix:camera',
+          label: 'Allumer ou eteindre la camera',
+          icon: 'video',
+          group: 'Voix',
+          keywords: 'webcam video visage',
+          run: () => void basculerCamera(),
+        },
+        {
+          id: 'voix:quitter',
+          label: 'Quitter le salon vocal',
+          icon: 'phone-off',
+          group: 'Voix',
+          keywords: 'raccrocher partir deconnecter',
+          run: () => void quitterVocal(),
+        },
+      );
+    }
+
+    list.push(
+      {
+        id: 'voix:porte',
+        label: media.noiseGate ? 'Couper la porte de bruit' : 'Activer la porte de bruit',
+        hint: 'Coupe le micro entre les phrases',
+        icon: 'mic',
+        group: 'Voix',
+        keywords: 'bruit suppression fond ventilateur clavier',
+        run: () => setMedia('noiseGate', !media.noiseGate),
+      },
+      {
+        id: 'voix:qualite',
+        label:
+          media.audioQuality === 'musique'
+            ? 'Qualite du son : repasser en voix'
+            : media.audioQuality === 'haute'
+              ? 'Qualite du son : passer en musique'
+              : 'Qualite du son : passer en haute',
+        hint:
+          media.audioQuality === 'musique'
+            ? '128 kb/s stereo aujourd hui'
+            : media.audioQuality === 'haute'
+              ? '64 kb/s aujourd hui'
+              : '32 kb/s aujourd hui',
+        icon: 'volume',
+        group: 'Voix',
+        keywords: 'audio debit qualite stereo musique',
+        run: () =>
+          setMedia(
+            'audioQuality',
+            media.audioQuality === 'musique'
+              ? 'voix'
+              : media.audioQuality === 'haute'
+                ? 'musique'
+                : 'haute',
+          ),
+      },
+      {
+        id: 'voix:priorite',
+        label:
+          media.screenPriority === 'motion'
+            ? 'Partage : privilegier la nettete'
+            : 'Partage : privilegier la fluidite',
+        hint: media.screenPriority === 'motion' ? 'Fluidite aujourd hui' : 'Nettete aujourd hui',
+        icon: 'screen',
+        group: 'Voix',
+        keywords: 'stream fps images definition jeu texte',
+        run: () =>
+          setMedia('screenPriority', media.screenPriority === 'motion' ? 'detail' : 'motion'),
+      },
+    );
+
+    list.push(
+      {
+        id: 'action:amis',
+        label: 'Ajouter un ami',
+        icon: 'user-plus',
+        group: 'Actions',
+        keywords: 'ami demande contact inviter quelqu un',
+        run: () => showDirectMessages(),
+      },
+      {
+        id: 'action:dm',
+        label: 'Nouvelle conversation privee',
+        icon: 'send',
+        group: 'Actions',
+        keywords: 'message prive dm ecrire',
+        run: () => openModal({ kind: 'new-dm' }),
+      },
+      {
+        id: 'action:profil',
+        label: 'Modifier mon profil',
+        hint: 'Photo, banniere, pseudo',
+        icon: 'edit',
+        group: 'Actions',
+        keywords: 'avatar bio pseudo banniere',
+        run: () => openModal({ kind: 'edit-profile' }),
+      },
+      {
+        id: 'statut:enligne',
+        label: 'Me mettre en ligne',
+        icon: 'check-circle',
+        group: 'Statut',
+        keywords: 'disponible actif',
+        run: () => void setStatus('online'),
+      },
+      {
+        id: 'statut:absent',
+        label: 'Me mettre absent',
+        icon: 'moon',
+        group: 'Statut',
+        keywords: 'inactif pause',
+        run: () => void setStatus('idle'),
+      },
+      {
+        id: 'statut:dnd',
+        label: 'Ne pas deranger',
+        hint: 'Coupe sonnerie et notifications',
+        icon: 'bell-off',
+        group: 'Statut',
+        keywords: 'silence occupe concentration',
+        run: () => void setStatus('dnd'),
+      },
+      {
+        id: 'statut:invisible',
+        label: 'Passer invisible',
+        icon: 'shield-off',
+        group: 'Statut',
+        keywords: 'hors ligne cache discret',
+        run: () => void setStatus('offline'),
+      },
+      {
+        id: 'reglages:voix',
+        label: 'Reglages : voix et video',
+        icon: 'mic',
+        group: 'Reglages',
+        keywords: 'micro camera peripherique test',
+        run: () => openSettings('voix'),
+      },
+      {
+        id: 'reglages:apparence',
+        label: 'Reglages : apparence',
+        icon: 'sun',
+        group: 'Reglages',
+        keywords: 'theme couleur densite transparence',
+        run: () => openSettings('apparence'),
+      },
+      {
+        id: 'reglages:notifications',
+        label: 'Reglages : notifications',
+        icon: 'bell',
+        group: 'Reglages',
+        keywords: 'sons alertes mentions',
+        run: () => openSettings('notifications'),
+      },
+      {
+        id: 'reglages:confidentialite',
+        label: 'Reglages : confidentialite',
+        icon: 'shield',
+        group: 'Reglages',
+        keywords: 'donnees blocage securite',
+        run: () => openSettings('confidentialite'),
+      },
+      {
+        id: 'reglages:accessibilite',
+        label: 'Reglages : accessibilite',
+        icon: 'sliders',
+        group: 'Reglages',
+        keywords: 'contraste animation taille texte',
+        run: () => openSettings('accessibilite'),
+      },
+      {
+        id: 'reglages:raccourcis',
+        label: 'Voir les raccourcis clavier',
+        icon: 'keyboard',
+        group: 'Reglages',
+        keywords: 'touches combinaisons',
+        run: () => openSettings('raccourcis'),
+      },
+      {
+        id: 'reglages:avance',
+        label: 'Reglages : avance',
+        hint: 'Version et mises a jour',
+        icon: 'sliders',
+        group: 'Reglages',
+        keywords: 'version maj mise a jour',
+        run: () => openSettings('avance'),
+      },
+    );
+
+    if (activeSpaceId) {
+      list.push(
+        {
+          id: 'espace:inviter',
+          label: 'Inviter du monde dans cet espace',
+          icon: 'link',
+          group: 'Espaces',
+          keywords: 'invitation lien code partager',
+          run: () => openModal({ kind: 'invite', spaceId: activeSpaceId }),
+        },
+        {
+          id: 'espace:salon',
+          label: 'Creer un salon',
+          icon: 'plus',
+          group: 'Espaces',
+          keywords: 'nouveau canal vocal texte',
+          run: () => openModal({ kind: 'create-channel', spaceId: activeSpaceId }),
+        },
+        {
+          id: 'espace:reglages',
+          label: 'Reglages de cet espace',
+          hint: 'Membres, salons, roles',
+          icon: 'settings',
+          group: 'Espaces',
+          keywords: 'serveur parametres roles membres categories',
+          run: () => openModal({ kind: 'space-settings', spaceId: activeSpaceId }),
+        },
+      );
     }
 
     return list;
