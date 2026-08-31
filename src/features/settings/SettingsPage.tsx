@@ -7,6 +7,8 @@ import { Icon, type IconName } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
 import { LIMITS } from '@/constants';
 import { VoiceSettings, SwitchRow } from './VoiceSettings';
+import { useMajEtat } from '@/features/shell/MiseAJour';
+
 import {
   permissionState,
   requestPermission,
@@ -1166,6 +1168,29 @@ function ShortcutsSection() {
 /* ========================================================================== */
 
 function AdvancedSection() {
+  const majEtat = useMajEtat((state) => state.etat);
+  const majDetail = useMajEtat((state) => state.detail);
+  const [recherche, setRecherche] = useState(false);
+
+  /*
+   * La meme recherche qu'au demarrage, mais a la demande.
+   *
+   * Elle ecrit dans le meme etat : ce que dit ce bouton et ce que decide la
+   * banniere ne peuvent donc pas se contredire.
+   */
+  const chercherMaj = async () => {
+    setRecherche(true);
+    try {
+      const { check } = await import('@tauri-apps/plugin-updater');
+      const mise = await check();
+      useMajEtat.getState().signaler(null, mise ? 'disponible' : 'a-jour');
+    } catch (cause) {
+      useMajEtat.getState().signaler(String(cause));
+    } finally {
+      setRecherche(false);
+    }
+  };
+
   const [checking, setChecking] = useState(false);
   const [health, setHealth] = useState<'ok' | 'down' | null>(null);
   const [latency, setLatency] = useState<number | null>(null);
@@ -1198,6 +1223,49 @@ function AdvancedSection() {
           D’autres langues demanderaient une traduction complete plutot qu’un
           menu qui ne changerait rien.
         </p>
+      </section>
+
+      <section className="settings__group">
+        <h2 className="settings__group-title">Mises a jour</h2>
+
+        <p className="settings__hint">
+          Version installee : <strong>{__APP_VERSION__}</strong>. L&rsquo;application
+          cherche une nouvelle version a chaque demarrage, et propose de
+          l&rsquo;installer sans repasser par l&rsquo;installateur.
+        </p>
+
+        <div className="settings__row">
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            disabled={recherche}
+            onClick={() => void chercherMaj()}
+          >
+            {recherche ? <span className="spinner" /> : <Icon name="refresh" size={14} />}
+            Rechercher une mise a jour
+          </button>
+
+          {/*
+            Le resultat est dit, quel qu'il soit.
+            Un bouton qui ne repond rien laisse croire qu'il n'a pas marche ;
+            « vous etes a jour » est une reponse aussi utile qu'une autre.
+          */}
+          {majEtat === 'a-jour' ? (
+            <span className="settings__ok" role="status">
+              <Icon name="check" size={14} />
+              Vous etes a jour
+            </span>
+          ) : majEtat === 'disponible' ? (
+            <span className="settings__ok" role="status">
+              <Icon name="arrow-down" size={14} />
+              Une version plus recente existe
+            </span>
+          ) : majEtat === 'echec' ? (
+            <span className="settings__alert">
+              La recherche a echoue : {majDetail}
+            </span>
+          ) : null}
+        </div>
       </section>
 
       <section className="settings__group">

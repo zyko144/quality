@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { create } from 'zustand';
 import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 
@@ -18,6 +19,24 @@ import { Modal } from '@/components/Modal';
  */
 
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+/**
+ * Ce que la derniere recherche a donne.
+ *
+ * Range a part pour que les reglages puissent l'afficher sans dupliquer la
+ * logique de recherche, et pour qu'une recherche lancee a la main mette a jour
+ * la meme information que celle du demarrage.
+ */
+export const useMajEtat = create<{
+  etat: 'inconnu' | 'a-jour' | 'disponible' | 'echec';
+  detail: string | null;
+  signaler: (detail: string | null, etat?: 'a-jour' | 'disponible') => void;
+}>((set) => ({
+  etat: 'inconnu',
+  detail: null,
+  signaler: (detail, etat) =>
+    set({ etat: etat ?? (detail ? 'echec' : 'inconnu'), detail }),
+}));
 
 /** Version pour laquelle les nouveautes ont deja ete montrees. */
 const CLE_VUE = 'quality:notes-vues';
@@ -63,7 +82,17 @@ export function MiseAJour() {
       try {
         const { check } = await import('@tauri-apps/plugin-updater');
         const mise = await check();
-        if (annule || !mise) return;
+
+        if (!mise) {
+          // A jour : on le note, pour que le bouton des reglages puisse le dire
+          // au lieu de rester muet.
+          useMajEtat.getState().signaler(null, 'a-jour');
+          return;
+        }
+
+        if (annule) return;
+
+        useMajEtat.getState().signaler(null, 'disponible');
 
         setDisponible({
           version: mise.version,
@@ -86,9 +115,18 @@ export function MiseAJour() {
             setInstallation('prete');
           },
         });
-      } catch {
-        // Pas de reseau, pas de version publiee, endpoint injoignable : une
-        // mise a jour qu'on ne trouve pas n'est pas une erreur a annoncer.
+      } catch (cause) {
+        /*
+         * Un echec ne doit pas disparaitre.
+         *
+         * Il n'y a pas de quoi interrompre qui que ce soit — l'application
+         * marche tres bien sans se mettre a jour — mais l'avaler completement
+         * rend la panne indiscernable du cas normal : on ne sait pas si l'on
+         * est a jour ou si la recherche a echoue. La console le dit, et le
+         * bouton des reglages le repete a qui va le chercher.
+         */
+        console.error('Recherche de mise a jour :', cause);
+        useMajEtat.getState().signaler(String(cause));
       }
     })();
 

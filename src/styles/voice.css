@@ -951,12 +951,19 @@ button.voice-tile__name:hover {
    deborde, rien ne defile.
    ========================================================================== */
 
+/*
+ * Le bandeau ne se reduit QUE lorsqu'un partage est effectivement affiche.
+ *
+ * Une premiere version retrecissait les tuiles des qu'une personne diffusait,
+ * meme sans que personne ne regarde. On obtenait des vignettes de cent trente
+ * pixels ou l'intitule « Voir mon partage » depassait de partout, coupe — donc
+ * impossible a cliquer, donc impossible d'afficher le partage, donc les tuiles
+ * restaient petites. Un cercle dont on ne pouvait pas sortir.
+ */
 .voice-stage:has(.voice-stage__screens) .voice-grid,
 .voice-stage:has(.voice-stage__focus) .voice-grid {
-  /* Un bandeau de vignettes : on veut savoir qui est la, pas detailler les
-     visages pendant qu'on regarde un ecran. */
   flex: none;
-  grid-template-columns: repeat(auto-fit, minmax(132px, max-content));
+  grid-template-columns: repeat(auto-fit, minmax(200px, max-content));
   justify-content: center;
   gap: var(--space-3);
   overflow: visible;
@@ -964,22 +971,44 @@ button.voice-tile__name:hover {
 
 .voice-stage:has(.voice-stage__screens) .voice-tile,
 .voice-stage:has(.voice-stage__focus) .voice-tile {
-  width: 132px;
-  aspect-ratio: 1;
+  width: 200px;
+  aspect-ratio: 16 / 10;
 }
 
 .voice-stage:has(.voice-stage__screens) .voice-tile .avatar,
 .voice-stage:has(.voice-stage__focus) .voice-tile .avatar {
-  width: 44px !important;
-  height: 44px !important;
-  min-width: 44px !important;
-  min-height: 44px !important;
-  max-width: 44px !important;
-  max-height: 44px !important;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
 }
 
-.voice-stage:has(.voice-stage__screens) .voice-tile__live {
+/* La pastille « en direct » et le bouton se rangent : le partage est deja
+   sous les yeux, l'annoncer une seconde fois ne sert plus a rien. */
+.voice-stage:has(.voice-stage__screens) .voice-tile__badge,
+.voice-stage:has(.voice-stage__focus) .voice-tile__badge {
   display: none;
+}
+
+/*
+ * L'annonce d'un partage ne doit jamais deborder.
+ *
+ * Elle occupe toute la largeur de la tuile, et son bouton se replie sur une
+ * icone quand la place manque : mieux vaut une cible sans texte qu'un texte
+ * coupe qu'on ne peut pas atteindre.
+ */
+.voice-tile__live {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.voice-tile__watch {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /*
@@ -1022,4 +1051,51 @@ button.voice-tile__name:hover {
 .voice-stage:has(.voice-stage__screens),
 .voice-stage:has(.voice-stage__focus) {
   padding-bottom: 84px;
+}
+
+/* ==========================================================================
+   Agrandir un partage d'un clic
+   ==========================================================================
+   Un clic sur l'image l'agrandit, un second la remet dans la grille. Le geste
+   est le meme dans les deux sens, ce qui evite d'avoir a chercher comment
+   revenir — c'est la premiere chose qu'on cherche apres avoir agrandi quelque
+   chose par erreur.
+   ========================================================================== */
+
+.voice-stage__focus .screen-tile {
+  /* Toute la place disponible : c'est le sens meme d'agrandir. */
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-xl);
+}
+
+.voice-stage__focus .screen-tile__video {
+  width: 100%;
+  height: 100%;
+  /* `contain` et non `cover` : un ecran partage n'a pas le rapport de la zone
+     qui l'accueille, et le rogner ferait disparaitre des bords ou se trouve
+     souvent ce qu'on veut montrer. */
+  object-fit: contain;
+}
+
+/* L'agrandissement se voit : le cadre grandit d'un cran a l'arrivee, sans quoi
+   on ne sait pas si le clic a fait quelque chose. */
+.voice-stage__focus {
+  animation: partage-agrandi var(--duration-normal) var(--spring);
+}
+
+@keyframes partage-agrandi {
+  from { transform: scale(0.985); opacity: 0.85; }
+  to   { transform: none; opacity: 1; }
+}
+
+[data-motion='reduced'] .voice-stage__focus,
+:root[data-perf='on'] .voice-stage__focus {
+  animation: none;
+}
+
+/* Le bouton d'agrandissement dit dans quel sens il va. */
+.screen-tile.is-focused .screen-tile__action[title='Reduire'] {
+  background: var(--accent);
+  color: var(--text-on-accent);
 }
