@@ -30,12 +30,24 @@ const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in win
 export const useMajEtat = create<{
   etat: 'inconnu' | 'a-jour' | 'disponible' | 'echec';
   detail: string | null;
+  /** Heure de la derniere reponse, ou `null` si l'on n'a pas encore cherche. */
+  verifie: number | null;
   signaler: (detail: string | null, etat?: 'a-jour' | 'disponible') => void;
+  /** Oublie la derniere reponse, le temps d'en chercher une nouvelle. */
+  chercher: () => void;
 }>((set) => ({
   etat: 'inconnu',
   detail: null,
+  verifie: null,
   signaler: (detail, etat) =>
-    set({ etat: etat ?? (detail ? 'echec' : 'inconnu'), detail }),
+    set({
+      etat: etat ?? (detail ? 'echec' : 'inconnu'),
+      detail,
+      // Horodatee, parce que la reponse a souvent l'air identique a la
+      // precedente : sans cela, chercher a nouveau ne change rien a l'ecran.
+      verifie: Date.now(),
+    }),
+  chercher: () => set({ etat: 'inconnu', detail: null }),
 }));
 
 /** Version pour laquelle les nouveautes ont deja ete montrees. */

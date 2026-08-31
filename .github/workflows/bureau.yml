@@ -162,7 +162,11 @@ jobs:
           # identique a l'oeil.
           printf '%s' "$MDP" | tr -d '[:space:]' > mdp_signature.txt
 
-          if ! base64 -d cle_signature.txt 2>/dev/null | head -1 | grep -q 'untrusted comment'; then
+          # `base64 -d` est du GNU coreutils ; le base64 de macOS veut `-D`, et
+          # echouait donc a chaque construction — la cle etait declaree
+          # illisible alors qu'elle etait parfaite. `openssl` decode de la meme
+          # facon sur les deux systemes.
+          if ! openssl base64 -d -A -in cle_signature.txt 2>/dev/null | head -1 | grep -q 'untrusted comment'; then
             echo "::error::TAURI_SIGNING_PRIVATE_KEY est illisible. Recollez le contenu de src-tauri/quality.key en une seule ligne, sans espace ni retour a la ligne."
             exit 1
           fi
@@ -221,11 +225,11 @@ jobs:
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
           releaseBody: |
+            Chercher une mise a jour repond visiblement, meme quand la reponse ne change pas : la ligne s'efface et revient horodatee.
+            La construction macOS repart : le decodage de la cle de signature employait une option qui n'existe pas sur ce systeme.
             Une fleche entre le partage et les participants replie les visages et rend leur place a l'image.
             Un bouton en bas a droite du partage l'agrandit ; il ne recouvre plus la barre de titre de ce qui est montre.
             Les commandes du salon vocal grandissent, et la barre qui les porte se resserre et passe au verre.
-            Un clic sur un partage l'agrandit, un second le remet dans la grille.
-            Un bouton dans Avance dit si une mise a jour existe, au lieu de rester muet.
 
       - uses: actions/upload-artifact@v4
         if: steps.version.outputs.publier == 'oui'

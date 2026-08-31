@@ -1170,16 +1170,31 @@ function ShortcutsSection() {
 function AdvancedSection() {
   const majEtat = useMajEtat((state) => state.etat);
   const majDetail = useMajEtat((state) => state.detail);
+  const majVerifie = useMajEtat((state) => state.verifie);
   const [recherche, setRecherche] = useState(false);
+
+  const majHeure = majVerifie
+    ? new Date(majVerifie).toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
 
   /*
    * La meme recherche qu'au demarrage, mais a la demande.
    *
    * Elle ecrit dans le meme etat : ce que dit ce bouton et ce que decide la
    * banniere ne peuvent donc pas se contredire.
+   *
+   * La reponse precedente est effacee avant de repartir. L'application cherche
+   * deja au demarrage, si bien qu'en ouvrant cette page on lit le plus souvent
+   * « Vous etes a jour » — et qu'un clic qui aboutit a la meme reponse ne
+   * changeait alors rien du tout a l'ecran. Le bouton paraissait mort alors
+   * qu'il repondait. La ligne disparait, puis revient horodatee.
    */
   const chercherMaj = async () => {
     setRecherche(true);
+    useMajEtat.getState().chercher();
     try {
       const { check } = await import('@tauri-apps/plugin-updater');
       const mise = await check();
@@ -1253,7 +1268,7 @@ function AdvancedSection() {
           {majEtat === 'a-jour' ? (
             <span className="settings__ok" role="status">
               <Icon name="check" size={14} />
-              Vous etes a jour
+              Vous etes a jour{majHeure ? ` (verifie a ${majHeure})` : ''}
             </span>
           ) : majEtat === 'disponible' ? (
             <span className="settings__ok" role="status">
