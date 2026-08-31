@@ -183,6 +183,14 @@ interface VoiceState {
   participantsByChannel: Record<UUID, VoiceParticipant[]>;
 
   /**
+   * Le son du partage a ete demande mais refuse par le systeme.
+   *
+   * Ni une erreur ni un etat durable : une precision a donner a qui partage,
+   * qui autrement n'a aucun moyen de distinguer un refus d'un jeu silencieux.
+   */
+  partageSansSon: boolean;
+
+  /**
    * Ou en est le masquage d'adresse, constate a la derniere entree.
    *
    * `sans-relais` n'est pas une erreur : c'est un souhait qu'aucune
@@ -1011,6 +1019,23 @@ export const useVoice = create<VoiceState>((set, get) => {
         screenBitrate(useDevices.getState().media),
         useDevices.getState().media.screenPriority,
       );
+
+      /*
+       * Le son du partage aussi.
+       *
+       * Il etait oublie ici : seule l'image partait vers un nouvel arrivant.
+       * Celui qui etait deja la entendait le jeu, celui qui arrivait ensuite
+       * ne voyait qu'une image muette — et rien ne le distinguait d'un partage
+       * sans son, puisque le symptome est le meme.
+       *
+       * Cela se voit surtout dans un serveur, ou l'on entre et sort pendant
+       * qu'une partie se joue.
+       */
+      const screenAudio = screen.getAudioTracks()[0];
+      if (screenAudio) {
+        peer.screenAudioSender = connection.addTrack(screenAudio, screen);
+      }
+
       announceStream(peerId, screen.id, 'screen');
     }
 
@@ -1248,6 +1273,7 @@ export const useVoice = create<VoiceState>((set, get) => {
     speaking: {},
     participantsByChannel: {},
     masquageActif: 'inconnu',
+    partageSansSon: false,
     outboundStats: null,
 
     join: async (channelId, userId) => {
@@ -1560,7 +1586,7 @@ export const useVoice = create<VoiceState>((set, get) => {
           arreterDecoupe?.();
           arreterDecoupe = null;
 
-          set({ sharing: false, localScreen: null });
+          set({ sharing: false, localScreen: null, partageSansSon: false });
           stopStats();
           playCue('share-stop');
           publishState();
@@ -1681,6 +1707,23 @@ export const useVoice = create<VoiceState>((set, get) => {
         // Le son du partage, quand la source en fournit. Il voyage dans le meme
         // flux que l'image : le separer obligerait a resynchroniser a l'arrivee.
         const [audioTrack] = display.getAudioTracks();
+
+        /*
+         * Le son demande n'est pas toujours accorde, et cela ne se voit pas.
+         *
+         * Windows ne permet la capture du son que pour un ecran entier ou un
+         * onglet, jamais pour une fenetre isolee. Nous sautons de plus le
+         * selecteur du moteur — c'est ce qui nous permet d'avoir le notre —
+         * or c'est dans ce selecteur que se coche « partager aussi le son ».
+         *
+         * Sans cette verification, l'echec est parfaitement muet : le partage
+         * part, l'image arrive, et personne ne sait si le silence vient d'un
+         * refus du systeme, d'un reglage oublie, ou d'un jeu qui ne fait pas
+         * de bruit. On le dit donc, une fois, a qui partage.
+         */
+        set({
+          partageSansSon: useDevices.getState().media.shareSystemAudio && !audioTrack,
+        });
 
         for (const [peerId, peer] of peers) {
           peer.screenSender = peer.connection.addTrack(videoTrack, display);

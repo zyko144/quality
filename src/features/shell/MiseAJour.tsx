@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
+import { lireLesNotes } from './notes';
 
 /**
  * Mises a jour, sans reinstaller.
@@ -270,16 +271,35 @@ export function MiseAJour() {
           </button>
         }
       >
-        <ul className="maj__liste">
-          {(nouveautes?.notes ?? '')
-            .split('\n')
-            .map((ligne) => ligne.replace(/^[-*\s]+/, '').trim())
-            .filter((ligne) => ligne.length > 0)
-            .slice(0, 12)
-            .map((ligne) => (
-              <li key={ligne}>{ligne}</li>
-            ))}
-        </ul>
+        {/*
+          Rangees par nature : ce qui est repare, ce qui est nouveau, ce qui a
+          change. Une liste plate obligeait a lire chaque ligne pour savoir si
+          elle concernait un defaut qu'on avait rencontre ou une fonctionnalite
+          qu'on ne connaissait pas. La categorie repond avant la lecture, et sa
+          couleur avant la categorie.
+        */}
+        <div className="maj__categories">
+          {lireLesNotes(nouveautes?.notes ?? '').map((categorie) => (
+            <section
+              className="maj__categorie"
+              data-genre={categorie.genre}
+              key={categorie.titre}
+            >
+              <h3 className="maj__categorie-titre">
+                <span className="maj__categorie-pastille" aria-hidden="true">
+                  <Icon name={categorie.icone} size={13} />
+                </span>
+                {categorie.titre}
+              </h3>
+
+              <ul className="maj__liste">
+                {categorie.lignes.slice(0, 8).map((ligne) => (
+                  <li key={ligne}>{ligne}</li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       </Modal>
     </>
   );

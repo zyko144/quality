@@ -2122,3 +2122,69 @@ button.userbar__voice-info:hover {
   contain: none;
   z-index: 70;
 }
+
+/* --------------------------------------------------------------------------
+   Les nouveautes, rangees et colorees
+   --------------------------------------------------------------------------
+   La couleur porte la categorie : on voit d'un coup d'oeil s'il y a des
+   corrections avant de lire ce qu'elles corrigent. C'est ce qui distingue une
+   liste qu'on parcourt d'une liste qu'on doit lire en entier.
+   -------------------------------------------------------------------------- */
+
+.maj__categories {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.maj__categorie-titre {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+}
+
+.maj__categorie-pastille {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+}
+
+/* Vert pour ce qui est repare, bleu d'accent pour ce qui est nouveau, ambre
+   pour ce qui a change de comportement — la meme grammaire que partout
+   ailleurs dans l'application. */
+.maj__categorie[data-genre='corrige'] .maj__categorie-titre { color: var(--success, #3ba55d); }
+.maj__categorie[data-genre='corrige'] .maj__categorie-pastille {
+  background: color-mix(in oklab, var(--success, #3ba55d) 20%, transparent);
+  color: var(--success, #3ba55d);
+}
+
+.maj__categorie[data-genre='nouveau'] .maj__categorie-titre { color: var(--accent-text); }
+.maj__categorie[data-genre='nouveau'] .maj__categorie-pastille {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.maj__categorie[data-genre='ameliore'] .maj__categorie-titre { color: var(--warning, #f0b232); }
+.maj__categorie[data-genre='ameliore'] .maj__categorie-pastille {
+  background: color-mix(in oklab, var(--warning, #f0b232) 20%, transparent);
+  color: var(--warning, #f0b232);
+}
+
+.maj__liste {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.maj__liste li::marker {
+  color: var(--text-faint);
+}

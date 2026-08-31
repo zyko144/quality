@@ -49,6 +49,7 @@ export function VoiceStage({ channel }: { channel: Channel }) {
   const muted = useVoice((state) => state.muted);
   const deafened = useVoice((state) => state.deafened);
   const sharing = useVoice((state) => state.sharing);
+  const partageSansSon = useVoice((state) => state.partageSansSon);
   const stats = useVoice((state) => state.outboundStats);
   const qualite = useContextMenu();
 
@@ -308,6 +309,22 @@ export function VoiceStage({ channel }: { channel: Channel }) {
           );
         })}
       </ul>
+
+      {/*
+        Le son du partage a ete demande et refuse.
+
+        Dit une fois, a qui partage, et seulement a lui : les autres n'y
+        peuvent rien. Sans cela, l'echec est parfaitement muet — l'image part,
+        et personne ne sait si le silence vient d'un refus du systeme ou d'un
+        jeu qui ne fait pas de bruit.
+      */}
+      {partageSansSon ? (
+        <p className="voice-stage__note" role="status">
+          <Icon name="volume" size={14} />
+          Votre partage part sans le son. Windows ne le permet que pour un ecran
+          entier ou un onglet, jamais pour une fenetre seule.
+        </p>
+      ) : null}
 
       <div className="voice-controls surface">
         <span className="voice-controls__timer" title="Duree de connexion">

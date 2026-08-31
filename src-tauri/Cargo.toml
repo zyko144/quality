@@ -1,6 +1,6 @@
 [package]
 name = "orbit"
-version = "0.2.9"
+version = "0.3.0"
 description = "Orbit - discussion d'equipe en temps reel"
 edition = "2021"
 rust-version = "1.77"

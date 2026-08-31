@@ -12,6 +12,21 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.0
+
+### Corrige
+
+- Le son d'un partage n'atteignait pas ceux qui rejoignaient **apres** son debut : seule l'image leur etait envoyee. Celui qui etait deja la entendait le jeu, l'arrivant voyait une image muette — et rien ne distinguait cela d'un partage sans son. Cela se voit surtout dans un serveur, ou l'on entre et sort pendant qu'une partie se joue.
+- Le workflow de publication ne se lisait plus depuis trois versions : une commande contenait un vrai retour a la ligne la ou il fallait un echappement. Aucun paquet n'etait construit, 0.2.7 a 0.2.9 n'ont jamais ete publiees.
+
+### Nouveau
+
+- Quand le systeme refuse le son du partage, l'application le dit a qui partage. Windows ne l'accorde que pour un ecran entier ou un onglet, jamais pour une fenetre seule : sans cette precision, l'echec etait muet et se confondait avec un jeu silencieux.
+
+### Ameliore
+
+- Ce message des nouveautes est range par nature et colore : vert pour ce qui est repare, bleu pour ce qui est nouveau, ambre pour ce qui change. On voit s'il y a des corrections avant de lire lesquelles.
+
 ## 0.2.9
 
 - Le message « aucun relais n'est configure » ne s'affiche plus en vocal. Il partait dans le canal des erreurs, celui des pannes reelles, pour dire que rien ne s'etait mal passe. Le constat vit maintenant dans les reglages, a cote de l'interrupteur concerne.
