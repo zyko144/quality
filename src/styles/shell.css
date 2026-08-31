@@ -2101,3 +2101,24 @@ button.userbar__voice-info:hover {
   background: var(--accent);
   color: var(--text-on-accent);
 }
+
+/*
+ * Le message qui porte un panneau ouvert sort du lot.
+ *
+ * `content-visibility: auto` fait de chaque message une boite contenue : le
+ * navigateur s'autorise a ne pas peindre ce qui deborde, et le message devient
+ * son propre contexte d'empilement. Le selecteur d'emojis, monte a l'interieur,
+ * ne pouvait donc pas en sortir : il passait sous les messages suivants, ou se
+ * trouvait coupe net — selon la position dans le defilement, ce qui rendait le
+ * defaut capricieux.
+ *
+ * `:focus-within` ne suffisait pas : le z-index qu'il pose s'applique bien,
+ * mais la containment reste et continue de rogner. Il faut la lever.
+ */
+.message:has(.emoji-picker),
+.message:has(.emoji-pop),
+.message:has([role='menu']) {
+  content-visibility: visible;
+  contain: none;
+  z-index: 70;
+}

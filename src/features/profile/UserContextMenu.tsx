@@ -31,13 +31,42 @@ function VolumeSlider({ userId }: { userId: UUID }) {
         step={1}
         value={local}
         onChange={(e) => {
-          const v = Number(e.target.value);
+          /*
+           * Le curseur s'aimante sur cent pour cent.
+           *
+           * Il court de zero a deux cents sur la largeur d'un menu : chaque
+           * pixel vaut deux a trois pour cent, et retrouver le reglage
+           * d'origine relevait de l'adresse. Or c'est la valeur qu'on cherche
+           * le plus souvent — on baisse quelqu'un pendant une partie, et on le
+           * remet ensuite.
+           *
+           * Quatre pour cent de part et d'autre suffisent : assez pour
+           * accrocher sans effort, trop peu pour empecher qui veut vraiment
+           * regler a 97 d'y arriver en deux mouvements.
+           */
+          const brut = Number(e.target.value);
+          const v = Math.abs(brut - 100) <= 4 ? 100 : brut;
           setLocal(v);
           setVolume(userId, v);
         }}
+        onDoubleClick={() => {
+          setLocal(100);
+          setVolume(userId, 100);
+        }}
+        title="Double-clic pour revenir a 100 %"
         aria-label="Volume de l'utilisateur"
       />
-      <span className="ctx-volume__value">{local} %</span>
+      <button
+        type="button"
+        className={'ctx-volume__value' + (local === 100 ? '' : ' is-modifie')}
+        onClick={() => {
+          setLocal(100);
+          setVolume(userId, 100);
+        }}
+        title={local === 100 ? 'Volume normal' : 'Revenir a 100 %'}
+      >
+        {local} %
+      </button>
     </div>
   );
 }

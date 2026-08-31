@@ -3,8 +3,8 @@
 
    Un seul fichier, aucune dependance externe : Vercel sert le dossier tel
    quel. Les couleurs reprennent l'identite du site existant (fond tres
-   sombre, accent dore) mais sans les halos ni les degrades satures : le site
-   doit rester lisible longtemps, pas seulement impressionner trois secondes.
+   sombre) et l'accent indigo de l'application, sans halo ni degrade sature :
+   le site doit rester lisible longtemps, pas seulement trois secondes.
    ========================================================================== */
 
 /* --------------------------------------------------------------- Jetons ---
@@ -29,12 +29,30 @@
   --text-2: #c2c3ca;
   --text-3: #8f9099;
 
-  /* Accent dore, herite du site existant mais desature */
-  --accent: #e8c56b;
-  --accent-bright: #f5dc9b;
-  --accent-soft: rgba(232, 197, 107, 0.12);
-  --accent-line: rgba(232, 197, 107, 0.34);
-  --on-accent: #17130a;
+  /* ------------------------------------------------------------------ Accent
+     L'indigo de l'application, repris tel quel de `src/styles/tokens.css`.
+     Il vit en deux valeurs, comme demande : le fonce porte les aplats et les
+     boutons, le clair porte les liens, les icones et les accents de texte.
+
+     Un bleu ne se comporte pas comme l'or qu'il remplace : l'or etait a la
+     fois assez clair pour servir de texte sur fond sombre et assez sature
+     pour recevoir du texte noir. L'indigo, lui, doit se dedoubler, sans quoi
+     l'un des deux usages tombe sous le seuil de contraste. D'ou la paire
+     `--accent-aplat` / `--accent-clair`.
+
+     Les hexadecimaux ci-dessous sont la conversion exacte des valeurs OKLCH
+     reprises plus bas dans un bloc `@supports`. Ils servent de repli : une
+     propriete personnalisee ne sait pas retomber toute seule sur une
+     declaration precedente, donc l'OKLCH ne peut pas etre pose ici. */
+
+  --accent: #6570ff;               /* oklch(62% 0.22 275) — identite, 4.97:1 sur le fond */
+  --accent-clair: #96a8ff;         /* oklch(76% 0.15 275) — liens et texte, 8.72:1 */
+  --accent-clair-vif: #b4c4ff;     /* survol d'un lien, 11.5:1 */
+  --accent-aplat: #5358ee;         /* oklch(55% 0.22 275) — fond des boutons, blanc dessus 5.23:1 */
+  --accent-aplat-survol: #5b62f9;  /* oklch(58% 0.22 275) — survol, blanc dessus 4.59:1 */
+  --accent-soft: rgba(101, 112, 255, 0.14);
+  --accent-line: rgba(101, 112, 255, 0.34);
+  --on-accent: #ffffff;
 
   /* Etats */
   --ok: #5ad18b;
@@ -60,6 +78,20 @@
   --ease: cubic-bezier(0.2, 0.8, 0.3, 1);
 
   color-scheme: dark;
+}
+
+/* Sur les navigateurs qui savent lire l'OKLCH — c'est-a-dire a peu pres tous
+   aujourd'hui — on repose les memes teintes dans l'espace ou l'application les
+   definit. Les deux ecritures donnent le meme rendu ; celle-ci a l'avantage de
+   se comparer ligne a ligne avec `src/styles/tokens.css`. */
+@supports (color: oklch(62% 0.22 275)) {
+  :root {
+    --accent: oklch(62% 0.22 275);
+    --accent-clair: oklch(76% 0.15 275);
+    --accent-clair-vif: oklch(84% 0.12 275);
+    --accent-aplat: oklch(55% 0.22 275);
+    --accent-aplat-survol: oklch(58% 0.22 275);
+  }
 }
 
 /* ------------------------------------------------------------- Socle ----- */
@@ -88,7 +120,7 @@ body {
   /* Voile tres doux en haut de page : pose la profondeur sans degrade visible */
   background-image: radial-gradient(
     120% 60% at 50% -10%,
-    rgba(232, 197, 107, 0.05),
+    rgba(101, 112, 255, 0.06),
     transparent 62%
   );
   background-repeat: no-repeat;
@@ -144,13 +176,13 @@ p {
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-clair);
   text-underline-offset: 0.22em;
   text-decoration-thickness: 1px;
 }
 
 a:hover {
-  color: var(--accent-bright);
+  color: var(--accent-clair-vif);
 }
 
 strong {
@@ -206,7 +238,7 @@ hr {
   transform: translate(-50%, -120%);
   z-index: 100;
   padding: 0.7rem 1.2rem;
-  background: var(--accent);
+  background: var(--accent-aplat);
   color: var(--on-accent);
   font-weight: 600;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
@@ -295,11 +327,14 @@ hr {
   margin-right: auto;
 }
 
+/* Le vrai logo de l'application : une vague bleue dans une bulle. C'est une
+   image et non un trace en ligne, donc `currentColor` n'a plus de prise —
+   ses couleurs lui appartiennent, et elles tombent deja juste sur le fond. */
 .marque__glyphe {
   width: 26px;
   height: 26px;
   flex: none;
-  color: var(--accent);
+  object-fit: contain;
 }
 
 .marque:hover {
@@ -345,11 +380,11 @@ hr {
 }
 
 .nav a.bouton--principal {
-  background: var(--accent);
+  background: var(--accent-aplat);
 }
 
 .nav a.bouton--principal:hover {
-  background: var(--accent-bright);
+  background: var(--accent-aplat-survol);
 }
 
 .bascule-nav {
@@ -395,12 +430,12 @@ hr {
 }
 
 .bouton--principal {
-  background: var(--accent);
+  background: var(--accent-aplat);
   color: var(--on-accent);
 }
 
 .bouton--principal:hover {
-  background: var(--accent-bright);
+  background: var(--accent-aplat-survol);
   color: var(--on-accent);
 }
 
@@ -486,7 +521,7 @@ hr {
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--accent-bright);
+  color: var(--accent-clair);
 }
 
 .pastille__point {
@@ -586,7 +621,7 @@ hr {
   border-radius: var(--radius-sm);
   border: 1px solid var(--accent-line);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-clair);
 }
 
 .carte__icone svg {
@@ -609,8 +644,8 @@ hr {
   border-color: var(--accent-line);
   background: linear-gradient(
     to bottom,
-    rgba(232, 197, 107, 0.06),
-    rgba(232, 197, 107, 0) 60%
+    rgba(101, 112, 255, 0.07),
+    rgba(101, 112, 255, 0) 60%
   );
 }
 
@@ -628,7 +663,7 @@ hr {
 }
 
 .carte-os--phare .carte-os__logo {
-  color: var(--accent);
+  color: var(--accent-clair);
 }
 
 .carte-os h2,
@@ -713,7 +748,7 @@ hr {
 }
 
 .encart--accent .encart__titre {
-  color: var(--accent-bright);
+  color: var(--accent-clair);
 }
 
 /* Champ que seul l'editeur peut remplir */
@@ -875,7 +910,7 @@ tbody tr:last-child th {
 .maquette__serveur--actif {
   background: var(--accent-soft);
   border-color: var(--accent-line);
-  color: var(--accent-bright);
+  color: var(--accent-clair);
   border-radius: 12px;
 }
 
@@ -959,6 +994,13 @@ tbody tr:last-child th {
   background: var(--bg-raised);
 }
 
+/* Le diese de l'en-tete du fil, un peu efface : c'est un ornement, pas une
+   information. En classe et non en attribut `style`, que la politique de
+   securite de contenu du site refuse. */
+.maquette__diese {
+  opacity: 0.6;
+}
+
 .maquette__entete-fil {
   display: flex;
   align-items: center;
@@ -993,11 +1035,13 @@ tbody tr:last-child th {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--on-accent);
-  background: var(--accent);
+  background: var(--accent-aplat);
 }
 
+/* Les deux autres avatars s'ecartent franchement de l'indigo : trois bleus
+   voisins se liraient comme une seule personne. */
 .maquette__avatar--b {
-  background: #7f8ce0;
+  background: #b184c9;
   color: #0b0b0d;
 }
 
@@ -1112,7 +1156,7 @@ tbody tr:last-child th {
   border-radius: 50%;
   border: 1px solid var(--accent-line);
   background: var(--accent-soft);
-  color: var(--accent-bright);
+  color: var(--accent-clair);
   font-size: 0.85rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;

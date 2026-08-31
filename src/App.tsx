@@ -6,7 +6,6 @@ import { PasswordRecovery } from '@/features/auth/PasswordRecovery';
 import { ChooseUsername } from '@/features/auth/ChooseUsername';
 import { Landing } from '@/features/landing/Landing';
 import { Workspace } from '@/features/shell/Workspace';
-import { Icon } from '@/components/Icon';
 
 export function App() {
   const session = useSession((state) => state.session);
@@ -42,16 +41,18 @@ export function App() {
     }
   }, [session, route, loading, recovering]);
 
-  if (loading) {
-    return (
-      <div className="boot">
-        <span className="boot__mark">
-          <Icon name="compass" size={26} />
-        </span>
-        <span className="spinner" />
-      </div>
-    );
-  }
+  /*
+   * Rien pendant le chargement, et c'est voulu.
+   *
+   * L'ecran d'attente de `index.html` est encore a l'ecran : il porte le logo,
+   * le nom et sa barre, et il est peint avant meme que le script ne soit lu.
+   * En afficher un second par-dessus donnait deux chargements a la suite — le
+   * logo qui tourne, puis une roue grise sans rapport — et faisait paraitre le
+   * demarrage deux fois plus long qu'il ne l'est.
+   *
+   * C'est `main.tsx` qui retire le voile, une fois la session connue.
+   */
+  if (loading) return null;
 
   // Le retour depuis un lien de recuperation passe avant tout le reste : une
   // session est deja ouverte, mais le mot de passe n'a pas encore ete choisi.

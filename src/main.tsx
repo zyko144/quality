@@ -21,6 +21,7 @@ import './styles/voice.css';
 import './styles/depth.css';
 // En dernier : les regles mobiles surchargent celles des grands ecrans.
 import './styles/mobile.css';
+import { useSession } from '@/store/session';
 
 // Le volume des signaux est lu au demarrage : sans cela, le reglage
 // enregistre ne prendrait effet qu'apres avoir rouvert les parametres.
@@ -94,5 +95,29 @@ function dismissSplash(): void {
 
 void root().then((screen) => {
   createRoot(container).render(<StrictMode>{screen}</StrictMode>);
-  dismissSplash();
+
+  /*
+   * Le voile tient jusqu'a ce que la session soit connue.
+   *
+   * Le retirer des le premier rendu decouvrait une application qui ne savait
+   * pas encore qui la regardait, et qui affichait donc son propre ecran
+   * d'attente — deux chargements a la suite pour une seule attente.
+   *
+   * Le garde-fou de huit secondes existe pour le cas ou la session ne se
+   * resoudrait jamais : mieux vaut une page vide qu'un voile eternel, car on
+   * peut recharger la premiere.
+   */
+  if (!useSession.getState().loading) {
+    dismissSplash();
+  } else {
+    const arret = useSession.subscribe((etat) => {
+      if (etat.loading) return;
+      arret();
+      dismissSplash();
+    });
+    window.setTimeout(() => {
+      arret();
+      dismissSplash();
+    }, 8000);
+  }
 });

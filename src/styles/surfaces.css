@@ -1466,3 +1466,67 @@
 .profile__main {
   min-height: 100%;
 }
+
+/*
+ * L'arobase cessait d'etre lisible.
+ *
+ * Elle est posee en absolu dans le champ, et la place qu'on lui reservait
+ * valait `1ch + 4px`. Or `ch` mesure la largeur du zero dans la police du
+ * CHAMP, tandis que l'arobase etait dessinee a une autre taille : dans une
+ * police ou l'arobase est large — c'est le cas de la plupart — le compte n'y
+ * etait pas, et les premieres lettres du pseudo lui passaient dessus.
+ *
+ * La reserve est maintenant exprimee en `em` de la meme taille de police que
+ * celle de l'arobase, et l'arobase suit celle du champ : les deux mesures ne
+ * peuvent plus diverger.
+ */
+.pseudo-champ__arobase {
+  font-size: inherit;
+  line-height: 1;
+}
+
+.pseudo-champ__saisie {
+  padding-left: calc(var(--space-4) + 1.4em);
+}
+
+/* --------------------------------------------------------------------------
+   Le curseur de volume, plus facile a viser
+   -------------------------------------------------------------------------- */
+
+.ctx-volume {
+  min-width: 230px;
+}
+
+.ctx-volume__slider {
+  /* Un repere au milieu : sans lui, rien ne dit ou se trouve « normal », et
+     l'aimantation a cent pour cent parait un a-coup plutot qu'une aide. */
+  background-image: linear-gradient(var(--text-faint), var(--text-faint));
+  background-size: 2px 10px;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+}
+
+/* La valeur devient un bouton : c'est le chemin le plus court pour revenir a
+   cent, et il se voit sans qu'on ait a deviner le double-clic. */
+.ctx-volume__value {
+  min-width: 52px;
+  padding: 2px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  cursor: default;
+}
+
+.ctx-volume__value.is-modifie {
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.ctx-volume__value.is-modifie:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}

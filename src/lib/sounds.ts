@@ -26,7 +26,18 @@
  * lieu de s'y ajouter. Descendues au do4, elles passent sous la parole et se
  * remarquent sans interrompre.
  */
-const GAMME = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25];
+/*
+ * Descendue d'une quinte.
+ *
+ * Elle commencait au do4. Ces signaux se posent sur une conversation, et dans
+ * ce registre ils sonnaient clair et pointu — un bip d'appareil menager plutot
+ * que le « toc » sourd qu'on attend d'un logiciel de discussion. Un cran plus
+ * bas, ils se remarquent toujours mais cessent de percer.
+ *
+ * Pas plus bas : sous le sol2, les haut-parleurs d'ordinateur portable ne
+ * restituent plus rien et le signal disparait pour une partie des gens.
+ */
+const GAMME = [174.61, 196.0, 220.0, 261.63, 293.66, 349.23];
 
 /**
  * « Ne pas deranger » ne derange pas.

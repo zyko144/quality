@@ -372,6 +372,10 @@ function ChannelItem({
     channel.kind === 'voice' ? state.participantsByChannel[channel.id] : undefined,
   );
 
+  const salonRejoint = useVoice((state) => state.channelId);
+  const rejoindreVocal = useVoice((state) => state.join);
+  const moi = useSession((state) => state.profile?.id);
+
   // Sous chaque salon vocal, qui s'y trouve — sauf si l'on a demande le
   // contraire pour ce serveur : sur une longue liste, ces vignettes repoussent
   // les salons texte hors de l'ecran.
@@ -468,7 +472,27 @@ function ChannelItem({
           (active ? ' is-active' : '') +
           (hasUnread ? ' is-unread' : '')
         }
-        onClick={() => onSelect(channel.id)}
+        onClick={() => {
+          onSelect(channel.id);
+
+          /*
+           * Cliquer un salon vocal alors qu'on est deja en ligne y bascule.
+           *
+           * Il fallait sinon quitter, choisir le salon, puis cliquer
+           * « Rejoindre » — trois gestes pour se deplacer de deux metres, alors
+           * qu'on change de salon en pleine conversation, souvent parce que
+           * quelqu'un vient de vous y appeler.
+           *
+           * On ne rejoint que si l'on parlait deja ailleurs : entrer en vocal
+           * d'un simple clic sur un salon qu'on voulait seulement regarder
+           * ouvrirait le micro sans qu'on l'ait demande.
+           */
+          if (channel.kind !== 'voice') return;
+          if (!salonRejoint || salonRejoint === channel.id) return;
+          if (!moi) return;
+
+          void rejoindreVocal(channel.id, moi);
+        }}
         aria-current={active ? 'true' : undefined}
         // Seule l'icone distinguait un salon vocal d'un salon texte : rien
         // qu'une feuille de style ou un test puisse viser.
