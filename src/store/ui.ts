@@ -54,6 +54,13 @@ interface UIState {
    * N'a de sens que dans la vue privee.
    */
   friendsOpen: boolean;
+  /**
+   * La page de l'abonnement, sous « Amis ».
+   *
+   * Un etat plutot qu'un salon : elle n'a ni conversation ni historique, et la
+   * ranger parmi les salons obligerait a la traiter comme tel partout ailleurs.
+   */
+  vagueOpen: boolean;
   /** Parametres en pleine page ; `null` quand ils sont fermes. */
   settings: SettingsSection | null;
   activeSpaceId: UUID | null;
@@ -93,6 +100,7 @@ interface UIState {
 
   selectSpace: (spaceId: UUID | null) => void;
   showDirectMessages: () => void;
+  showVague: () => void;
   selectChannel: (channelId: UUID) => void;
   openThread: (threadId: UUID) => void;
   closeThread: () => void;
@@ -113,6 +121,7 @@ interface UIState {
 export const useUI = create<UIState>((set, get) => ({
   view: 'space',
   friendsOpen: false,
+  vagueOpen: false,
   settings: null,
   activeSpaceId: null,
   activeChannelId: null,
@@ -133,6 +142,7 @@ export const useUI = create<UIState>((set, get) => ({
     set({
       view: 'direct',
       friendsOpen: true,
+      vagueOpen: false,
       activeSpaceId: null,
       activeChannelId: null,
       activeThreadId: null,
@@ -147,6 +157,7 @@ export const useUI = create<UIState>((set, get) => ({
     set({
       view: 'space',
       friendsOpen: false,
+      vagueOpen: false,
       activeSpaceId: spaceId,
       activeChannelId: null,
       activeThreadId: null,
@@ -161,6 +172,7 @@ export const useUI = create<UIState>((set, get) => ({
       // Ouvrir une conversation quitte la page des amis : les deux occupent la
       // meme zone.
       friendsOpen: false,
+      vagueOpen: false,
       // Choisir un salon referme le tiroir : sur mobile il masque la
       // conversation qu'on vient justement de demander.
       navOpen: false,
@@ -178,6 +190,7 @@ export const useUI = create<UIState>((set, get) => ({
       // Le bouton d'accueil des messages prives ouvre les amis : c'est de la
       // qu'on demarre une conversation, et la liste de gauche peut etre vide.
       friendsOpen: true,
+      vagueOpen: false,
       activeSpaceId: null,
       activeChannelId: null,
       activeThreadId: null,
@@ -199,6 +212,9 @@ export const useUI = create<UIState>((set, get) => ({
     })),
 
   toggleVoiceChat: () => set((state) => ({ voiceChatOpen: !state.voiceChatOpen })),
+
+  showVague: () =>
+    set({ view: 'direct', friendsOpen: false, vagueOpen: true, activeChannelId: null }),
 
   openModal: (modal) => set({ modal }),
   closeModal: () => set({ modal: { kind: 'none' } }),

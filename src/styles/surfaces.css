@@ -1602,3 +1602,50 @@
 .ctx-volume.is-muet .ctx-volume__slider {
   cursor: not-allowed;
 }
+
+/* --------------------------------------------------------------------------
+   La fiche respire
+   --------------------------------------------------------------------------
+   Les titres de rubrique etaient des majuscules grises de onze pixels, la
+   biographie collait a ce qui la precede, et les liens s'alignaient sans
+   marge : le tout se lisait comme un seul bloc, ou l'on ne distinguait plus
+   « A propos » de son contenu.
+   -------------------------------------------------------------------------- */
+
+.profile__section-title {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--text-secondary);
+}
+
+.profile__bio {
+  /* Une bio ne court pas sur toute la largeur : au-dela d'une soixantaine de
+     caracteres, l'oeil perd la ligne en revenant a gauche. */
+  max-width: 60ch;
+  line-height: 1.65;
+}
+
+.profile__panel .profile__bio {
+  margin-bottom: var(--space-6);
+}
+
+/* Les liens sont des liens, pas une suite de mots : ils prennent de l'air et
+   se distinguent du texte au-dessus. */
+.profile__links {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.profile__panel .profile__links {
+  margin-bottom: var(--space-6);
+}
+
+/* Chaque rubrique de la colonne de droite se detache de la suivante. */
+.profile__panel section + section {
+  margin-top: var(--space-7);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+}

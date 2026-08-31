@@ -1354,3 +1354,38 @@
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
+
+/* --------------------------------------------------------------------------
+   Les interrupteurs respirent
+   --------------------------------------------------------------------------
+   Le libelle et son explication etaient separes de deux pixels, et les lignes
+   se touchaient presque : le tout se lisait comme un bloc de texte plutot que
+   comme une suite de reglages distincts. C'est ce qu'on voit sur une capture
+   ou l'on ne distingue plus ce qui appartient a quoi.
+   -------------------------------------------------------------------------- */
+
+.switchrow {
+  gap: var(--space-6);
+  padding: var(--space-4) 0;
+}
+
+.switchrow__body {
+  gap: var(--space-2);
+}
+
+.switchrow__label {
+  font-weight: var(--weight-semibold);
+}
+
+.switchrow__hint {
+  line-height: 1.55;
+  /* L'explication ne court pas sur toute la largeur : au-dela d'une
+     soixantaine de caracteres, l'oeil perd la ligne en revenant a gauche. */
+  max-width: 62ch;
+}
+
+/* Le trait entre deux reglages s'ecarte du texte qu'il separe. */
+.switchrow + .switchrow {
+  margin-top: var(--space-1);
+  padding-top: var(--space-5);
+}

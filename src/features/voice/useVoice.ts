@@ -182,6 +182,14 @@ interface VoiceState {
 
   participantsByChannel: Record<UUID, VoiceParticipant[]>;
 
+  /**
+   * Ou en est le masquage d'adresse, constate a la derniere entree.
+   *
+   * `sans-relais` n'est pas une erreur : c'est un souhait qu'aucune
+   * infrastructure ne permet encore d'exaucer. Voir `reseau.ts`.
+   */
+  masquageActif: 'inconnu' | 'oui' | 'coupe' | 'sans-relais';
+
   /** Mesures du partage sortant, relevees toutes les deux secondes. */
   outboundStats: {
     width: number;
@@ -1239,6 +1247,7 @@ export const useVoice = create<VoiceState>((set, get) => {
     watchedShares: {},
     speaking: {},
     participantsByChannel: {},
+    masquageActif: 'inconnu',
     outboundStats: null,
 
     join: async (channelId, userId) => {

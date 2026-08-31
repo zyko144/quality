@@ -7,23 +7,6 @@ import { GoogleMark } from '@/components/GoogleMark';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
-const HIGHLIGHTS = [
-  {
-    icon: 'thread' as const,
-    title: 'Des fils qui se referment',
-    body: "Chaque question ouvre un fil qui reste en tete de liste jusqu'a ce que quelqu'un le marque comme resolu. Plus rien ne se perd dans le defilement.",
-  },
-  {
-    icon: 'search' as const,
-    title: 'Une recherche qui trouve',
-    body: 'Classement par pertinence, filtres `de:` et `dans:`, insensible aux accents. Retrouver un message de l’an dernier prend deux secondes.',
-  },
-  {
-    icon: 'sparkles' as const,
-    title: 'Leger, et vraiment',
-    body: 'Aucun moteur de navigateur embarque, un demarrage instantane, un theme clair qui n’est pas une arriere-pensee et une densite reglable.',
-  },
-];
 
 export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('signin');
@@ -95,56 +78,42 @@ export function AuthScreen() {
 
   return (
     <div className="auth">
-      <section className="auth__pitch">
-        <button
-          type="button"
-          className="auth__brand auth__brand--link"
-          onClick={() => navigate('/')}
-          aria-label="Revenir a la presentation"
-        >
-          <span className="auth__logo" aria-hidden="true">
-            <QualityLogo size={28} />
-          </span>
-          <span className="auth__wordmark">Quality</span>
-        </button>
-
-        <h1 className="auth__headline">
-          La discussion d’equipe,
-          <br />
-          debarrassee du bruit.
-        </h1>
-
-        <p className="auth__subhead">
-          Tout ce qu’on aime dans Discord, sans ce qui fait renoncer : l’historique
-          illisible, la recherche approximative et les trois gigaoctets de memoire.
-        </p>
-
-        <ul className="auth__highlights">
-          {HIGHLIGHTS.map((item) => (
-            <li className="auth__highlight" key={item.title}>
-              <span className="auth__highlight-icon" aria-hidden="true">
-                <Icon name={item.icon} size={17} />
-              </span>
-              <div>
-                <h2 className="auth__highlight-title">{item.title}</h2>
-                <p className="auth__highlight-body">{item.body}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
+      {/*
+        Une seule colonne, centree.
+        La colonne de presentation qui occupait la moitie gauche redisait ce
+        que la page d'accueil vient d'expliquer : on y arrive en cliquant
+        « Se connecter », donc apres l'avoir lue. La repeter ici demandait a
+        chacun de la traverser une seconde fois pour atteindre deux champs.
+      */}
       <section className="auth__panel">
         <form className="auth__form" onSubmit={handleSubmit}>
           <button
             type="button"
             className="auth__back-btn"
             onClick={() => navigate('/')}
-            title="Revenir à la page de présentation"
+            title="Revenir a la page de presentation"
           >
             <Icon name="arrow-left" size={16} />
-            <span>Retour à l'accueil</span>
+            {/* « Retour » seul ne dit pas ou l'on va, et cette page n'a plus
+                de colonne de presentation pour le suggerer. */}
+            <span>Retour a l&rsquo;accueil</span>
           </button>
+
+          {/*
+            Le logo tourne pendant l'attente.
+
+            C'est la meme marque que l'ecran de demarrage, et le meme mouvement.
+            Une roue grise a cet endroit donnerait l'impression d'avoir change
+            d'application entre le lancement et la connexion.
+          */}
+          <span
+            className={'auth__mark' + (busy || googleBusy ? ' is-occupe' : '')}
+            aria-hidden="true"
+          >
+            <QualityLogo size={54} />
+          </span>
+
+          <p className="auth__wordmark">Quality</p>
 
           {mode !== 'forgot' ? (
           <div className="auth__tabs" role="tablist" aria-label="Mode de connexion">

@@ -58,6 +58,30 @@ function FriendsEntry() {
   );
 }
 
+/**
+ * L'entree de l'abonnement, juste sous « Amis ».
+ *
+ * Elle porte sa mention « bientot » plutot que de laisser decouvrir apres coup
+ * qu'il n'y a rien a acheter : c'est ce qui la distingue d'un appel a payer.
+ */
+function VagueEntry() {
+  const vagueOpen = useUI((state) => state.vagueOpen);
+  const showVague = useUI((state) => state.showVague);
+
+  return (
+    <button
+      type="button"
+      className={'dm-friends dm-vague' + (vagueOpen ? ' is-active' : '')}
+      onClick={showVague}
+      aria-current={vagueOpen ? 'page' : undefined}
+    >
+      <Icon name="sparkles" size={19} />
+      Vague
+      <span className="dm-vague__bientot">Bientot</span>
+    </button>
+  );
+}
+
 export function DirectMessageList() {
   const channels = useChat((state) => state.channels);
   const dmParticipants = useChat((state) => state.dmParticipants);
@@ -120,6 +144,7 @@ export function DirectMessageList() {
 
       <div className="sidebar__scroll scroll">
         <FriendsEntry />
+      <VagueEntry />
 
         {hasAny ? (
           <div className="dm-search">

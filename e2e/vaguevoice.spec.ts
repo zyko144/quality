@@ -1,0 +1,36 @@
+import { test, expect } from '@playwright/test';
+import { openApp } from './session';
+
+/**
+ * La page de l'abonnement.
+ *
+ * Nommee pour tomber dans le projet « authentifie » : elle vit sous la liste
+ * des conversations privees.
+ */
+test.describe('Vague', () => {
+  test('s ouvre depuis la liste et annonce sans vendre', async ({ page }) => {
+    await openApp(page);
+
+    // On passe en messages prives, ou vit l'entree.
+    await page.locator('.rail__button--home, .rail__button').first().click();
+
+    const entree = page.getByRole('button', { name: /Vague/ });
+    await expect(entree).toBeVisible({ timeout: 15_000 });
+
+    // La mention « bientot » figure sur l'entree elle-meme : on ne decouvre pas
+    // apres coup qu'il n'y a rien a acheter.
+    await expect(entree).toContainText('Bientot');
+
+    await entree.click();
+    await expect(page.getByRole('heading', { name: 'Vague', level: 1 })).toBeVisible();
+
+    // Le bouton n'est pas cliquable : aucun paiement n'existe.
+    const bouton = page.getByRole('button', { name: /Bientot disponible/i });
+    await expect(bouton).toBeVisible();
+    await expect(bouton).toBeDisabled();
+
+    // Les engagements sont la, pas seulement la liste d'avantages.
+    await expect(page.getByRole('heading', { name: /ne fera jamais/i })).toBeVisible();
+    await expect(page.getByText(/Rendre payant ce qui est gratuit/i)).toBeVisible();
+  });
+});

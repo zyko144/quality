@@ -1512,3 +1512,114 @@
   }
 }
 
+
+/* ==========================================================================
+   Connexion : une seule colonne
+   ==========================================================================
+   La page occupait deux colonnes, dont une de presentation. Or on n'arrive ici
+   qu'en cliquant « Se connecter » depuis la page d'accueil, c'est-a-dire apres
+   avoir lu cette presentation : la redire obligeait a la traverser une seconde
+   fois pour atteindre deux champs.
+   ========================================================================== */
+
+.auth {
+  display: grid;
+  /* La colonne de presentation n'existe plus : sans cette remise a zero, la
+     grille garde ses deux colonnes et la carte se pose dans la premiere. */
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  min-height: 100vh;
+  height: auto;
+  padding: var(--space-6);
+}
+
+.auth__panel {
+  width: min(420px, 100%);
+  padding: 0;
+  background: none;
+  border: 0;
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lg), var(--edge-light);
+}
+
+/* Le logo est centre au-dessus des champs, a la taille ou on le reconnait
+   sans le chercher. */
+.auth__mark {
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+}
+
+/* Il tourne pendant l'attente : le meme mouvement qu'a l'ouverture de
+   l'application, pour que ce soit visiblement la meme chose qui travaille. */
+.auth__mark.is-occupe svg {
+  animation: auth-tourne 2.8s linear infinite;
+}
+
+@keyframes auth-tourne {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+[data-motion='reduced'] .auth__mark.is-occupe svg,
+:root[data-perf='on'] .auth__mark.is-occupe svg {
+  animation: none;
+}
+
+.auth__wordmark {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  text-align: center;
+  color: var(--text-primary);
+}
+
+/* Le retour se fait discret : il quitte une page ou l'on vient d'arriver
+   volontairement, ce n'est pas l'action principale. */
+.auth__back-btn {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.auth__back-btn:hover { color: var(--text-primary); }
+
+.auth__tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+.auth__tab {
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.auth__tab.is-active {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}

@@ -6,7 +6,7 @@ import {
   screenBitrate,
   type MediaPreferences,
 } from '@/store/devices';
-import { byteToDecibels, ANALYSER_FLOOR, ANALYSER_CEILING } from '@/features/voice/useVoice';
+import { byteToDecibels, ANALYSER_FLOOR, ANALYSER_CEILING, useVoice } from '@/features/voice/useVoice';
 import { Icon } from '@/components/Icon';
 import { playCue } from '@/lib/sounds';
 import { ouvrirPorte } from '@/features/voice/porte';
@@ -22,6 +22,9 @@ import { ouvrirPorte } from '@/features/voice/porte';
 
 export function VoiceSettings() {
   const media = useDevices((state) => state.media);
+  // Constate a la derniere entree en vocal : « inconnu » tant qu'on n'y est
+  // pas alle, ce qui est le cas en ouvrant les parametres au demarrage.
+  const masquage = useVoice((state) => state.masquageActif);
   const setMedia = useDevices((state) => state.setMedia);
   const microphones = useDevices((state) => state.microphones);
   const speakers = useDevices((state) => state.speakers);
@@ -203,16 +206,39 @@ export function VoiceSettings() {
 
         <SwitchRow
           label="Masquer mon adresse IP"
-          hint="Fait passer la voix et l'image par un relais plutot qu'en direct. Les autres participants ne voient plus votre adresse — au prix d'un peu de latence. Sans relais configure sur le serveur, ce reglage reste sans effet et l'application vous le dit en entrant."
+          hint="Fait passer la voix et l'image par un relais plutot qu'en direct. Les autres participants ne voient plus votre adresse, au prix d'un peu de latence."
           checked={media.masquerIp}
           onChange={(value) => setMedia('masquerIp', value)}
         />
 
+        {/*
+          L'etat constate, la ou la question se pose.
+
+          Il partait auparavant dans le canal des erreurs et s'affichait en
+          rouge a chaque entree en vocal, pour dire que rien ne s'etait mal
+          passe. Ici, il ne parle qu'a qui vient de s'y interesser.
+        */}
+        {media.masquerIp && masquage === 'sans-relais' ? (
+          <p className="settings__hint" role="status">
+            <strong>Sans effet pour l&rsquo;instant :</strong> aucun relais
+            n&rsquo;est configure sur le serveur, votre adresse reste donc
+            visible des autres participants. Le reglage s&rsquo;appliquera de
+            lui-meme le jour ou un relais existera, sans rien reinstaller.
+          </p>
+        ) : null}
+
+        {media.masquerIp && masquage === 'oui' ? (
+          <p className="settings__ok" role="status">
+            <Icon name="check" size={14} />
+            Actif : votre trafic passe par un relais.
+          </p>
+        ) : null}
+
         <p className="settings__hint">
           Une liaison directe suppose que les deux machines connaissent leurs
           adresses : c&rsquo;est ce qui rend la voix aussi rapide, et c&rsquo;est
-          aussi ce qui expose votre adresse. Il n&rsquo;y a pas de troisieme
-          voie. Voir <strong>SECURITE.md</strong> pour installer un relais.
+          aussi ce qui expose la votre. Il n&rsquo;y a pas de troisieme voie.
+          Voir <strong>SECURITE.md</strong> pour installer un relais.
         </p>
       </section>
 

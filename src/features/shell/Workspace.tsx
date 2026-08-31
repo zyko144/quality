@@ -21,6 +21,7 @@ import { CommandPalette } from '@/features/palette/CommandPalette';
 import { Modals } from '@/features/settings/Modals';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { FriendsPage } from '@/features/friends/FriendsPage';
+import { Vague } from '@/features/abonnement/Vague';
 import { useFriends } from '@/store/friends';
 import { Icon } from '@/components/Icon';
 import { useIsMobile } from '@/lib/useMediaQuery';
@@ -41,6 +42,7 @@ export function Workspace() {
 
   const view = useUI((state) => state.view);
   const friendsOpen = useUI((state) => state.friendsOpen);
+  const vagueOpen = useUI((state) => state.vagueOpen);
   const settings = useUI((state) => state.settings);
   const activeSpaceId = useUI((state) => state.activeSpaceId);
   const activeChannelId = useUI((state) => state.activeChannelId);
@@ -408,7 +410,9 @@ export function Workspace() {
       </div>
 
       <main className="main" id="conversation">
-        {friendsOpen && view === 'direct' ? (
+        {vagueOpen && view === 'direct' ? (
+          <Vague />
+        ) : friendsOpen && view === 'direct' ? (
           <FriendsPage />
         ) : channel ? (
           <>

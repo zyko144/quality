@@ -1433,3 +1433,160 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   font-weight: 400;
   font-synthesis: none;
 }
+
+/* ==========================================================================
+   Vague — la page de l'abonnement
+   ==========================================================================
+   Elle annonce, elle ne vend pas : le ton reste celui du reste de
+   l'application, sans degrade criard ni compte a rebours. Ce qui la distingue
+   d'une page ordinaire, c'est la lumiere derriere le logo, et rien d'autre.
+   ========================================================================== */
+
+.vague {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-9) var(--space-7) var(--space-10);
+}
+
+.vague__entete {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  max-width: 560px;
+  margin: 0 auto var(--space-9);
+  text-align: center;
+}
+
+/* Le halo vient de la teinte d'accent : la page suit le theme choisi plutot
+   que d'imposer ses propres couleurs. */
+.vague__logo {
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in oklab, var(--accent) 34%, transparent),
+    transparent 70%
+  );
+}
+
+.vague__annonce {
+  margin: 0;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.vague__titre {
+  margin: 0;
+  font-size: var(--text-3xl, 2rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+}
+
+.vague__accroche {
+  margin: 0;
+  max-width: 44ch;
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.vague__bouton {
+  margin-top: var(--space-2);
+  min-width: 220px;
+}
+
+.vague__note {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.vague__liste {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: var(--space-4);
+  max-width: 980px;
+  margin: 0 auto var(--space-9);
+  padding: 0;
+  list-style: none;
+}
+
+.vague__carte {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+}
+
+.vague__icone {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.vague__carte-titre {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.vague__carte-detail {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* Les engagements sont poses a part, sur un fond sobre : ce sont eux qui
+   tiennent la page, pas la liste d'avantages. */
+.vague__promesse {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-sunken);
+}
+
+.vague__promesse-titre {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.vague__promesse ul {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* L'entree dans la liste des conversations. */
+.dm-vague__bientot {
+  margin-left: auto;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+}

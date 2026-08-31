@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.2.9
+
+- Le message « aucun relais n'est configure » ne s'affiche plus en vocal. Il partait dans le canal des erreurs, celui des pannes reelles, pour dire que rien ne s'etait mal passe. Le constat vit maintenant dans les reglages, a cote de l'interrupteur concerne.
+- La page de connexion passe a une seule colonne centree. La colonne de presentation redisait ce que la page d'accueil vient d'expliquer — on y arrive en cliquant « Se connecter », donc apres l'avoir lue.
+- Le logo tourne pendant la connexion, comme au demarrage : la meme marque et le meme mouvement, pour que ce soit visiblement la meme chose qui travaille.
+- **Vague**, l'abonnement de Quality, s'annonce sous « Amis ». Rien n'est encaissable : le bouton est desactive et le dit. Ce que Vague ne fera jamais est ecrit noir sur blanc.
+- Les reglages et les fiches de profil respirent : titres de rubrique lisibles, explications limitees a une soixantaine de caracteres par ligne, rubriques separees.
+
 ## 0.2.8
 
 - Un champ de recherche dans les parametres. Onze sections et une centaine de reglages : le classement est defendable, mais il suppose de partager le raisonnement de qui l'a range. Personne ne cherche « Voix et video » — on cherche « le truc qui enleve le bruit du clavier ». Taper « clavier » y mene.
