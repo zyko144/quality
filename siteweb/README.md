@@ -20,25 +20,30 @@ dependance, aucun outil de construction, rien a compiler. On ouvre
 ## Avant toute mise en ligne publique
 
 Les trois documents juridiques sont des **modeles de depart, rediges sans
-conseil juridique**. Chacun porte un encart le disant, et laisse entre crochets
-ce que seul l'editeur peut renseigner :
+conseil juridique**. Chacun porte un encart le disant.
 
-- `[Nom de l'editeur]`, `[Forme juridique, ou personne physique]`, `[Adresse]`,
-  `[Numero de telephone]`, `[Email de contact]`, `[Directeur de la publication]`
-- `[Capital social, si societe]`, `[Numero de TVA, le cas echeant]`
-- `[Hebergeur]`, `[Adresse de l'hebergeur]`, `[Contact de l'hebergeur]`,
-  `[Region d'hebergement de la base de donnees]`
-- `[Email de securite]`, `[Delegue a la protection des donnees, le cas echeant]`
-- `[Mediateur de la consommation, le cas echeant]`,
-  `[Duree d'inactivite retenue, par exemple 3 ans]`
-- `[Date d'entree en vigueur]`, `[Date de derniere mise a jour]`
+Les mentions legales reposent sur l'article 6, III, 2 de la LCEN : une personne
+physique qui edite un site **a titre non professionnel** peut ne pas publier son
+identite ni son adresse, des lors qu'elle les a communiquees a son hebergeur.
+D'ou l'absence de nom, de siege, de forme juridique, de SIRET et de TVA — ce
+n'est pas un oubli, et la page l'explique. **Cela suppose que l'identite ait
+effectivement ete communiquee a Vercel** ; si ce n'est pas fait, le regime ne
+s'applique pas.
 
-L'immatriculation ne figure plus entre crochets : les mentions legales
-indiquent que l'editeur n'est pas immatricule et publie a titre personnel. Si
-cela change, c'est la ligne « Immatriculation » de `mentions-legales.html`
-qu'il faut reprendre.
+Quatre champs restent entre crochets, parce qu'eux seuls dependent d'une
+decision ou d'un renseignement que le site ne peut pas deviner :
 
-Pour les retrouver tous :
+- `[Region d'hebergement de la base de donnees]` — dans le tableau de bord Supabase
+- `[Duree d'inactivite retenue, par exemple 3 ans]` — au choix de l'editeur
+- `[Delegue a la protection des donnees, le cas echeant]` — aucun designe a ce jour
+- `[Mediateur de la consommation, le cas echeant]` — aucun designe a ce jour
+
+Un point signale dans `confidentialite.html` et non tranche : la LCEN autorise
+l'editeur non professionnel a taire son identite, mais le RGPD demande que le
+responsable du traitement soit identifiable. Les deux regimes ne se recouvrent
+pas exactement.
+
+Pour retrouver les crochets restants :
 
 ```bash
 grep -rn '\[' *.html
@@ -49,18 +54,19 @@ couvre les sujets attendus ; il ne remplace pas un avis sur votre situation.
 
 ## Le formulaire du centre d'aide
 
-Il est **desactive tant qu'aucune adresse de contact n'est publiee**, et la page
-le dit au visiteur plutot que de faire semblant d'envoyer. Pour l'activer, une
-seule ligne, en tete de `assets/site.js` :
+Le bouton ouvre le logiciel de messagerie du visiteur avec un message deja
+redige — categorie, description, version de l'application et systeme. Rien ne
+part sans son geste : il n'y a pas de serveur derriere, et le site n'en reclame
+pas.
+
+L'adresse tient en une ligne, en tete de `assets/site.js` :
 
 ```js
-var ADRESSE_CONTACT = 'contact@exemple.fr';
+var ADRESSE_CONTACT = 'contactqualityz@gmail.com';
 ```
 
-Des qu'elle est renseignee, les champs s'activent et le bouton ouvre le logiciel
-de messagerie du visiteur avec un message deja redige — categorie, description,
-version de l'application et systeme. Rien ne part sans son geste : il n'y a pas
-de serveur derriere, et le site n'en reclame pas.
+La vider desactive le formulaire, qui l'annonce alors franchement plutot que de
+faire semblant d'envoyer.
 
 Un tableau de bord pour suivre les demandes suppose une base et une
 authentification : il se construit cote application, pas ici.

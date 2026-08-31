@@ -10,17 +10,17 @@
   'use strict';
 
   /* ------------------------------------------------------------------------
-     A REMPLIR PAR L'EDITEUR.
+     Adresse de contact du centre d'aide.
 
-     Tant que cette chaine est vide, le formulaire du centre d'aide reste
-     desactive et le dit franchement. Renseignez l'adresse de contact et il
-     s'active tout seul : le bouton ouvre alors le logiciel de messagerie du
-     visiteur avec un message deja redige. Rien n'est envoye a son insu.
+     Renseignee, elle active le formulaire : le bouton ouvre le logiciel de
+     messagerie du visiteur avec un message deja redige. Rien n'est envoye a
+     son insu, et il n'y a pas de serveur derriere — c'est lui qui expedie.
 
-     Il n'existe volontairement pas de troisieme etat : un formulaire qui a
-     l'air d'envoyer sans rien envoyer vaut moins que pas de formulaire.
+     Videe, le formulaire se desactive et le dit franchement. Il n'existe
+     volontairement pas de troisieme etat : un formulaire qui a l'air d'envoyer
+     sans rien envoyer vaut moins que pas de formulaire.
      ---------------------------------------------------------------------- */
-  var ADRESSE_CONTACT = '';
+  var ADRESSE_CONTACT = 'contactqualityz@gmail.com';
 
   // On signale que le script tourne. Les styles d'apparition sont conditionnes
   // a cette classe, pour qu'un blocage du JavaScript ne laisse pas la page

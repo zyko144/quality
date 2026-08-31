@@ -18,7 +18,6 @@ import {
 import { useChat } from '@/store/chat';
 import { useSpacePrefs } from '@/store/spacePrefs';
 import { ouvrirPorte, type Porte } from './porte';
-import { capturerSonSysteme } from './sonSysteme';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -1707,29 +1706,25 @@ export const useVoice = create<VoiceState>((set, get) => {
 
         // Le son du partage, quand la source en fournit. Il voyage dans le meme
         // flux que l'image : le separer obligerait a resynchroniser a l'arrivee.
-        let [audioTrack] = display.getAudioTracks();
+        const [audioTrack] = display.getAudioTracks();
 
         /*
-         * Si la fenetre de selection n'a pas donne le son, on le prend ailleurs.
+         * Le detour par `chromeMediaSource` a ete retire.
          *
-         * Voir `sonSysteme.ts` : `getDisplayMedia` n'accorde l'audio que par une
-         * case qui vit dans la fenetre du systeme, celle que nous remplacons par
-         * la notre. Le detour par les contraintes heritees de Chromium capture
-         * la sortie de l'ordinateur sans rien afficher.
+         * Il demandait la sortie du systeme par les contraintes heritees de
+         * Chromium, sans identifiant de source — ce que WebView2 traite comme
+         * un message malforme et sanctionne en tuant le processus de rendu :
+         * `RESULT_CODE_KILLED_BAD_MESSAGE`, page blanche, application a
+         * relancer, a chaque tentative de partage.
          *
-         * La piste rejoint le flux du partage plutot que de vivre a part :
-         * l'emission, l'annonce et l'arret la traitent alors comme si elle
-         * venait de la, sans un seul cas particulier ailleurs.
+         * Ces contraintes n'existent que couplees a un identifiant obtenu par
+         * `desktopCapturer`, une interface propre a Electron que Tauri n'a pas.
+         * Il n'y avait donc pas de demi-mesure a trouver : sans cet
+         * identifiant, l'appel est invalide par construction.
+         *
+         * Un partage muet vaut infiniment mieux qu'une application qui tombe.
+         * La capture de la sortie audio se fera cote natif — voir `sonSysteme.ts`.
          */
-        if (!audioTrack && useDevices.getState().media.shareSystemAudio) {
-          const secours = await capturerSonSysteme();
-          const pisteSecours = secours?.getAudioTracks()[0];
-
-          if (pisteSecours) {
-            display.addTrack(pisteSecours);
-            audioTrack = pisteSecours;
-          }
-        }
 
         /*
          * Le son demande n'est pas toujours accorde, et cela ne se voit pas.

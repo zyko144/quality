@@ -1,73 +1,46 @@
 /**
- * Le son de l'ordinateur, sans la fenetre de Windows.
+ * Le son de l'ordinateur : ce qui a ete essaye, et ce qu'il reste a faire.
  *
- * Le probleme
- * -----------
- * `getDisplayMedia` n'accorde le son que si la case « partager aussi le son »
- * a ete cochee — et cette case vit dans la fenetre de selection du systeme,
- * celle que nous supprimons precisement pour afficher la notre. On ne pouvait
- * donc avoir que l'un des deux : notre selecteur, ou le son.
+ * Ce module ne contient plus de code. Il garde la trace de deux impasses, pour
+ * qu'on n'y revienne pas une troisieme fois.
  *
- * Rendre la fenetre de Windows n'est pas une solution : c'est exactement ce
- * qu'on avait entrepris de retirer.
+ * Premiere impasse : rendre la fenetre de Windows
+ * ------------------------------------------------
+ * `getDisplayMedia` n'accorde le son que si la case « partager aussi l'audio
+ * systeme » a ete cochee, et cette case vit dans la fenetre de selection du
+ * systeme — celle que le drapeau `--auto-select-desktop-capture-source`
+ * supprime pour laisser place a la notre.
  *
- * Le detour
- * ---------
- * Chromium expose une seconde voie, anterieure a `getDisplayMedia` et toujours
- * en place : les contraintes `chromeMediaSource` de `getUserMedia`. Avec
- * `desktop` sur une demande audio seule, il rend la sortie du systeme — le
- * bouclage WASAPI sous Windows — sans afficher quoi que ce soit. C'est la voie
- * qu'emploient les applications Electron pour la meme raison.
+ * Un reglage a donc ete propose pour choisir entre les deux. C'etait une
+ * fausse solution : reprendre cette fenetre, c'est reprendre exactement ce
+ * qu'on avait entrepris de retirer, titre « http://tauri.localhost » compris.
+ * Le mecanisme a ete arrache.
  *
- * Elle n'est ni standard ni garantie : ces contraintes ne figurent dans aucune
- * specification, et rien n'oblige le moteur a les conserver. D'ou le traitement
- * reserve aux echecs — on essaie, et si cela ne donne rien, le partage part
- * sans le son comme avant, ce qui n'est pas pire qu'aujourd'hui.
+ * Seconde impasse : les contraintes heritees de Chromium
+ * -------------------------------------------------------
+ * `getUserMedia` accepte historiquement `mandatory.chromeMediaSource = 'desktop'`,
+ * qui rend la sortie du systeme sans afficher quoi que ce soit. C'est ce
+ * qu'emploient les applications Electron.
  *
- * Ce qu'elle ne fait pas
- * ----------------------
- * Elle capture la sortie ENTIERE de l'ordinateur, pas celle d'une fenetre.
- * Impossible de faire autrement par ce chemin : le bouclage est global. En
- * pratique cela revient au meme dans le cas qui nous occupe — on partage un
- * jeu, et le jeu est ce qui fait du bruit.
+ * Elle ne fonctionne pas ici, et pas d'une facon anodine : sans identifiant de
+ * source — obtenu par `desktopCapturer`, une interface propre a Electron que
+ * Tauri n'a pas — WebView2 tient l'appel pour un message malforme et tue le
+ * processus de rendu. `RESULT_CODE_KILLED_BAD_MESSAGE` : page blanche,
+ * application a relancer, a chaque tentative de partage.
  *
- * Il faut aussi savoir qu'elle capte notre propre sortie, donc les voix des
- * autres participants si elles passent par les haut-parleurs. Au casque, le
- * probleme ne se pose pas ; sur des haut-parleurs, les autres s'entendent
- * revenir. C'est la contrepartie du bouclage, et elle vaut d'etre dite.
+ * Il n'y avait pas de demi-mesure a chercher : l'appel est invalide par
+ * construction, pas seulement refuse.
+ *
+ * Ce qui reste
+ * ------------
+ * Capturer la sortie audio cote natif, en Rust, par le bouclage WASAPI de
+ * Windows, puis reinjecter les echantillons dans la vue web — par un canal
+ * Tauri vers un `AudioWorklet`, qui les rend dans un `MediaStreamDestination`
+ * dont la piste rejoint le partage.
+ *
+ * C'est la seule voie qui n'emprunte rien au moteur web, donc la seule qui ne
+ * depende ni d'une fenetre qu'on veut supprimer, ni d'une interface qu'on n'a
+ * pas.
  */
 
-/** Contraintes non standard, absentes des types du DOM. */
-interface ContraintesHeritees {
-  mandatory?: Record<string, string>;
-}
-
-/**
- * Tente de capturer la sortie du systeme.
- *
- * Rend `null` des que le moteur refuse, sans distinguer les causes : aucune
- * n'appelle une reaction differente, et toutes reviennent a « pas de son ».
- */
-export async function capturerSonSysteme(): Promise<MediaStream | null> {
-  try {
-    const flux = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-        },
-      } as ContraintesHeritees as MediaTrackConstraints,
-      video: false,
-    });
-
-    // Un flux sans piste n'est pas un succes : certains moteurs rendent un
-    // objet vide plutot que de rejeter.
-    if (flux.getAudioTracks().length === 0) {
-      for (const piste of flux.getTracks()) piste.stop();
-      return null;
-    }
-
-    return flux;
-  } catch {
-    return null;
-  }
-}
+export {};

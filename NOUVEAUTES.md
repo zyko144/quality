@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.7
+
+### Corrige
+
+- **L'application tombait a chaque partage d'ecran.** Le detour ajoute en 0.3.5 pour recuperer le son demandait la sortie du systeme par des contraintes heritees de Chromium, sans identifiant de source. WebView2 traite cet appel comme un message malforme et tue le processus de rendu : page blanche, application a relancer. Le detour est retire.
+- Un partage muet vaut infiniment mieux qu'une application qui tombe. Le son se fera donc autrement.
+
 ## 0.3.6
 
 ### Corrige

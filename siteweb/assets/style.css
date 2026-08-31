@@ -1404,6 +1404,27 @@ tbody tr:last-child th {
   }
 }
 
+/* L'etiquette posee sur la maquette. L'avertissement qui la precede ne suit
+   pas l'image : ni quand on fait defiler vite, ni dans une capture d'ecran
+   partagee ailleurs. Celle-ci reste avec elle. */
+.maquette__etiquette {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(240, 178, 50, 0.5);
+  background: rgba(240, 178, 50, 0.16);
+  color: var(--warn);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
 /* ------------------------------------------------------------- Bandeau --- */
 
 .bandeau-final {
