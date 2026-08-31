@@ -13,7 +13,7 @@ name: Applications de bureau
 on:
   workflow_dispatch:
   push:
-    tags: ['v*']
+    branches: [main]
 
 # Le jeton fourni au workflow est en lecture seule par defaut sur les depots
 # recents. Publier une version demande d'ecrire dans le depot — creer le tag, la
@@ -50,12 +50,42 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ----------------------------------------------------------------------
+      # On ne publie que si la version a change.
+      #
+      # Le workflow part a chaque envoi sur `main`, sinon il faut penser a le
+      # lancer — et une mise a jour qu'il faut penser a publier n'arrive jamais
+      # chez personne. Mais republier la meme version echouerait sur un tag qui
+      # existe deja, et pour rien : les applications installees comparent les
+      # numeros, une version identique ne leur dit rien.
+      #
+      # La version du fichier fait donc foi. La changer, c'est publier.
+      # ----------------------------------------------------------------------
+      - name: Version deja publiee ?
+        id: version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "publier=non" >> "$GITHUB_OUTPUT"
+            echo "La version $version est deja publiee : rien a faire."
+          else
+            echo "publier=oui" >> "$GITHUB_OUTPUT"
+            echo "Version $version a publier."
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.version.outputs.publier == 'oui'
         with:
           node-version: 22
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
+        if: steps.version.outputs.publier == 'oui'
         with:
           targets: ${{ matrix.cibles_rust }}
 
@@ -63,6 +93,7 @@ jobs:
       # execution recompile Tauri et ses dependances depuis zero, soit une
       # dizaine de minutes pour rien.
       - uses: swatinem/rust-cache@v2
+        if: steps.version.outputs.publier == 'oui'
         with:
           workspaces: src-tauri
 
@@ -77,6 +108,7 @@ jobs:
       # Aucune valeur n'est affichee — seulement leur presence.
       # ----------------------------------------------------------------------
       - name: Verifier les secrets
+        if: steps.version.outputs.publier == 'oui'
         shell: bash
         env:
           CLE: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -151,12 +183,15 @@ jobs:
           echo "Cle de signature valide."
 
       - run: npm ci
+        if: steps.version.outputs.publier == 'oui'
 
       # L'interface est verifiee avant d'etre empaquetee : livrer une
       # application qui ne compile pas en TypeScript n'aurait pas de sens.
       - run: npx tsc --noEmit
+        if: steps.version.outputs.publier == 'oui'
 
       - uses: tauri-apps/tauri-action@v0
+        if: steps.version.outputs.publier == 'oui'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Signature des mises a jour. Sans elle, l'archive produite n'est pas
@@ -186,6 +221,9 @@ jobs:
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
           releaseBody: |
+            Les tuiles du salon vocal sont assez grandes pour qu'on puisse cliquer « Regarder ».
+            Un clic sur un partage l'agrandit, un second le remet dans la grille.
+            Un bouton dans Avance dit si une mise a jour existe, au lieu de rester muet.
             Appels prives : on peut s'appeler depuis une conversation, sans passer par un salon vocal.
             Le son ne se coupe plus quand on quitte le salon vocal des yeux.
             Le partage rend a nouveau ses soixante images par seconde.
@@ -199,6 +237,7 @@ jobs:
           prerelease: false
 
       - uses: actions/upload-artifact@v4
+        if: steps.version.outputs.publier == 'oui'
         with:
           name: orbit-${{ matrix.nom }}
           # `if-no-files-found: error` plutot que le defaut silencieux : une
@@ -220,7 +259,7 @@ jobs:
       # On depose donc un second exemplaire, sans version.
       # ----------------------------------------------------------------------
       - name: Copie au nom fixe
-        if: matrix.nom == 'Windows'
+        if: steps.version.outputs.publier == 'oui' && matrix.nom == 'Windows'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
