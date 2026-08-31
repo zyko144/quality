@@ -1,7 +1,7 @@
 {
   "name": "quality",
   "private": true,
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "module",
   "description": "Quality - plateforme de communication temps reel, moderne et legere",
   "scripts": {

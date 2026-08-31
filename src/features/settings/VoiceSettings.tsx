@@ -9,6 +9,7 @@ import {
 import { byteToDecibels, ANALYSER_FLOOR, ANALYSER_CEILING } from '@/features/voice/useVoice';
 import { Icon } from '@/components/Icon';
 import { playCue } from '@/lib/sounds';
+import { ouvrirPorte } from '@/features/voice/porte';
 
 /**
  * Reglages voix et video.
@@ -299,6 +300,9 @@ function MicrophoneTest({ media }: { media: MediaPreferences }) {
   const barRef = useRef<HTMLDivElement>(null);
   const markRef = useRef<HTMLDivElement>(null);
   const stopRef = useRef<(() => void) | null>(null);
+  /** L'element de retour, pour le couper ou le rendre audible a la demande. */
+  const retourRef = useRef<HTMLAudioElement | null>(null);
+  const [ecoute, setEcoute] = useState(false);
 
   const stop = useCallback(() => {
     stopRef.current?.();
@@ -322,6 +326,21 @@ function MicrophoneTest({ media }: { media: MediaPreferences }) {
     }
 
     const context = new AudioContext();
+
+    /*
+     * Le contexte demarre parfois suspendu.
+     *
+     * Les navigateurs ouvrent tout `AudioContext` a l'arret tant qu'un geste ne
+     * l'a pas autorise, et ne le reprennent pas toujours d'eux-memes meme
+     * lorsqu'on le cree dans un gestionnaire de clic — un contexte suspendu
+     * existant sur la page suffit a le laisser dans cet etat. L'analyseur
+     * tournait alors sur un signal fige a zero : la barre ne bougeait jamais,
+     * et le test paraissait casse alors que le micro marchait.
+     */
+    if (context.state === 'suspended') {
+      await context.resume().catch(() => undefined);
+    }
+
     const source = context.createMediaStreamSource(stream);
     const analyser = context.createAnalyser();
     analyser.fftSize = 512;
@@ -329,6 +348,31 @@ function MicrophoneTest({ media }: { media: MediaPreferences }) {
     analyser.minDecibels = ANALYSER_FLOOR;
     analyser.maxDecibels = ANALYSER_CEILING;
     source.connect(analyser);
+
+    /*
+     * S'entendre soi-meme, tel que les autres nous entendent.
+     *
+     * La porte de bruit agit sur ce qu'on emet : son effet est, par
+     * construction, inaudible pour celui qui parle. « Je l'active et j'entends
+     * encore tout » est donc exact et attendu — ce qu'on entend, c'est le micro
+     * des autres, sur lequel notre reglage n'a aucune prise.
+     *
+     * Ce retour fait passer notre propre voix par la meme porte et la renvoie
+     * dans les haut-parleurs. C'est le seul moyen de verifier le reglage sans
+     * demander a quelqu'un de rester en ligne.
+     */
+    const porte = useDevices.getState().media.noiseGate
+      ? ouvrirPorte(stream, useDevices.getState().media.speakingThreshold)
+      : null;
+
+    let retour: HTMLAudioElement | null = null;
+    if (porte) {
+      retour = new Audio();
+      retour.srcObject = porte.flux;
+      retour.muted = true;
+      void retour.play().catch(() => undefined);
+      retourRef.current = retour;
+    }
 
     const buffer = new Uint8Array(analyser.frequencyBinCount);
     let frame = 0;
@@ -355,6 +399,9 @@ function MicrophoneTest({ media }: { media: MediaPreferences }) {
 
     stopRef.current = () => {
       cancelAnimationFrame(frame);
+      retour?.pause();
+      retourRef.current = null;
+      porte?.arreter();
       stream.getTracks().forEach((track) => track.stop());
       void context.close();
       markRef.current?.classList.remove('is-live');
@@ -400,7 +447,37 @@ function MicrophoneTest({ media }: { media: MediaPreferences }) {
           {failure}
         </p>
       ) : null}
-    </section>
+    
+      {/*
+        Le retour d'ecoute.
+
+        Coupe par defaut : s'entendre en direct dans ses haut-parleurs provoque
+        un larsen des qu'on ne porte pas de casque, et c'est desagreable au
+        point qu'on referme les parametres avant d'avoir compris d'ou ca vient.
+      */}
+      <label className="switchrow mictest__ecoute">
+        <span className="switchrow__body">
+          <span className="switchrow__label">M&rsquo;ecouter pendant le test</span>
+          <span className="switchrow__hint">
+            Renvoie votre voix telle que les autres l&rsquo;entendent, porte de
+            bruit comprise. A n&rsquo;utiliser qu&rsquo;avec un casque : sur des
+            haut-parleurs, le micro reprend le retour et cela siffle.
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          className="visually-hidden"
+          checked={ecoute}
+          onChange={(event) => {
+            setEcoute(event.target.checked);
+            if (retourRef.current) retourRef.current.muted = !event.target.checked;
+          }}
+        />
+        <span className={'switchrow__track' + (ecoute ? ' is-on' : '')} aria-hidden="true">
+          <span className="switchrow__thumb" />
+        </span>
+      </label>
+</section>
   );
 }
 

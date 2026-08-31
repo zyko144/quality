@@ -228,12 +228,11 @@ let sonnerie: number | null = null;
  * de four. Descendue vers le sol1, elle porte a travers une piece.
  */
 const GRAVE = {
-  sol1: 49.0,
-  do2: 65.41,
-  re2: 73.42,
-  fa2: 87.31,
   sol2: 98.0,
-  sib2: 116.54,
+  do3: 130.81,
+  re3: 146.83,
+  fa3: 174.61,
+  sol3: 196.0,
 };
 
 /*
@@ -244,14 +243,16 @@ const GRAVE = {
  * rythme plutot qu'un signal, et c'est ce qu'on reconnait sans y penser.
  */
 const MOTIF: { hz: number; debut: number; duree: number; gain: number }[] = [
-  { hz: GRAVE.do2, debut: 0, duree: 0.16, gain: 0.55 },
-  { hz: GRAVE.do2, debut: 0.2, duree: 0.14, gain: 0.4 },
-  { hz: GRAVE.sol2, debut: 0.46, duree: 0.2, gain: 0.5 },
-  { hz: GRAVE.fa2, debut: 0.72, duree: 0.16, gain: 0.42 },
-  { hz: GRAVE.re2, debut: 0.9, duree: 0.3, gain: 0.5 },
+  { hz: GRAVE.do3, debut: 0, duree: 0.16, gain: 0.5 },
+  { hz: GRAVE.do3, debut: 0.2, duree: 0.14, gain: 0.36 },
+  { hz: GRAVE.sol3, debut: 0.46, duree: 0.2, gain: 0.46 },
+  { hz: GRAVE.fa3, debut: 0.72, duree: 0.16, gain: 0.4 },
+  { hz: GRAVE.re3, debut: 0.9, duree: 0.3, gain: 0.46 },
   // La basse qui tient sous le motif : c'est elle qu'on sent plus qu'on
-  // n'entend, et qui fait la difference entre une sonnerie et un bip.
-  { hz: GRAVE.sol1, debut: 0, duree: 1.2, gain: 0.28 },
+  // n'entend, et qui fait la difference entre une sonnerie et un bip. Elle
+  // reste une octave sous le chant, sans descendre au point de disparaitre
+  // dans un haut-parleur d'ordinateur portable.
+  { hz: GRAVE.sol2, debut: 0, duree: 1.2, gain: 0.24 },
 ];
 
 function jouerMotif(): void {

@@ -1157,13 +1157,31 @@ export const useVoice = create<VoiceState>((set, get) => {
         await new Promise((resoudre) => setTimeout(resoudre, 120));
       }
 
-      // On ecoutait peut-etre ce salon de loin : deux abonnements au meme
-      // endroit se marcheraient dessus, et le second publierait une presence
-      // que le premier ignore.
+      /*
+       * Le sujet doit etre libre AVANT d'ouvrir le salon.
+       *
+       * On ecoutait peut-etre ce salon de loin. `supabase.channel(sujet)` ne
+       * cree pas un canal neuf quand il en existe deja un sur ce sujet : il rend
+       * l'ancien. Poser un ecouteur dessus leve alors une exception, la
+       * signalisation ne s'installe jamais, et l'on se retrouve « connecte »
+       * dans un salon ou personne ne s'entend — le defaut se voyait surtout en
+       * conversation privee, ou l'on appelle depuis un salon qu'on ecoutait a
+       * l'instant meme.
+       *
+       * D'ou l'attente : `removeChannel` est un aller-retour, et le lancer sans
+       * l'attendre laissait la course ouverte.
+       */
       const observateur = observateurs.get(channelId);
       if (observateur) {
-        void supabase.removeChannel(observateur);
         observateurs.delete(channelId);
+        await supabase.removeChannel(observateur);
+      }
+
+      // Ceinture : un canal sur ce sujet peut venir d'ailleurs — un salon
+      // precedent mal referme, une reconciliation en vol.
+      for (const reste of supabase.getChannels()) {
+        if (!reste.topic.endsWith(`orbit:voice:${channelId}`)) continue;
+        await supabase.removeChannel(reste);
       }
 
       set({ connecting: true, error: null });

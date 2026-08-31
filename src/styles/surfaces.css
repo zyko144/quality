@@ -1419,3 +1419,50 @@
 .profile__avatar-edit:focus:not(:focus-visible) {
   outline: none;
 }
+
+/* ==========================================================================
+   Trois retouches signalees a l'usage
+   ========================================================================== */
+
+/*
+ * La pastille d'un serveur reste ronde.
+ *
+ * Elle passait de cercle a carre arrondi au survol. L'intention etait de
+ * reprendre le geste de Discord, mais notre icone deborde du cercle a mesure
+ * qu'il s'ouvre : on voit apparaitre les angles de l'image, qui ressemblent a
+ * de petits traits parasites. Un cercle qui reste un cercle ne pose pas la
+ * question.
+ */
+.rail__button:hover,
+.rail__button.is-active,
+.rail__button--home:hover,
+.rail__button--home.is-active {
+  border-radius: 50%;
+}
+
+/*
+ * Le nom, un cran plus bas.
+ *
+ * En `2xl` il occupait deux lignes des que quelqu'un choisissait un nom un peu
+ * long, et poussait tout le reste de la fiche vers le bas.
+ */
+.profile__name {
+  font-size: var(--text-xl);
+}
+
+/*
+ * Plus de bande sous la fiche.
+ *
+ * La carte reservait une marge basse : sur la fiche en deux colonnes, elle
+ * laissait une bande sombre sur toute la largeur, sous les deux colonnes, qui
+ * ressemblait a un element vide qu'on aurait oublie de remplir. Les colonnes
+ * descendent maintenant jusqu'au bord.
+ */
+.profile:has(.profile__aside) .tilt__inner {
+  padding-bottom: 0;
+}
+
+.profile__aside,
+.profile__main {
+  min-height: 100%;
+}

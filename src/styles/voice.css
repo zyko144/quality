@@ -1436,3 +1436,54 @@ button.voice-tile__name:hover {
   max-width: 84px !important;
   max-height: 84px !important;
 }
+
+/* ==========================================================================
+   Partage range : tout sur une meme ligne
+   ==========================================================================
+   La vignette se posait tout en haut, les visages tout en bas, et un vide de
+   la hauteur de l'ecran entre les deux. Chacun etait pourtant a sa place :
+   c'est la scene qui les ecartait, en donnant toute la hauteur restante a la
+   grille des participants.
+
+   Range, un partage n'est plus qu'une tuile de plus. Il prend donc la meme
+   taille que les cartes et se met a leur suite, et l'ensemble se centre au
+   lieu de s'etirer.
+   ========================================================================== */
+
+.voice-stage:has(.voice-stage__screens):not(:has(.voice-stage__focus)) {
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.voice-stage:has(.voice-stage__screens):not(:has(.voice-stage__focus)) .voice-grid {
+  flex: none;
+  align-content: center;
+  overflow: visible;
+}
+
+/* La vignette adopte la largeur d'une carte : deux tuiles de tailles
+   differentes cote a cote se lisent comme deux choses sans rapport. */
+.voice-stage:has(.voice-stage__screens):not(:has(.voice-stage__focus)) .screen-tile {
+  width: 100%;
+  max-width: 380px;
+}
+
+.voice-stage:has(.voice-stage__screens):not(:has(.voice-stage__focus)) .voice-stage__screens {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
+  justify-items: center;
+  padding: var(--space-2);
+}
+
+/*
+ * A deux et plus, la place se repartit d'elle-meme.
+ *
+ * Les deux grilles emploient la meme colonne minimale : une personne de plus
+ * fait passer l'ensemble de une a deux colonnes, puis a trois, sans qu'aucune
+ * regle n'ait a compter les participants.
+ */
+.voice-stage:has(.voice-stage__screens):not(:has(.voice-stage__focus))
+  .voice-grid:has(> :only-child) {
+  grid-template-columns: minmax(0, 380px);
+  justify-content: center;
+}

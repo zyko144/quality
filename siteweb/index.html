@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qualityz — la discussion d'equipe, sans detour</title>
+<meta name="description" content="Quality est une application de discussion d'equipe : salons ecrits, salons vocaux en pair-a-pair et partage d'ecran jusqu'a 1080p60. Telechargement Windows, installateur de 1,3 Mo.">
+<meta name="theme-color" content="#0b0b0d">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Qualityz — la discussion d'equipe, sans detour">
+<meta property="og:description" content="Salons ecrits, vocal en pair-a-pair, partage d'ecran 1080p60. Une application de bureau de 1,3 Mo qui se met a jour toute seule.">
+<meta property="og:locale" content="fr_FR">
+</head>
+<body>
+
+<a class="saut-contenu" href="#contenu">Aller au contenu</a>
+
+<!-- ══ En-tete commun ══════════════════════════════════════════════════ -->
+<header class="entete">
+  <div class="enveloppe entete__barre">
+    <a class="marque" href="index.html">
+      <svg class="marque__glyphe" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M 50 8 C 26.8 8 8 26.8 8 50 C 8 59.8 11.4 68.8 17.1 76 L 10 94 L 29.4 87.5 C 35.6 90.9 42.6 92.8 50 92.8 C 73.2 92.8 92 74 92 50 C 92 26.8 73.2 8 50 8 Z M 50 84 C 43.8 84 38 82.4 32.8 79.5 L 30 78 L 19 81.7 L 23 71.4 L 21.2 68.6 C 16.7 61.9 14.2 56.2 14.2 50 C 14.2 30.2 30.2 14.2 50 14.2 C 69.8 14.2 85.8 30.2 85.8 50 C 85.8 69.8 69.8 84 50 84 Z"/>
+        <path d="M 28 58 C 38 58 46 47 57 38 C 66 30 76 33 80 44 C 74 44 69 49 65 55 C 58 64 47 67 36 67 C 32 67 29 63 28 58 Z"/>
+        <path d="M 38 72 C 48 72 58 65 67 56 C 73 50 79 50 83 56 C 77 60 70 66 61 71 C 53 76 45 76 38 72 Z"/>
+      </svg>
+      Qualityz
+    </a>
+
+    <button class="bascule-nav" type="button" aria-expanded="false" aria-controls="nav-principale">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+      </svg>
+      Menu
+    </button>
+
+    <nav class="nav" id="nav-principale" aria-label="Navigation principale">
+      <a href="index.html" aria-current="page">Accueil</a>
+      <a href="telecharger.html">Telecharger</a>
+      <a href="player.html">Lecteur web</a>
+      <a href="securite.html">Securite</a>
+      <a class="bouton bouton--principal" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">Telecharger</a>
+    </nav>
+  </div>
+</header>
+
+<main id="contenu">
+
+  <!-- ══ Heros ═════════════════════════════════════════════════════════ -->
+  <section class="enveloppe heros">
+    <div class="heros__grille">
+      <div>
+        <p class="pastille"><span class="pastille__point" aria-hidden="true"></span> Windows — installateur de 1,3 Mo</p>
+        <h1 class="heros__titre">Parler ensemble,<br>sans passer par nous.</h1>
+        <p class="heros__accroche">
+          Quality reunit vos equipes dans des espaces : des salons ecrits pour ce
+          qui se garde, des salons vocaux pour ce qui se dit. La voix, la video et
+          le partage d'ecran voyagent en direct d'une machine a l'autre, jamais par
+          nos serveurs. L'application de bureau tient dans un installateur de
+          1,3 Mo et se met a jour seule.
+        </p>
+        <div class="groupe-boutons">
+          <a class="bouton bouton--principal bouton--grand" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">
+            <svg class="bouton__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/>
+            </svg>
+            Telecharger pour Windows
+          </a>
+          <a class="bouton bouton--secondaire bouton--grand" href="player.html">Voir l'interface</a>
+        </div>
+        <p class="heros__note">Windows 10 et 11 · 64 bits · gratuit · macOS et Linux a venir</p>
+      </div>
+
+      <!-- Illustration dessinee : le chemin de la voix entre deux membres.
+           Pas une capture d'ecran, un schema — c'est le point le plus
+           difficile a expliquer en une phrase. -->
+      <figure class="figure" data-apparition>
+        <svg class="illustration" viewBox="0 0 620 420" role="img" aria-labelledby="schema-titre schema-desc">
+          <title id="schema-titre">Le chemin de la voix dans Quality</title>
+          <desc id="schema-desc">Deux membres sont relies par une liaison directe qui porte l'audio et la video. Le serveur, place a l'ecart, ne sert qu'a les mettre en relation et ne recoit aucun media.</desc>
+
+          <!-- Cercles d'ambiance, tres discrets -->
+          <g stroke="rgba(255,255,255,0.09)" fill="none">
+            <circle cx="310" cy="290" r="150" opacity="0.55"/>
+            <circle cx="310" cy="290" r="215" opacity="0.3"/>
+          </g>
+
+          <!-- Le serveur, volontairement en retrait -->
+          <g>
+            <rect x="235" y="40" width="150" height="52" rx="14" fill="#131316" stroke="rgba(255,255,255,0.17)"/>
+            <path d="M262 58h14M262 66h20M262 74h10" stroke="#8f9099" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="358" cy="66" r="4" fill="#8f9099"/>
+            <text x="288" y="70" font-size="14" font-weight="600" fill="#c2c3ca">Serveur</text>
+            <text x="310" y="112" text-anchor="middle" font-size="12.5" fill="#8f9099">comptes et messages ecrits</text>
+          </g>
+
+          <!-- Signalisation : fin, pointille, secondaire -->
+          <g stroke="rgba(255,255,255,0.17)" stroke-width="1.5" stroke-dasharray="4 6" fill="none">
+            <path d="M250 96 C 200 150 170 200 152 250"/>
+            <path d="M370 96 C 420 150 450 200 468 250"/>
+          </g>
+          <text x="150" y="176" text-anchor="end" font-size="12" fill="#8f9099">mise en</text>
+          <text x="150" y="192" text-anchor="end" font-size="12" fill="#8f9099">relation</text>
+
+          <!-- Les deux membres -->
+          <g>
+            <circle cx="120" cy="292" r="46" fill="#131316" stroke="rgba(255,255,255,0.17)"/>
+            <g transform="translate(120 292)" stroke="#c2c3ca" stroke-width="1.9" fill="none" stroke-linecap="round">
+              <rect x="-6" y="-17" width="12" height="21" rx="6"/>
+              <path d="M-11 -1a11 11 0 0 0 22 0"/>
+              <path d="M0 10v7"/>
+            </g>
+            <text x="120" y="368" text-anchor="middle" font-size="13.5" font-weight="600" fill="#c2c3ca">Vous</text>
+          </g>
+          <g>
+            <circle cx="500" cy="292" r="46" fill="#131316" stroke="rgba(255,255,255,0.17)"/>
+            <g transform="translate(500 292)" stroke="#c2c3ca" stroke-width="1.9" fill="none" stroke-linecap="round">
+              <circle cx="-5" cy="-8" r="6"/>
+              <circle cx="8" cy="-6" r="5"/>
+              <path d="M-16 12a11 11 0 0 1 22 0"/>
+              <path d="M9 12a9 9 0 0 1 10 0" opacity="0.7"/>
+            </g>
+            <text x="500" y="368" text-anchor="middle" font-size="13.5" font-weight="600" fill="#c2c3ca">Vos amis</text>
+          </g>
+
+          <!-- La liaison directe : le trait le plus epais de l'image -->
+          <path class="flux-p2p" d="M167 288 C 250 236 370 236 453 288" fill="none" stroke="#e8c56b" stroke-width="3" stroke-linecap="round"/>
+          <g transform="translate(310 258)">
+            <rect x="-96" y="-19" width="192" height="30" rx="15" fill="#08080a" stroke="rgba(232,197,107,0.34)"/>
+            <g stroke="#e8c56b" stroke-width="2.2" stroke-linecap="round">
+              <path d="M-80 -8v8M-73 -12v16M-66 -6v4M-59 -11v14"/>
+            </g>
+            <text x="-48" y="1" font-size="12.5" font-weight="600" fill="#f5dc9b">audio et video en direct</text>
+          </g>
+
+          <text x="310" y="404" text-anchor="middle" font-size="12" fill="#8f9099">Le son ne remonte jamais jusqu'au serveur.</text>
+        </svg>
+        <figcaption class="figure__legende">Le serveur met les membres en relation, puis s'efface : la voix passe d'un poste a l'autre.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ══ Points forts ══════════════════════════════════════════════════ -->
+  <section class="enveloppe section" aria-labelledby="titre-forces">
+    <div class="section__intro" data-apparition>
+      <span class="surtitre">Ce qui change</span>
+      <h2 id="titre-forces">Six choix qui se sentent a l'usage</h2>
+    </div>
+
+    <div class="grille grille--3" data-apparition>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>
+          </svg>
+        </div>
+        <h3>Vocal en pair-a-pair</h3>
+        <p>Les salons vocaux etablissent une liaison WebRTC directe entre les participants. Le serveur les presente, puis se retire : il ne voit jamais passer l'audio.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+        </div>
+        <h3>Partage d'ecran 1080p60</h3>
+        <p>Une fenetre, un ecran entier ou un jeu, jusqu'a 1080p a soixante images par seconde. Le mouvement reste net, le texte reste lisible.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/>
+          </svg>
+        </div>
+        <h3>Mises a jour automatiques</h3>
+        <p>Quality verifie les nouvelles versions au demarrage, les installe en arriere-plan et verifie leur signature. Rien a retelecharger, rien a reinstaller.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/>
+          </svg>
+        </div>
+        <h3>Une application legere</h3>
+        <p>L'installateur pese environ 1,3 Mo. Quality s'appuie sur le moteur de rendu deja present dans Windows, la ou une application Electron embarquerait tout Chromium.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>
+          </svg>
+        </div>
+        <h3>Salons, fils et messages prives</h3>
+        <p>Des espaces pour vos groupes, des salons pour vos sujets, des messages directs pour le reste. La recherche retrouve ce qui a ete dit.</p>
+      </article>
+
+      <article class="carte">
+        <div class="carte__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+            <path d="M12 3l7 3v6c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6l7-3Z"/><path d="m9.5 12.2 1.9 1.9 3.6-3.7"/>
+          </svg>
+        </div>
+        <h3>Un compte, deux chemins</h3>
+        <p>Adresse e-mail et mot de passe, ou connexion Google si vous preferez. Les echanges avec le serveur passent par une liaison chiffree.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ══ Appel final ═══════════════════════════════════════════════════ -->
+  <section class="enveloppe section section--serre">
+    <div class="bandeau-final" data-apparition>
+      <h2>Essayez-le, il tient dans un souffle</h2>
+      <p>1,3 Mo a telecharger, une minute a installer, et vos salons vous attendent.</p>
+      <div class="groupe-boutons">
+        <a class="bouton bouton--principal bouton--grand" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">Telecharger pour Windows</a>
+        <a class="bouton bouton--secondaire bouton--grand" href="telecharger.html">Toutes les plateformes</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══ Pied de page commun ══════════════════════════════════════════════ -->
+<footer class="pied">
+  <div class="enveloppe">
+    <div class="pied__grille">
+      <div>
+        <a class="pied__marque" href="index.html">
+          <svg class="marque__glyphe" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true" focusable="false">
+            <path d="M 50 8 C 26.8 8 8 26.8 8 50 C 8 59.8 11.4 68.8 17.1 76 L 10 94 L 29.4 87.5 C 35.6 90.9 42.6 92.8 50 92.8 C 73.2 92.8 92 74 92 50 C 92 26.8 73.2 8 50 8 Z M 50 84 C 43.8 84 38 82.4 32.8 79.5 L 30 78 L 19 81.7 L 23 71.4 L 21.2 68.6 C 16.7 61.9 14.2 56.2 14.2 50 C 14.2 30.2 30.2 14.2 50 14.2 C 69.8 14.2 85.8 30.2 85.8 50 C 85.8 69.8 69.8 84 50 84 Z"/>
+            <path d="M 28 58 C 38 58 46 47 57 38 C 66 30 76 33 80 44 C 74 44 69 49 65 55 C 58 64 47 67 36 67 C 32 67 29 63 28 58 Z"/>
+            <path d="M 38 72 C 48 72 58 65 67 56 C 73 50 79 50 83 56 C 77 60 70 66 61 71 C 53 76 45 76 38 72 Z"/>
+          </svg>
+          Qualityz
+        </a>
+        <p class="pied__accroche">La discussion d'equipe, avec la voix qui passe directement d'un membre a l'autre.</p>
+      </div>
+
+      <div>
+        <h2>Produit</h2>
+        <ul>
+          <li><a href="index.html">Accueil</a></li>
+          <li><a href="telecharger.html">Telecharger</a></li>
+          <li><a href="player.html">Lecteur web</a></li>
+          <li><a href="securite.html">Securite</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>Juridique</h2>
+        <ul>
+          <li><a href="cgu.html">Conditions generales</a></li>
+          <li><a href="confidentialite.html">Confidentialite</a></li>
+          <li><a href="mentions-legales.html">Mentions legales</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>Ressources</h2>
+        <ul>
+          <li><a href="https://github.com/zyko144/quality/releases/latest">Versions publiees</a></li>
+          <li><a href="securite.html#signaler">Signaler une faille</a></li>
+          <li><a href="confidentialite.html#droits">Exercer vos droits</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pied__bas">
+      <p>&copy; <span data-annee>2026</span> Qualityz — edite par <span class="a-completer">[Nom de l'editeur]</span>.</p>
+      <p>Quality n'est affilie a aucun editeur tiers.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -417,15 +417,39 @@
    personnaliser sans jamais deregler les contrastes du texte.
    ================================================================== */
 
-:root[data-accent='blurple'] { --accent: #5865f2; --accent-hover: #4752c4; --accent-text: #949cf7; }
-:root[data-accent='vert']    { --accent: #248046; --accent-hover: #1a6334; --accent-text: #43b581; }
-:root[data-accent='rose']    { --accent: #eb459e; --accent-hover: #c03384; --accent-text: #f47fc0; }
-:root[data-accent='orange']  { --accent: #f0761a; --accent-hover: #c65e13; --accent-text: #f5a25d; }
-:root[data-accent='rouge']   { --accent: #da373c; --accent-hover: #a12d2f; --accent-text: #f07579; }
-:root[data-accent='cyan']    { --accent: #00a8fc; --accent-hover: #0087ca; --accent-text: #4fc3ff; }
-:root[data-accent='gris']    { --accent: #4e5058; --accent-hover: #6d6f78; --accent-text: #b5bac1; }
+/*
+ * Les noms doivent etre ceux que l'application pose.
+ *
+ * Sept teintes etaient definies ici — blurple, vert, orange, rouge, cyan,
+ * gris — quand le selecteur des parametres en propose huit autres : indigo,
+ * violet, ocean, teal, forest, sunset, rose, mono. Seul « rose » figurait dans
+ * les deux listes, et c'est donc la seule qui changeait quoi que ce soit. Les
+ * sept autres posaient bien leur attribut sur la racine, sans qu'aucune regle
+ * ne l'attende.
+ *
+ * Les valeurs reprennent la premiere couleur de la pastille correspondante
+ * dans `surfaces.css` : ce qu'on choisit est ce qu'on voit.
+ */
+:root[data-accent='indigo'] { --accent: oklch(62% 0.22 275); --accent-hover: oklch(55% 0.22 275); --accent-text: oklch(76% 0.15 275); }
+:root[data-accent='violet'] { --accent: oklch(62% 0.22 295); --accent-hover: oklch(55% 0.22 295); --accent-text: oklch(76% 0.15 295); }
+:root[data-accent='ocean']  { --accent: oklch(62% 0.2 235);  --accent-hover: oklch(55% 0.2 235);  --accent-text: oklch(76% 0.14 235); }
+:root[data-accent='teal']   { --accent: oklch(66% 0.16 195); --accent-hover: oklch(58% 0.16 195); --accent-text: oklch(80% 0.12 195); }
+:root[data-accent='forest'] { --accent: oklch(62% 0.17 155); --accent-hover: oklch(54% 0.17 155); --accent-text: oklch(76% 0.13 155); }
+:root[data-accent='sunset'] { --accent: oklch(66% 0.19 35);  --accent-hover: oklch(58% 0.19 35);  --accent-text: oklch(80% 0.14 45); }
+:root[data-accent='rose']   { --accent: oklch(64% 0.21 350); --accent-hover: oklch(56% 0.21 350); --accent-text: oklch(78% 0.15 350); }
+/*
+ * « Neutre » n'est pas une teinte eteinte : c'est un gris clair assume, lisible
+ * sur les fonds sombres de l'application. Un gris moyen aurait rendu les
+ * boutons principaux indistincts des secondaires, ce qui n'est pas un choix
+ * d'apparence mais une perte d'information.
+ */
+:root[data-accent='mono']   { --accent: oklch(72% 0 0);      --accent-hover: oklch(64% 0 0);      --accent-text: oklch(86% 0 0); }
 
-:root[data-accent='blurple'] .accent-soft,
+/* Le texte pose sur l'accent. Clair partout, sauf sur le neutre, ou il doit
+   redevenir sombre pour rester lisible. */
+:root[data-accent] { --text-on-accent: #fff; }
+:root[data-accent='mono'] { --text-on-accent: #14141a; }
+
 :root[data-accent] { --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent); }
 
 /* ==================================================================

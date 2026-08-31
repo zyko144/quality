@@ -250,6 +250,22 @@ export const useRoles = create<RolesState>((set, get) => ({
   },
 
   updateRole: async (spaceId, roleId, patch) => {
+    /*
+     * Un nom vide ne part jamais.
+     *
+     * La base impose entre un et quarante caracteres une fois les blancs
+     * retires. Le formulaire s'en occupe deja, mais ce magasin est appelable
+     * d'ailleurs, et une contrainte violee revient ici en jargon Postgres.
+     */
+    if (patch.name !== undefined) {
+      const propre = patch.name.trim();
+      if (propre === '') {
+        set({ error: 'Un role doit porter un nom.' });
+        return;
+      }
+      patch = { ...patch, name: propre.slice(0, 40) };
+    }
+
     const avant = get().getSpaceRoles(spaceId);
 
     // Applique tout de suite : cocher une permission doit repondre au clic, et

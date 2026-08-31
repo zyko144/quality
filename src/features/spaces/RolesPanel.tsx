@@ -35,6 +35,13 @@ const COULEURS = [
 ];
 
 export function RolesPanel({ spaceId }: { spaceId: UUID }) {
+  /*
+   * Le nom en cours de saisie, tant qu'il n'est pas valide.
+   *
+   * `null` signifie « rien en cours » : on affiche alors le nom du role tel
+   * qu'il est enregistre.
+   */
+  const [nomEnCours, setNomEnCours] = useState<string | null>(null);
   const loadSpace = useRoles((state) => state.loadSpace);
   const roles = useRoles((state) => state.roles[spaceId]);
   const createRole = useRoles((state) => state.createRole);
@@ -61,6 +68,21 @@ export function RolesPanel({ spaceId }: { spaceId: UUID }) {
         ? role.permissions.filter((id) => id !== permission)
         : [...role.permissions, permission],
     });
+  };
+
+  /*
+   * Pose le nom, ou le rend a ce qu'il etait.
+   *
+   * Un champ vide n'est pas une erreur a signaler : c'est un nom en cours de
+   * frappe, ou un abandon. On remet l'ancien plutot que de refuser bruyamment
+   * quelque chose que personne n'a demande d'enregistrer.
+   */
+  const poserLeNom = (roleId: UUID, actuel: string) => {
+    const propose = (nomEnCours ?? '').trim();
+    setNomEnCours(null);
+
+    if (propose === '' || propose === actuel) return;
+    void updateRole(spaceId, roleId, { name: propose.slice(0, 40) });
   };
 
   return (
@@ -118,11 +140,25 @@ export function RolesPanel({ spaceId }: { spaceId: UUID }) {
       {role ? (
         <div className="roles__detail">
           <div className="roles__entete">
+            {/*
+              Le nom s'ecrit ici, mais ne part qu'une fois pose.
+
+              Chaque frappe declenchait une ecriture. Effacer le champ pour le
+              retaper — le geste le plus naturel qui soit — envoyait donc un nom
+              vide, que la base refuse : « new row for relation "roles" violates
+              check constraint "roles_name_check" », affiche tel quel au milieu
+              d'un formulaire.
+            */}
             <input
               className="input roles__nom"
-              value={role.name}
+              value={nomEnCours ?? role.name}
               maxLength={40}
-              onChange={(event) => void updateRole(spaceId, role.id, { name: event.target.value })}
+              onChange={(event) => setNomEnCours(event.target.value)}
+              onBlur={() => poserLeNom(role.id, role.name)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur();
+                if (event.key === 'Escape') setNomEnCours(null);
+              }}
               aria-label="Nom du role"
             />
 
