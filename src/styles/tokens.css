@@ -18,8 +18,27 @@
   /* ------------------------------------------------------------- Typographie
      `gg sans` est la police de Discord ; absente ailleurs, la pile retombe sur
      celle du systeme, qui reste sobre et lisible. */
+  /*
+   * Les emojis sont nommes en fin de pile, apres les polices de texte.
+   *
+   * Le navigateur descend la liste caractere par caractere : les lettres
+   * trouvent preneur des la premiere police, les emojis n'y sont pas et
+   * poursuivent jusqu'a la premiere qui sache les dessiner. Nommer
+   * « Apple Color Emoji » en premier ne changerait donc rien au texte, mais
+   * decide de l'apparence des emojis la ou cette police existe — c'est-a-dire
+   * sur macOS et iOS.
+   *
+   * Sur Windows, c'est « Segoe UI Emoji » qui repond, et il n'y a pas moyen
+   * d'obtenir les emojis d'Apple autrement qu'en embarquant leur police : elle
+   * est sous licence et ne peut pas etre redistribuee. « Noto Color Emoji »
+   * est le seul jeu libre proche ; il pese une dizaine de mega-octets, ce qui
+   * multiplierait par huit le poids de l'installateur.
+   */
+  --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
+    'Twemoji Mozilla', 'Segoe UI Symbol', sans-serif;
+
   --font-sans: 'gg sans', 'Noto Sans', -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    'Segoe UI', Roboto, Helvetica, Arial, var(--font-emoji), sans-serif;
   --font-display: var(--font-sans);
   --font-mono: 'gg mono', Consolas, 'Andale Mono WT', 'Andale Mono',
     'Lucida Console', Monaco, monospace;

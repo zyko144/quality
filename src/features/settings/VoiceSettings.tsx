@@ -199,6 +199,24 @@ export function VoiceSettings() {
       </section>
 
       <section className="settings__group">
+        <h2 className="settings__group-title">Confidentialite du reseau</h2>
+
+        <SwitchRow
+          label="Masquer mon adresse IP"
+          hint="Fait passer la voix et l'image par un relais plutot qu'en direct. Les autres participants ne voient plus votre adresse — au prix d'un peu de latence. Sans relais configure sur le serveur, ce reglage reste sans effet et l'application vous le dit en entrant."
+          checked={media.masquerIp}
+          onChange={(value) => setMedia('masquerIp', value)}
+        />
+
+        <p className="settings__hint">
+          Une liaison directe suppose que les deux machines connaissent leurs
+          adresses : c&rsquo;est ce qui rend la voix aussi rapide, et c&rsquo;est
+          aussi ce qui expose votre adresse. Il n&rsquo;y a pas de troisieme
+          voie. Voir <strong>SECURITE.md</strong> pour installer un relais.
+        </p>
+      </section>
+
+      <section className="settings__group">
         <h2 className="settings__group-title">Qualite du son</h2>
 
         <Choice

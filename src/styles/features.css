@@ -1414,3 +1414,22 @@ a.attachment:hover {
 li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)) {
   border-top: 1px solid var(--border-subtle);
 }
+
+
+/* --------------------------------------------------------------------------
+   Emojis
+   --------------------------------------------------------------------------
+   La ou l'emoji est seul — une reaction, une vignette du selecteur — il porte
+   la pile qui lui est propre. Ailleurs il l'herite de `--font-sans`, qui la
+   nomme en dernier.
+   -------------------------------------------------------------------------- */
+
+.emoji-section__item,
+.reaction__emoji,
+.emoji-pop {
+  font-family: var(--font-emoji);
+  /* Les fontes couleur ignorent `font-weight` mais pas la synthese : sans
+     cela, un emoji dans un texte en gras est artificiellement epaissi. */
+  font-weight: 400;
+  font-synthesis: none;
+}

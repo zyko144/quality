@@ -43,6 +43,20 @@ export interface MediaPreferences {
   noiseGate: boolean;
 
   /**
+   * Masquer son adresse IP aux autres participants.
+   *
+   * Une liaison directe suppose que les deux machines connaissent leurs
+   * adresses : dans un salon vocal ordinaire, la votre est donc visible des
+   * autres. La seule facon de la masquer est de faire passer tout le trafic
+   * par un relais, ce qui coute de la latence et demande un serveur TURN.
+   *
+   * Le reglage reste sans effet tant qu'aucun relais n'est configure —
+   * l'imposer sans relais ne masquerait rien, cela empecherait simplement
+   * toute connexion. Voir `reseau.ts` et `SECURITE.md`.
+   */
+  masquerIp: boolean;
+
+  /**
    * Qualite du son de la voix.
    *
    * WebRTC ouvre Opus a environ trente kilobits par seconde — un reglage pense
@@ -95,6 +109,9 @@ const DEFAULTS: MediaPreferences = {
   voiceIsolation: true,
   autoGainControl: true,
   noiseGate: true,
+  // Actif par defaut : sans relais configure il ne fait rien, et le jour ou
+  // l'on en pose un, la protection s'applique sans avoir a y penser.
+  masquerIp: true,
   // « haute » par defaut : le debit double celui de WebRTC sans mettre en peril
   // une connexion ordinaire, et c'est la difference que l'on entend le plus.
   audioQuality: 'haute',

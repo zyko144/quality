@@ -18,6 +18,7 @@ import {
 import { useChat } from '@/store/chat';
 import { useSpacePrefs } from '@/store/spacePrefs';
 import { ouvrirPorte, type Porte } from './porte';
+import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
 /**
@@ -107,44 +108,27 @@ type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion | Refus | Deplacement
  */
 
 /**
- * Serveurs de decouverte reseau.
+ * Serveurs de decouverte et de relais.
  *
- * Un serveur STUN ne transporte ni son ni image : il sert uniquement a
- * decouvrir son adresse publique pour percer les box et les pare-feux. La voix
- * et l'ecran, eux, vont directement d'une machine a l'autre.
+ * Voir `reseau.ts` : ils sont demandes au serveur a l'entree dans un salon,
+ * de facon a pouvoir porter des identifiants temporaires. Ce qui est compile
+ * dans le binaire ne sert plus que de repli.
  *
- * Ils restent une dependance : celui qu'on interroge voit l'adresse IP de qui
- * rejoint un salon. D'ou la configuration par l'environnement — renseigner
- * `VITE_ICE_SERVERS` avec son propre serveur (coturn, par exemple) rend
- * l'ensemble reellement autonome. Les serveurs publics de Google ne servent
- * que de repli, pour que l'application marche sans rien installer.
- *
- * Format attendu : un JSON, ou une liste d'adresses separees par des virgules.
+ * Retenus pour la duree du salon : changer de serveurs entre deux pairs du
+ * meme salon donnerait des chemins incoherents.
  */
-function readIceServers(): RTCIceServer[] {
-  const brut = import.meta.env['VITE_ICE_SERVERS'];
-  if (typeof brut !== 'string' || brut.trim() === '') {
-    return [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-    ];
-  }
+let serveursDuSalon: RTCIceServer[] = [];
 
-  try {
-    const analyse: unknown = JSON.parse(brut);
-    if (Array.isArray(analyse)) return analyse as RTCIceServer[];
-  } catch {
-    // Pas du JSON : on accepte aussi la forme courte, une liste d'adresses.
-  }
-
-  return brut
-    .split(',')
-    .map((adresse) => adresse.trim())
-    .filter(Boolean)
-    .map((urls) => ({ urls }));
-}
-
-const ICE_SERVERS: RTCIceServer[] = readIceServers();
+/**
+ * Le trafic passe-t-il obligatoirement par un relais ?
+ *
+ * C'est la seule facon de masquer son adresse aux autres participants. Decide
+ * a l'entree, une fois pour toutes : le changer en cours de salon ne toucherait
+ * que les connexions ouvertes ensuite, et l'on serait masque pour les uns, pas
+ * pour les autres — le genre de demi-protection qui vaut moins que rien,
+ * puisqu'on la croit acquise.
+ */
+let relaisImpose = false;
 
 interface VoiceState {
   channelId: UUID | null;
@@ -924,7 +908,13 @@ export const useVoice = create<VoiceState>((set, get) => {
     if (existing) return existing;
 
     const me = get().userId ?? '';
-    const connection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const connection = new RTCPeerConnection({
+      iceServers: serveursDuSalon,
+      // `relay` interdit au moteur de proposer l'adresse locale et l'adresse
+      // publique : il ne presente que celle du relais. C'est ce qui masque
+      // l'adresse, et rien d'autre ne le fait.
+      ...(relaisImpose ? { iceTransportPolicy: 'relay' as RTCIceTransportPolicy } : {}),
+    });
 
     const peer: Peer = {
       connection,
@@ -1195,6 +1185,16 @@ export const useVoice = create<VoiceState>((set, get) => {
        */
       const captureEnCours = capturerMicro();
 
+      /*
+       * Les serveurs reseau, demandes pendant que le micro s'ouvre.
+       *
+       * Encore une attente qui n'a rien a voir avec les autres : autant la
+       * mener de front. Voir `reseau.ts` pour ce qu'on y gagne — des
+       * identifiants qui ne trainent pas dans le binaire.
+       */
+      const serveursEnCours = serveursIce();
+      serveursEnCours.catch(() => undefined);
+
       // Une promesse rejetee sans personne pour l'ecouter fait un
       // « unhandled rejection ». L'echec est traite au moment ou on l'attend ;
       // ce gestionnaire ne sert qu'a le signaler comme deja pris en charge.
@@ -1233,6 +1233,26 @@ export const useVoice = create<VoiceState>((set, get) => {
       } catch (cause) {
         set({ connecting: false, error: messageDeCapture(cause, 'micro') });
         return;
+      }
+
+      serveursDuSalon = await serveursEnCours.catch(() => []);
+
+      /*
+       * Le masquage n'est applique que s'il peut l'etre.
+       *
+       * Sans relais joignable, `iceTransportPolicy: 'relay'` n'aboutit a aucune
+       * connexion : on serait « protege » et muet. Le reglage reste donc sans
+       * effet tant qu'aucun serveur TURN n'est configure, et l'interface le dit
+       * plutot que de laisser croire le contraire.
+       */
+      const veutMasquer = useDevices.getState().media.masquerIp;
+      relaisImpose = veutMasquer && comporteUnRelais(serveursDuSalon);
+
+      if (veutMasquer && !relaisImpose) {
+        set({
+          error:
+            'Aucun relais n\u2019est configure : votre adresse reste visible des autres participants. Voir SECURITE.md.',
+        });
       }
 
       instantArrivee = Date.now();
