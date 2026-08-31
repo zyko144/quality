@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.9
+
+### Nouveau
+
+- Le logo revient a la vague en spirale d'origine, en blanc sur un disque noir, et rond partout — dans l'application, sur la barre des taches, dans le menu Demarrer et sur le site.
+
 ## 0.3.8
 
 ### Nouveau
