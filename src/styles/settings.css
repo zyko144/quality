@@ -1139,3 +1139,135 @@
 }
 
 .mod-tabs .mod-tab { flex: none; white-space: nowrap; }
+
+/* ==========================================================================
+   Les reglages, plus lisibles
+   ==========================================================================
+   Trois defauts se cumulaient. Les titres de groupe etaient des majuscules
+   grises de douze pixels — la typographie qu'on reserve d'ordinaire aux
+   etiquettes secondaires — si bien que rien ne structurait la page : on lisait
+   une suite d'interrupteurs sans savoir a quoi ils se rapportaient. La
+   navigation etait tassee sur trente-deux pixels. Et le contenu s'arretait a
+   740 pixels au milieu d'un ecran qui en fait le double, laissant un vide que
+   rien ne venait combler.
+   ========================================================================== */
+
+/* -------------------------------------------------------------- Navigation */
+
+.settings {
+  grid-template-columns: minmax(248px, 1fr) minmax(0, 3.4fr);
+}
+
+.settings__nav-inner {
+  max-width: 248px;
+  gap: 3px;
+}
+
+/* Le titre d'un groupe porte sa couleur d'accent : c'est ce qui permet de
+   retrouver « Application » d'un coup d'oeil au lieu de le lire. */
+.settings__nav-title {
+  margin-top: var(--space-5);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  color: var(--accent-text);
+}
+
+.settings__nav-inner > .settings__nav-title:first-child {
+  margin-top: 0;
+}
+
+.settings__navitem {
+  height: 38px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+}
+
+.settings__navitem svg {
+  opacity: 0.85;
+}
+
+/* L'entree active porte un liseré plutot qu'un simple fond : sur un aplat
+   sombre, un fond legerement plus clair se distingue mal du survol. */
+.settings__navitem.is-active {
+  position: relative;
+  font-weight: var(--weight-semibold);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.settings__navitem.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+/* ----------------------------------------------------------------- Contenu */
+
+.settings__page {
+  max-width: 900px;
+}
+
+/*
+ * Un vrai titre de section.
+ *
+ * En majuscules grises de douze pixels, il se lisait comme une etiquette de
+ * champ : la page paraissait plate et l'on ne savait plus ou commencait quoi.
+ * Il devient un titre — plus grand, plus contraste, et precede d'un filet
+ * colore qui le rattache visuellement a la navigation.
+ */
+.settings__group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.settings__group-title::before {
+  content: '';
+  flex: none;
+  width: 4px;
+  height: 1.1em;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.settings__group--danger .settings__group-title::before {
+  background: var(--danger);
+}
+
+/* Les groupes deviennent des cartes : le trait qui les separait ne disait pas
+   ou finissait l'un et ou commencait l'autre quand la page defilait. */
+.settings__group {
+  padding: var(--space-6);
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-raised);
+}
+
+.settings__group:last-child {
+  margin-bottom: 0;
+}
+
+.settings__title {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-6);
+}
+
+/* Les explications sous un reglage sont ce qu'on lit le plus dans cette page,
+   et c'est ce qui etait le plus petit. */
+.settings__hint {
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}

@@ -225,11 +225,10 @@ jobs:
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
           releaseBody: |
-            Le vocal qui lachait « des fois » : chaque entree fermait puis rouvrait tous les canaux d'ecoute, au moment precis ou la signalisation du salon s'etablissait. Quand elle perdait la course, personne ne s'entendait et les partages n'arrivaient pas.
-            La porte de bruit passe sur le fil audio : elle etait pilotee par une minuterie que le navigateur ralentit a une execution par seconde des que la fenetre passe en arriere-plan — c'est-a-dire des qu'on joue.
-            Elle echoue desormais ouverte : le moindre defaut donnait un silence total, indiagnosticable depuis l'autre bout de la ligne.
-            Les liens des messages s'ouvrent enfin dans le navigateur du systeme, au lieu de ne rien faire.
-            Les emojis prennent une pile de polices qui leur est propre.
+            Les reglages sont refaits : les titres de section deviennent de vrais titres au lieu de petites majuscules grises, chaque groupe devient une carte, la colonne de contenu passe de 740 a 900 pixels et la navigation respire.
+            Le vocal qui lachait « des fois » est repare : chaque entree fermait puis rouvrait tous les canaux d'ecoute, au moment ou la signalisation s'etablissait.
+            La porte de bruit passe sur le fil audio — elle etait ralentie a une execution par seconde des que la fenetre passait en arriere-plan, c'est-a-dire des qu'on joue.
+            Les liens des messages s'ouvrent dans le navigateur du systeme, au lieu de ne rien faire.
 
       - uses: actions/upload-artifact@v4
         if: steps.version.outputs.publier == 'oui'
