@@ -43,3 +43,6 @@ src-tauri/quality.key
 # arriveraient vides.
 site/
 src-tauri/quality.key.password
+
+# Ecrit par `vercel link` : identifiants de projet, propres a cette machine.
+siteweb/.env.local

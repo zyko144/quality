@@ -13,10 +13,15 @@
    couleur n'est enfermee dans un bloc conditionnel. */
 
 :root {
-  /* Fonds, du plus profond au plus haut */
-  --bg: #0b0b0d;
-  --bg-sunken: #08080a;
-  --bg-raised: #131316;
+  /* Fonds, du plus profond au plus haut.
+
+     Noir franc plutot que le gris tres sombre d'avant : le logo est une tuile
+     noire, et sur un fond legerement plus clair sa forme se detachait comme un
+     rectangle rapporte. Sur du noir, elle disparait dans la page et il ne
+     reste que la bulle blanche — ce qu'on veut voir. */
+  --bg: #000000;
+  --bg-sunken: #000000;
+  --bg-raised: #0d0d0f;
   --surface: rgba(255, 255, 255, 0.028);
   --surface-hover: rgba(255, 255, 255, 0.055);
 
@@ -117,16 +122,11 @@ body {
   letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Voile tres doux en haut de page : pose la profondeur sans degrade visible.
-     Volontairement pas `background-attachment: fixed` — le voile doit rester
-     en haut du document, pas suivre la fenetre, et un fond fixe se repeint a
-     chaque defilement sur les pages longues comme le centre d'aide. */
-  background-image: radial-gradient(
-    120% 60% at 50% -10%,
-    rgba(101, 112, 255, 0.06),
-    transparent 62%
-  );
-  background-repeat: no-repeat;
+  /* Aucun voile.
+
+     Un degrade indigo tres doux couvrait le haut de la page. Sur un fond noir
+     il ne pose plus de profondeur, il pose une teinte — et c'est ce qui
+     empechait le noir d'etre noir. */
 }
 
 img,
@@ -304,7 +304,7 @@ hr {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(11, 11, 13, 0.82);
+  background: rgba(0, 0, 0, 0.82);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
@@ -329,14 +329,20 @@ hr {
   margin-right: auto;
 }
 
-/* Le vrai logo de l'application : une vague bleue dans une bulle. C'est une
-   image et non un trace en ligne, donc `currentColor` n'a plus de prise —
-   ses couleurs lui appartiennent, et elles tombent deja juste sur le fond. */
+/* Le logo de l'application : une bulle blanche sur une tuile noire arrondie.
+   C'est une image et non un trace en ligne, donc `currentColor` n'a plus de
+   prise — ses couleurs lui appartiennent.
+
+   Rien n'est ajoute autour. La tuile porte deja sa forme et son fond ; l'
+   enfermer dans un second cadre lui en donnerait deux, l'un dans l'autre. */
 .marque__glyphe {
   width: 26px;
   height: 26px;
   flex: none;
   object-fit: contain;
+  background: none;
+  border: 0;
+  border-radius: 0;
 }
 
 .marque:hover {
@@ -1073,12 +1079,12 @@ tbody tr:last-child th {
    voisins se liraient comme une seule personne. */
 .maquette__avatar--b {
   background: #b184c9;
-  color: #0b0b0d;
+  color: #000000;
 }
 
 .maquette__avatar--c {
   background: #6fb3a3;
-  color: #0b0b0d;
+  color: #000000;
 }
 
 .maquette__auteur {

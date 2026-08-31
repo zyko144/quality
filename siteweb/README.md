@@ -1,4 +1,4 @@
-﻿# Echow — site vitrine
+# Echow — site vitrine
 
 Site statique : du HTML, une feuille de style, un fichier de script. Aucune
 dependance, aucun outil de construction, rien a compiler. On ouvre
@@ -90,8 +90,14 @@ n'en charge aucune, ce qui rend cette regle gratuite.
 Il pointe vers la derniere version publiee sur GitHub :
 
 ```
-https://github.com/zyko144/quality/releases/latest/download/Echow-setup.exe
+https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe
 ```
+
+Le fichier garde son nom historique alors que l'application s'appelle desormais
+Echow. Ce n'est pas un oubli : ce nom est present dans des liens deja partages,
+et la publication depose les deux — `Echow-setup.exe` et `Quality-setup.exe`
+pointent sur le meme binaire. Le site sert l'ancien parce qu'il repond aussi
+pour les versions publiees avant le changement de nom.
 
 Cette adresse ne change jamais : `latest` suit les publications. Rien a
 modifier ici a chaque version.

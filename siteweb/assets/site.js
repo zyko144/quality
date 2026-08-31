@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Echow — le peu de JavaScript dont le site a besoin.
 
    Trois choses, pas une de plus : le menu sur petit ecran, l'annee du pied de
