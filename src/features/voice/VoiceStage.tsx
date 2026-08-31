@@ -321,10 +321,10 @@ export function VoiceStage({ channel }: { channel: Channel }) {
       {partageSansSon ? (
         <p className="voice-stage__note" role="status">
           <Icon name="volume" size={14} />
-          Votre partage part sans le son. C&rsquo;est notre selecteur de source
-          qui l&rsquo;empeche : la case qui autorise le son vit dans la fenetre
-          de Windows que nous remplacons. Cochez « Partager le son de
-          l&rsquo;ordinateur » dans le selecteur, puis relancez Quality.
+          Votre partage part sans le son. Deux chemins ont ete essayes et
+          refuses par le systeme. Dites-le-moi si cela persiste : la capture de
+          la sortie audio se fait alors cote application, ce qui reste a
+          construire.
         </p>
       ) : null}
 

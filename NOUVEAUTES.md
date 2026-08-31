@@ -12,6 +12,18 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.5
+
+### Corrige
+
+- Le son du partage est capture par un autre chemin, sans rendre la fenetre de selection de Windows. Ma correction precedente proposait de la faire revenir en echange du son : c'etait exactement ce qu'on avait entrepris de retirer, donc pas une solution.
+- Chromium expose une voie anterieure a `getDisplayMedia`, toujours en place, qui rend la sortie de l'ordinateur sans rien afficher. C'est celle qu'emploient les applications Electron pour la meme raison. Elle est tentee des que la premiere n'a pas donne de son.
+- La liste des suggestions ne s'installait pas : `max()` n'existe pas pour les booleens en PostgreSQL.
+
+### Ameliore
+
+- Le message affiche pendant un partage muet dit desormais que deux chemins ont ete essayes, et ce qu'il resterait a faire.
+
 ## 0.3.4
 
 ### Corrige

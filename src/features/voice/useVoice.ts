@@ -18,6 +18,7 @@ import {
 import { useChat } from '@/store/chat';
 import { useSpacePrefs } from '@/store/spacePrefs';
 import { ouvrirPorte, type Porte } from './porte';
+import { capturerSonSysteme } from './sonSysteme';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -1706,7 +1707,29 @@ export const useVoice = create<VoiceState>((set, get) => {
 
         // Le son du partage, quand la source en fournit. Il voyage dans le meme
         // flux que l'image : le separer obligerait a resynchroniser a l'arrivee.
-        const [audioTrack] = display.getAudioTracks();
+        let [audioTrack] = display.getAudioTracks();
+
+        /*
+         * Si la fenetre de selection n'a pas donne le son, on le prend ailleurs.
+         *
+         * Voir `sonSysteme.ts` : `getDisplayMedia` n'accorde l'audio que par une
+         * case qui vit dans la fenetre du systeme, celle que nous remplacons par
+         * la notre. Le detour par les contraintes heritees de Chromium capture
+         * la sortie de l'ordinateur sans rien afficher.
+         *
+         * La piste rejoint le flux du partage plutot que de vivre a part :
+         * l'emission, l'annonce et l'arret la traitent alors comme si elle
+         * venait de la, sans un seul cas particulier ailleurs.
+         */
+        if (!audioTrack && useDevices.getState().media.shareSystemAudio) {
+          const secours = await capturerSonSysteme();
+          const pisteSecours = secours?.getAudioTracks()[0];
+
+          if (pisteSecours) {
+            display.addTrack(pisteSecours);
+            audioTrack = pisteSecours;
+          }
+        }
 
         /*
          * Le son demande n'est pas toujours accorde, et cela ne se voit pas.

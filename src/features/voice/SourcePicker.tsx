@@ -70,29 +70,15 @@ export function SourcePicker({
         await invoke('regler_son_systeme', {
           actif: useDevices.getState().media.shareSystemAudio,
         });
-        setSonPossible(await invoke<boolean>('son_systeme_disponible'));
+
       })
-      .catch(() => setSonPossible(null));
+      .catch(() => undefined);
   }, [open]);
 
   const media = useDevices((state) => state.media);
   const setMedia = useDevices((state) => state.setMedia);
 
   const [sources, setSources] = useState<Source[] | null>(null);
-  /*
-   * Ce que le lancement a reellement decide, demande au lanceur.
-   *
-   * La version precedente le devinait depuis le reglage enregistre, et se
-   * trompait : l'application suppose que le son est demande par defaut, le
-   * lanceur suppose l'inverse tant qu'aucun fichier ne dit le contraire. Les
-   * deux valeurs par defaut ne s'accordaient pas, et l'avertissement
-   * n'apparaissait donc jamais — on cochait une case deja cochee, rien n'etait
-   * ecrit, et rien ne changeait au redemarrage.
-   *
-   * `null` tant que la reponse n'est pas arrivee, ou hors application de
-   * bureau : on n'affirme rien dans ce cas.
-   */
-  const [sonPossible, setSonPossible] = useState<boolean | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [onglet, setOnglet] = useState<'ecran' | 'fenetre'>('ecran');
   const [choisie, setChoisie] = useState<string | null>(null);
@@ -329,33 +315,6 @@ export function SourcePicker({
             />
             Partager le son de l&rsquo;ordinateur
           </label>
-
-          {/*
-            L'ecart entre ce qui est demande et ce que ce lancement permet.
-            C'est une comparaison, pas une supposition : `sonPossible` vient du
-            lanceur lui-meme.
-          */}
-          {sonPossible !== null && media.shareSystemAudio !== sonPossible ? (
-            <p className="picker__avertissement" role="status">
-              <Icon name="refresh" size={14} />
-              <span>
-                {media.shareSystemAudio ? (
-                  <>
-                    Relancez Quality pour que le son parte avec l&rsquo;image.
-                    Windows n&rsquo;accorde le son que par sa propre fenetre de
-                    selection : celle-ci reviendra donc a la place de cette
-                    liste. C&rsquo;est l&rsquo;un ou l&rsquo;autre, et le choix
-                    vous appartient.
-                  </>
-                ) : (
-                  <>
-                    Relancez Quality pour retrouver ce selecteur a la place de
-                    la fenetre de Windows.
-                  </>
-                )}
-              </span>
-            </p>
-          ) : null}
         </div>
       </div>
     </Modal>
