@@ -1099,3 +1099,130 @@ button.voice-tile__name:hover {
   background: var(--accent);
   color: var(--text-on-accent);
 }
+
+/* --------------------------------------------------------------------------
+   Replier les participants
+   -------------------------------------------------------------------------- */
+
+/*
+ * La fleche vit entre le partage et les visages, au milieu.
+ *
+ * C'est la que se trouve la limite qu'elle deplace : la poser dans un coin
+ * obligerait a chercher ce qu'elle commande.
+ */
+.voice-stage__replier {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 22px;
+  margin: calc(var(--space-2) * -1) 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.voice-stage__replier:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Replies, les participants disparaissent et leur place revient au partage. */
+.voice-grid.is-replie {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Commandes du partage, en bas a droite
+   -------------------------------------------------------------------------- */
+
+.screen-tile__actions {
+  top: auto;
+  bottom: var(--space-3);
+  right: var(--space-3);
+}
+
+/*
+ * Visibles en permanence sur un partage qu'on regarde.
+ *
+ * Elles n'apparaissaient qu'au survol : pour agrandir, il fallait deja savoir
+ * qu'il y avait quelque chose a survoler. Sur la vignette d'une grille, le
+ * survol reste un bon compromis ; sur l'image qu'on regarde, non.
+ */
+.voice-stage__focus .screen-tile__actions {
+  opacity: 1;
+}
+
+.screen-tile__action {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, #000 62%, transparent);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.screen-tile__action:hover {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+:root[data-perf='on'] .screen-tile__action {
+  backdrop-filter: none;
+}
+
+/* --------------------------------------------------------------------------
+   La barre de commandes : plus grande, plus discrete
+   --------------------------------------------------------------------------
+   Les commandes grandissent — on les vise en pleine conversation, parfois sans
+   regarder — pendant que la barre qui les porte se resserre et s'efface. C'est
+   l'inverse du reglage precedent, ou une barre epaisse encadrait des boutons
+   trop petits pour ce qu'ils font.
+   -------------------------------------------------------------------------- */
+
+.voice-controls {
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  /* Du verre plutot qu'un aplat : la barre flotte au-dessus du partage, et
+     l'image continue de vivre derriere elle. */
+  background: color-mix(in oklab, var(--bg-raised) 62%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid color-mix(in oklab, #fff 10%, transparent);
+  box-shadow: var(--shadow-lg);
+}
+
+.voice-controls .icon-btn {
+  width: 52px;
+  height: 52px;
+}
+
+.voice-controls .icon-btn svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* Le bouton de sortie reste distinct : c'est le seul de la barre dont on ne
+   revient pas d'un second clic. */
+.voice-controls .btn--danger {
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-full);
+}
+
+:root[data-transparency='off'] .voice-controls,
+:root[data-perf='on'] .voice-controls {
+  background: var(--bg-raised);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

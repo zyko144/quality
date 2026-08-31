@@ -221,20 +221,11 @@ jobs:
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
           releaseBody: |
-            Les tuiles du salon vocal sont assez grandes pour qu'on puisse cliquer « Regarder ».
+            Une fleche entre le partage et les participants replie les visages et rend leur place a l'image.
+            Un bouton en bas a droite du partage l'agrandit ; il ne recouvre plus la barre de titre de ce qui est montre.
+            Les commandes du salon vocal grandissent, et la barre qui les porte se resserre et passe au verre.
             Un clic sur un partage l'agrandit, un second le remet dans la grille.
             Un bouton dans Avance dit si une mise a jour existe, au lieu de rester muet.
-            Appels prives : on peut s'appeler depuis une conversation, sans passer par un salon vocal.
-            Le son ne se coupe plus quand on quitte le salon vocal des yeux.
-            Le partage rend a nouveau ses soixante images par seconde.
-            Isolation de la voix : clavier, chien et conversations voisines disparaissent.
-            Mode performance, pour jouer sans que l'interface occupe la carte graphique.
-            Les salons se rangent en les glissant.
-            Deconnecter quelqu'un d'un salon vocal, depuis son menu.
-            Roles et permissions, avec couleurs et attribution depuis une fiche.
-            Icone et banniere pour les espaces.
-          releaseDraft: false
-          prerelease: false
 
       - uses: actions/upload-artifact@v4
         if: steps.version.outputs.publier == 'oui'

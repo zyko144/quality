@@ -25,6 +25,7 @@ export function VoiceStage({ channel }: { channel: Channel }) {
   const profiles = useChat((state) => state.profiles);
   const openModal = useUI((state) => state.openModal);
   const [panneauPartage, setPanneauPartage] = useState(false);
+  const [participantsReplies, setParticipantsReplies] = useState(false);
 
   const channelId = useVoice((state) => state.channelId);
   const connecting = useVoice((state) => state.connecting);
@@ -171,7 +172,30 @@ export function VoiceStage({ channel }: { channel: Channel }) {
         </div>
       ) : null}
 
-      <ul className="voice-grid">
+      {/*
+        Replier les participants.
+        Quand on regarde un partage, les visages ne servent plus qu'a savoir
+        qui est la — information qu'on a deja apres deux secondes. La fleche
+        rend leur place a l'image, et la rappelle d'un second clic.
+      */}
+      {screenShares.length > 0 ? (
+        <button
+          type="button"
+          className="voice-stage__replier"
+          onClick={() => setParticipantsReplies((replie) => !replie)}
+          title={
+            participantsReplies ? 'Afficher les participants' : 'Masquer les participants'
+          }
+          aria-expanded={!participantsReplies}
+        >
+          <Icon name={participantsReplies ? 'chevron-down' : 'chevron-up'} size={16} />
+          <span className="visually-hidden">
+            {participantsReplies ? 'Afficher les participants' : 'Masquer les participants'}
+          </span>
+        </button>
+      ) : null}
+
+      <ul className={'voice-grid' + (participantsReplies ? ' is-replie' : '')}>
         {participants.map((participant) => {
           const person = profiles[participant.user_id];
           const isMe = participant.user_id === profile?.id;
@@ -495,6 +519,12 @@ function ScreenTile({
         {label}
       </figcaption>
 
+      {/*
+        Les commandes passent en bas a droite.
+        En haut, elles recouvraient la barre de titre de ce qui est partage —
+        souvent la seule facon de savoir de quelle fenetre il s'agit. En bas, le
+        coin est presque toujours vide.
+      */}
       <div className="screen-tile__actions">
         {onToggleFocus ? (
           <button
@@ -504,7 +534,7 @@ function ScreenTile({
             title={focused ? 'Reduire' : 'Agrandir'}
             aria-label={focused ? 'Reduire le partage' : 'Agrandir le partage'}
           >
-            <Icon name={focused ? 'minus' : 'plus'} size={15} />
+            <Icon name={focused ? 'minus' : 'expand'} size={15} />
           </button>
         ) : null}
 
