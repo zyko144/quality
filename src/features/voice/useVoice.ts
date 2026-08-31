@@ -1050,15 +1050,25 @@ export const useVoice = create<VoiceState>((set, get) => {
         /*
          * Voix ou son de partage ?
          *
-         * Le flux porte deja la reponse : `streamPurposes` est renseigne par
-         * l'annonce qui accompagne tout partage. Une piste audio arrivant sur
-         * un flux annonce comme ecran est le son de ce qui est montre, pas la
-         * voix de qui le montre.
+         * Le micro est emis seul : son flux ne porte que de l'audio. Un partage
+         * d'ecran avec le son, lui, emet ses deux pistes sur un meme flux —
+         * c'est `addTrack(piste, display)` des deux cotes. La presence d'une
+         * piste video dans le flux suffit donc a trancher.
          *
-         * Sans cette distinction, les deux se rangeaient au meme endroit et le
-         * second effacait le premier.
+         * Ce test remplace une lecture de `streamPurposes`, qui dependait de
+         * l'ordre d'arrivee : l'annonce du partage voyage par le canal de
+         * signalisation, la piste par la connexion media, et rien ne garantit
+         * laquelle arrive d'abord. Quand l'audio precedait l'annonce, il etait
+         * pris pour une voix et ecrasait le micro — le son du partage
+         * n'arrivait pas, et la voix de qui partage disparaissait avec.
+         *
+         * `streamPurposes` reste consulte en second : un partage sans son n'a
+         * pas de piste audio, mais une camera avec micro pourrait un jour en
+         * avoir une.
          */
-        if (streamPurposes.get(stream.id) === 'screen') {
+        const porteDeLaVideo = stream.getVideoTracks().length > 0;
+
+        if (porteDeLaVideo || streamPurposes.get(stream.id) === 'screen') {
           set((state) => ({
             remoteScreenAudio: { ...state.remoteScreenAudio, [peerId]: stream },
           }));

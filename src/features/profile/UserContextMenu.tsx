@@ -19,9 +19,12 @@ import type { UUID } from '@/types/db';
 function VolumeSlider({
   userId,
   genre = 'voix',
+  muet = false,
 }: {
   userId: UUID;
   genre?: 'voix' | 'partage';
+  /** Le partage n'emet pas de son : le curseur s'affiche, mais n'a rien a regler. */
+  muet?: boolean;
 }) {
   const volumeVoix = useUserAudio((s) => s.getVolume(userId));
   const volumePartage = useUserAudio((s) => s.getStreamVolume(userId));
@@ -35,7 +38,14 @@ function VolumeSlider({
   const [local, setLocal] = useState(volume);
 
   return (
-    <div className="ctx-volume">
+    <div
+      className={'ctx-volume' + (muet ? ' is-muet' : '')}
+      title={
+        muet
+          ? 'Ce partage n’envoie pas de son. C’est un reglage de la personne qui partage.'
+          : undefined
+      }
+    >
       <Icon name={genre === 'voix' ? 'volume' : 'screen'} size={14} />
       <input
         type="range"
@@ -44,6 +54,7 @@ function VolumeSlider({
         max={200}
         step={1}
         value={local}
+        disabled={muet}
         onChange={(e) => {
           /*
            * Le curseur s'aimante sur cent pour cent.
@@ -142,9 +153,17 @@ export function UserContextMenu({
   const dansMonVocal =
     userId !== me?.id && (participants ?? []).some((p) => p.user_id === userId);
 
-  // Un son de partage recu de cette personne : c'est la seule situation ou un
-  // curseur pour ce son a quelque chose a regler.
-  const partageEnCours = useVoice((state) => Boolean(state.remoteScreenAudio[userId]));
+  /*
+   * Deux etats a distinguer : la personne partage-t-elle, et son partage
+   * porte-t-il du son ?
+   *
+   * N'afficher le curseur que dans le second cas laissait sans reponse la
+   * question « pourquoi n'y a-t-il pas de barre de volume ? ». Un curseur
+   * grise qui dit pourquoi vaut mieux qu'un curseur absent : le partage sans
+   * son est une case a cocher du cote de qui partage, et rien ne le disait.
+   */
+  const partageEnCours = useVoice((state) => Boolean(state.remoteScreens[userId]));
+  const partageAvecSon = useVoice((state) => Boolean(state.remoteScreenAudio[userId]));
 
   /*
    * Les autres salons vocaux du meme espace.
@@ -235,7 +254,7 @@ export function UserContextMenu({
     if (partageEnCours) {
       entrees.push({
         id: 'volume-partage',
-        custom: <VolumeSlider userId={userId} genre="partage" />,
+        custom: <VolumeSlider userId={userId} genre="partage" muet={!partageAvecSon} />,
       });
     }
 

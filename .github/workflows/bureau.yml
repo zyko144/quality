@@ -107,6 +107,45 @@ jobs:
       #
       # Aucune valeur n'est affichee — seulement leur presence.
       # ----------------------------------------------------------------------
+      # ----------------------------------------------------------------------
+      # Les notes de version viennent de `NOUVEAUTES.md`.
+      #
+      # Le meme fichier alimente le message affiche dans l'application au
+      # premier lancement qui suit une mise a jour. Les ecrire a deux endroits
+      # garantissait qu'ils finiraient par diverger — et c'est la page publique
+      # qui aurait raison contre l'application, ou l'inverse, sans qu'on sache
+      # lequel.
+      # ----------------------------------------------------------------------
+      - name: Notes de version
+        id: notes
+        if: steps.version.outputs.publier == 'oui'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+
+          # `awk` decoupe sur les titres : la section commence au titre voulu et
+          # s'arrete au suivant.
+          texte=$(awk -v v="## $version" '
+            $0 == v { dedans = 1; next }
+            /^## / { dedans = 0 }
+            dedans { print }
+          ' NOUVEAUTES.md)
+
+          if [ -z "$(printf '%s' "$texte" | tr -d '[:space:]')" ]; then
+            echo "::error::Aucune section « ## $version » dans NOUVEAUTES.md."
+            echo "Ajoutez-la : elle sert a la fois a la release et au message affiche dans l'application."
+            exit 1
+          fi
+
+          {
+            echo 'texte<<FIN_DES_NOTES'
+            printf '%s
+' "$texte"
+            echo 'FIN_DES_NOTES'
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Notes trouvees pour $version."
+
       - name: Verifier les secrets
         if: steps.version.outputs.publier == 'oui'
         shell: bash
@@ -224,12 +263,7 @@ jobs:
           # Ces lignes deviennent la liste que l'application montre au
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
-          releaseBody: |
-            Une vraie suppression du bruit : RNNoise retire le clavier, la chaise et le ventilateur PENDANT qu'on parle, la ou une porte ne sait que couper entre les phrases.
-            La case « Isolation de la voix » etait sans effet : le moteur l'annonce supportee puis la refuse. Elle est remplacee par le traitement ci-dessus.
-            Un seul ecran de demarrage, enfin : un second attendait le chargement des espaces derriere le premier.
-            Le son des partages d'ecran s'entend, avec son propre curseur — il n'apparait que lorsque la personne partage effectivement du son.
-            Le curseur de volume fonctionne et suit une courbe perceptive ; au-dela de cent pour cent il amplifie reellement.
+          releaseBody: ${{ steps.notes.outputs.texte }}
 
       - uses: actions/upload-artifact@v4
         if: steps.version.outputs.publier == 'oui'

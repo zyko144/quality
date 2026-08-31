@@ -50,8 +50,13 @@ export const useMajEtat = create<{
   chercher: () => set({ etat: 'inconnu', detail: null }),
 }));
 
-/** Version pour laquelle les nouveautes ont deja ete montrees. */
-const CLE_VUE = 'quality:notes-vues';
+/**
+ * Derniere version dont les nouveautes ont ete montrees.
+ *
+ * Une cle neuve : l'ancienne contenait un objet, et la relire produirait une
+ * comparaison de version contre du JSON.
+ */
+const CLE_VUE = 'quality:version-vue';
 
 interface Disponible {
   version: string;
@@ -67,21 +72,55 @@ export function MiseAJour() {
   /*
    * Ce qui a change depuis la derniere fois.
    *
-   * Les notes sont rangees au moment de l'installation, et relues au demarrage
-   * suivant : c'est le seul instant ou l'on est disponible pour les lire.
+   * On compare la version qui tourne a la derniere vue, et les notes sont
+   * embarquees dans le binaire — voir `NOUVEAUTES.md` et `vite.config.ts`.
+   *
+   * La version precedente rangeait les notes AU MOMENT de l'installation, dans
+   * le bouton « Installer ». C'etait le defaut : qui met a jour en lancant le
+   * setup a la main ne passe jamais par ce bouton, si bien que rien n'etait
+   * range et que le message ne s'affichait jamais. Or c'est exactement ainsi
+   * que les premieres versions ont ete installees.
+   *
+   * Comparer les versions marche quel que soit le chemin emprunte, y compris
+   * une reinstallation complete.
    */
   useEffect(() => {
+    if (!__APP_NOTES__.trim()) return;
+
     try {
-      const brut = localStorage.getItem(CLE_VUE);
-      if (!brut) return;
+      const vue = localStorage.getItem(CLE_VUE);
 
-      const range = JSON.parse(brut) as { version: string; notes: string; montre: boolean };
-      if (range.montre || !range.notes.trim()) return;
+      /*
+       * Absence de cle : premier lancement, ou premiere version a savoir la
+       * poser ?
+       *
+       * Les deux se ressemblent et demandent l'inverse l'une de l'autre. Sans
+       * distinction, la version qui introduit ce mecanisme se prend pour une
+       * premiere installation et n'affiche rien — il faudrait attendre la
+       * suivante pour voir le message, ce qui est precisement le defaut qu'on
+       * corrige.
+       *
+       * La presence d'autres reglages tranche : quelqu'un qui ouvre
+       * l'application pour la premiere fois n'a rien enregistre.
+       */
+      if (vue === null) {
+        const dejaVenu = Object.keys(localStorage).some(
+          (cle) => cle.startsWith('quality:') || cle.startsWith('orbit:'),
+        );
 
-      setNouveautes({ version: range.version, notes: range.notes });
-      localStorage.setItem(CLE_VUE, JSON.stringify({ ...range, montre: true }));
+        localStorage.setItem(CLE_VUE, __APP_VERSION__);
+        if (!dejaVenu) return;
+
+        setNouveautes({ version: __APP_VERSION__, notes: __APP_NOTES__ });
+        return;
+      }
+
+      if (vue === __APP_VERSION__) return;
+
+      setNouveautes({ version: __APP_VERSION__, notes: __APP_NOTES__ });
+      localStorage.setItem(CLE_VUE, __APP_VERSION__);
     } catch {
-      // Stockage indisponible : on se passe des notes plutot que d'echouer.
+      // Stockage indisponible : on se passe du message plutot que d'echouer.
     }
   }, []);
 
@@ -113,17 +152,8 @@ export function MiseAJour() {
             setInstallation('cours');
             await mise.downloadAndInstall();
 
-            // Rangees maintenant : au prochain lancement, l'application les
-            // trouvera et les montrera.
-            try {
-              localStorage.setItem(
-                CLE_VUE,
-                JSON.stringify({ version: mise.version, notes: mise.body ?? '', montre: false }),
-              );
-            } catch {
-              // Sans stockage, on perd les notes. Rien de plus.
-            }
-
+            // Rien a ranger : la version installee porte ses propres notes, et
+            // les montrera d'elle-meme au prochain lancement.
             setInstallation('prete');
           },
         });

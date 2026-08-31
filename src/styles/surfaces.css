@@ -1591,3 +1591,14 @@
 .membre-roles__option:hover {
   background: var(--bg-hover);
 }
+
+/* Un curseur de partage sans son : visible, mais rendu inerte. Le laisser
+   disparaitre ne repondait pas a la question « pourquoi n'y a-t-il pas de
+   barre ? », qui est la premiere qu'on se pose. */
+.ctx-volume.is-muet {
+  opacity: 0.5;
+}
+
+.ctx-volume.is-muet .ctx-volume__slider {
+  cursor: not-allowed;
+}
