@@ -182,6 +182,19 @@ jobs:
           # et le `latest.json` que l'application interroge au demarrage.
           tagName: v__VERSION__
           releaseName: Quality v__VERSION__
+          # Ces lignes deviennent la liste que l'application montre au
+          # redemarrage : elles doivent donc parler de ce qui change pour qui
+          # utilise le logiciel, pas de ce qui change dans le code.
+          releaseBody: |
+            Appels prives : on peut s'appeler depuis une conversation, sans passer par un salon vocal.
+            Le son ne se coupe plus quand on quitte le salon vocal des yeux.
+            Le partage rend a nouveau ses soixante images par seconde.
+            Isolation de la voix : clavier, chien et conversations voisines disparaissent.
+            Mode performance, pour jouer sans que l'interface occupe la carte graphique.
+            Les salons se rangent en les glissant.
+            Deconnecter quelqu'un d'un salon vocal, depuis son menu.
+            Roles et permissions, avec couleurs et attribution depuis une fiche.
+            Icone et banniere pour les espaces.
           releaseDraft: false
           prerelease: false
 
