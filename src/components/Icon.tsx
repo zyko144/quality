@@ -72,6 +72,9 @@ const PATHS = {
     'M3 7h3l2-2h8l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
   image: 'M3 4h18v16H3Z M3 16l5-5 4 4 3-3 6 6 M9 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
   bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9 M13.7 21a2 2 0 0 1-3.4 0',
+  // Chemise a onglet : sert aux categories, qui rangent des salons comme une
+  // chemise range des feuilles.
+  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z',
   'bell-off': 'M2 2l20 20 M8.7 3.7A6 6 0 0 1 18 8c0 2.3.3 4.1.8 5.4 M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h13 M13.7 21a2 2 0 0 1-3.4 0',
   moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z',
   sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',

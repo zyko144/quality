@@ -219,9 +219,39 @@ export function playCue(cue: Cue): void {
  */
 let sonnerie: number | null = null;
 
-const MOTIF: Note[] = [
-  { degre: 3, debut: 0, duree: 0.22, gain: 0.42 },
-  { degre: 5, debut: 0.26, duree: 0.3, gain: 0.42 },
+/*
+ * Une gamme a part, deux octaves plus bas.
+ *
+ * La gamme des signaux commence au do4 : c'est fait pour percer une
+ * conversation sans la couvrir. Une sonnerie n'a pas ce probleme — quand elle
+ * sonne, personne ne parle — et ce registre lui donnait un timbre de minuterie
+ * de four. Descendue vers le sol1, elle porte a travers une piece.
+ */
+const GRAVE = {
+  sol1: 49.0,
+  do2: 65.41,
+  re2: 73.42,
+  fa2: 87.31,
+  sol2: 98.0,
+  sib2: 116.54,
+};
+
+/*
+ * Le motif : deux appuis, puis une reponse decalee.
+ *
+ * Une pulsation reguliere donne une alarme. Le contretemps du troisieme coup
+ * — pose entre deux temps plutot que dessus — est ce qui fait entendre un
+ * rythme plutot qu'un signal, et c'est ce qu'on reconnait sans y penser.
+ */
+const MOTIF: { hz: number; debut: number; duree: number; gain: number }[] = [
+  { hz: GRAVE.do2, debut: 0, duree: 0.16, gain: 0.55 },
+  { hz: GRAVE.do2, debut: 0.2, duree: 0.14, gain: 0.4 },
+  { hz: GRAVE.sol2, debut: 0.46, duree: 0.2, gain: 0.5 },
+  { hz: GRAVE.fa2, debut: 0.72, duree: 0.16, gain: 0.42 },
+  { hz: GRAVE.re2, debut: 0.9, duree: 0.3, gain: 0.5 },
+  // La basse qui tient sous le motif : c'est elle qu'on sent plus qu'on
+  // n'entend, et qui fait la difference entre une sonnerie et un bip.
+  { hz: GRAVE.sol1, debut: 0, duree: 1.2, gain: 0.28 },
 ];
 
 function jouerMotif(): void {
@@ -234,8 +264,10 @@ function jouerMotif(): void {
     const oscillateur = ctx.createOscillator();
     const enveloppe = ctx.createGain();
 
-    oscillateur.type = 'triangle';
-    oscillateur.frequency.value = GAMME[note.degre] ?? GAMME[0]!;
+    // Onde sinusoidale dans le grave : le triangle y produit des harmoniques
+    // qui grattent sur de petits haut-parleurs.
+    oscillateur.type = 'sine';
+    oscillateur.frequency.value = note.hz;
 
     const t0 = depart + note.debut;
     const t1 = t0 + note.duree;
@@ -258,7 +290,8 @@ export function startRing(): void {
   jouerMotif();
   // Deux secondes entre deux motifs : le rythme d'un telephone, assez espace
   // pour qu'on puisse s'entendre parler entre deux.
-  sonnerie = window.setInterval(jouerMotif, 2000);
+  // Le motif dure 1,2 s ; la respiration qui suit fait partie du rythme.
+  sonnerie = window.setInterval(jouerMotif, 1800);
 }
 
 export function stopRing(): void {

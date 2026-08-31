@@ -179,6 +179,12 @@ export function VoiceSettings() {
           onChange={(value) => setMedia('voiceIsolation', value)}
         />
         <SwitchRow
+          label="Porte de bruit"
+          hint="Coupe le micro entre les phrases. La reduction de bruit travaille pendant que vous parlez ; elle ne fait rien du fond sonore qui reste entre les mots — or c'est celui-la que les autres entendent toute la journee. Le seuil suit celui du detecteur de parole."
+          checked={media.noiseGate}
+          onChange={(value) => setMedia('noiseGate', value)}
+        />
+        <SwitchRow
           label="Gain automatique"
           hint="Egalise le niveau de votre voix. A couper si vous utilisez deja un compresseur."
           checked={media.autoGainControl}

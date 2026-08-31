@@ -225,14 +225,14 @@ jobs:
           # redemarrage : elles doivent donc parler de ce qui change pour qui
           # utilise le logiciel, pas de ce qui change dans le code.
           releaseBody: |
-            Le son de la voix double de debit, et un mode Musique monte a 128 kb/s en stereo.
-            Les reglages du micro — reduction de bruit, echo, isolation — s'appliquent enfin en cours d'appel, au lieu d'attendre la prochaine connexion.
-            La liste des salons montre qui discute, dans tous les serveurs, avant d'y entrer.
-            Un appel dans une conversation privee fait sonner, avec de quoi repondre ou refuser.
-            « Ne pas deranger » fait taire sonnerie et notifications, ce qu'il ne faisait pas.
-            Le plein ecran ne laisse plus de bande en bas, et la photo cesse d'etre demesuree quand on est seul.
-            Le bouton d'appel grandit et porte un combine.
-            L'application cherche une mise a jour toutes les quinze minutes, sans attendre un redemarrage.
+            Une vraie porte de bruit coupe le micro entre les phrases : le fond sonore disparait au lieu d'etre seulement attenue.
+            Les reglages du serveur passent de quatre onglets a sept : Membres, Salons et Mes preferences s'ajoutent.
+            La liste des membres se cherche et se filtre — en ligne, en vocal, sans role.
+            Chaque serveur se met en sourdine, choisit ce qui compte comme non-lu, et prend une teinte.
+            Creer un role marche plus d'une fois : le nom propose etait toujours le meme, et la base refusait le doublon en jargon.
+            La pastille d'un serveur montre qui est en vocal sans avoir a l'ouvrir, et signale un partage en cours.
+            La sonnerie descend de deux octaves et prend un rythme, au lieu du timbre de minuterie de four.
+            Refuser un appel raccroche chez l'appelant, qui restait seul dans un salon vide.
 
       - uses: actions/upload-artifact@v4
         if: steps.version.outputs.publier == 'oui'

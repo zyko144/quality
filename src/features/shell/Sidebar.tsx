@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { useSession } from '@/store/session';
 import { useVoice } from '@/features/voice/useVoice';
+import { useSpacePrefs } from '@/store/spacePrefs';
 import { Icon } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
 import { formatRelative } from '@/lib/time';
@@ -92,42 +93,6 @@ export function Sidebar() {
     [categories, activeSpaceId],
   );
 
-  /*
-   * Qui parle, et ou, avant meme d'y entrer.
-   *
-   * La presence n'etait lue que pour le salon rejoint : ailleurs, la liste
-   * paraissait vide, et le seul moyen de savoir si quelqu'un attendait quelque
-   * part etait d'aller voir — c'est-a-dire de s'y connecter, avec le bruit
-   * d'arrivee que cela suppose.
-   *
-   * L'ecoute suit le salon rejoint : en entrant quelque part, ce salon sort de
-   * la liste observee, son propre canal prenant le relais.
-   */
-  const observerSalons = useVoice((state) => state.observerSalons);
-  const salonRejoint = useVoice((state) => state.channelId);
-
-  const salonsVocaux = useMemo(
-    () => [
-      ...spaceChannels.filter((channel) => channel.kind === 'voice').map((channel) => channel.id),
-      /*
-       * Les conversations privees sont ecoutees en permanence.
-       *
-       * Une privee est un salon vocal comme un autre : quelqu'un qui y entre
-       * appelle. Sans cette ecoute, la sonnerie ne se declencherait que pour la
-       * conversation deja ouverte a l'ecran — c'est-a-dire quand on n'a pas
-       * besoin d'etre prevenu.
-       */
-      ...channels.filter((channel) => channel.space_id === null).map((channel) => channel.id),
-    ],
-    [spaceChannels, channels],
-  );
-
-  useEffect(() => {
-    observerSalons(salonsVocaux);
-    // Quitter l'espace ferme les ecoutes : rien ne sert d'entendre les salons
-    // d'un serveur qu'on ne regarde plus.
-    return () => observerSalons([]);
-  }, [salonsVocaux, salonRejoint, observerSalons]);
 
   // Fils encore ouverts de cet espace, les plus recents en premier. C'est la
   // section qui remplace la chasse au message perdu dans l'historique.
@@ -406,6 +371,13 @@ function ChannelItem({
   const participants = useVoice((state) =>
     channel.kind === 'voice' ? state.participantsByChannel[channel.id] : undefined,
   );
+
+  // Sous chaque salon vocal, qui s'y trouve — sauf si l'on a demande le
+  // contraire pour ce serveur : sur une longue liste, ces vignettes repoussent
+  // les salons texte hors de l'ecran.
+  const apercuVocal = useSpacePrefs((state) =>
+    channel.space_id ? state.pour(channel.space_id).apercuVocal : true,
+  );
   const openModal = useUI((state) => state.openModal);
   const deleteChannel = useChat((state) => state.deleteChannel);
   const menu = useContextMenu();
@@ -538,7 +510,7 @@ function ChannelItem({
         ) : null}
       </button>
 
-      {channel.kind === 'voice' && participants && participants.length > 0 ? (
+      {channel.kind === 'voice' && apercuVocal && participants && participants.length > 0 ? (
         <ul className="channel__voice">
           {menuMembre ? (
             <UserContextMenu

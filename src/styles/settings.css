@@ -1001,3 +1001,141 @@
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
 }
+
+/* ==========================================================================
+   Membres, salons : deux listes de reglages
+   ========================================================================== */
+
+.membres__barre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.membres__recherche {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 200px;
+  color: var(--text-muted);
+}
+
+.membres__recherche .input { flex: 1; }
+
+.membres__filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.membres__liste,
+.salons__liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.membres__ligne,
+.salons__ligne {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+.membres__ligne:hover,
+.salons__ligne:hover { background: var(--bg-hover); }
+
+.membres__identite {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.membres__noms { display: grid; min-width: 0; }
+.membres__nom { font-weight: 600; color: var(--text-primary); }
+.membres__handle { font-size: var(--text-sm); color: var(--text-muted); }
+
+.membres__marques {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.membres__rang {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Une puce compacte : le nom d'un role tient dedans sans peser autant qu'un
+   bouton. */
+.chip--sm {
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+}
+
+.salons__entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.salons__nom {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+
+.salons__champ { flex: 1; min-width: 0; }
+
+.salons__categorie {
+  min-width: 0;
+  max-width: 30%;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.salons__actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.icon-btn--sm { width: 28px; height: 28px; }
+
+/* Les onglets d'un serveur sont maintenant sept : ils defilent plutot que de
+   se comprimer jusqu'a l'illisible. */
+.mod-tabs {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.mod-tabs .mod-tab { flex: none; white-space: nowrap; }

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { Icon } from '@/components/Icon';
 import { RolesPanel } from './RolesPanel';
+import { MembresPanel } from './MembresPanel';
+import { SalonsPanel } from './SalonsPanel';
+import { PreferencesEspace } from './PreferencesEspace';
 import { supabase, errorMessage } from '@/lib/supabase';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
@@ -10,7 +13,14 @@ import { uploadSpaceImage } from '@/lib/upload';
 import { useSession } from '@/store/session';
 import type { UUID } from '@/types/db';
 
-type Tab = 'general' | 'categories' | 'roles' | 'danger';
+type Tab =
+  | 'general'
+  | 'membres'
+  | 'salons'
+  | 'categories'
+  | 'roles'
+  | 'preferences'
+  | 'danger';
 
 /**
  * Parametres d'un espace.
@@ -216,8 +226,11 @@ export function SpaceSettings({
         {(
           [
             ['general', 'General', 'settings'],
-            ['categories', 'Categories', 'hash'],
+            ['membres', 'Membres', 'users'],
+            ['salons', 'Salons', 'hash'],
+            ['categories', 'Categories', 'folder'],
             ['roles', 'Roles', 'shield'],
+            ['preferences', 'Mes preferences', 'bell'],
             ['danger', 'Zone sensible', 'trash'],
           ] as const
         ).map(([id, label, icon]) => (
@@ -449,7 +462,15 @@ export function SpaceSettings({
         </>
       ) : null}
 
+      {tab === 'membres' && spaceId ? (
+        <MembresPanel spaceId={spaceId} peutGerer={rank >= 2} />
+      ) : null}
+
+      {tab === 'salons' && spaceId ? <SalonsPanel spaceId={spaceId} /> : null}
+
       {tab === 'roles' && spaceId ? <RolesPanel spaceId={spaceId} /> : null}
+
+      {tab === 'preferences' && spaceId ? <PreferencesEspace spaceId={spaceId} /> : null}
 
       {tab === 'danger' ? (
         <div className="danger-zone">

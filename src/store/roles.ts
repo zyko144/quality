@@ -112,7 +112,7 @@ interface RolesState {
   error: string | null;
 
   /** Charge roles et attributions d'un espace. Sans effet si deja charge. */
-  loadSpace: (spaceId: UUID) => Promise<void>;
+  loadSpace: (spaceId: UUID, forcer?: boolean) => Promise<void>;
   getSpaceRoles: (spaceId: UUID) => CustomRole[];
   getMemberRoleIds: (spaceId: UUID, userId: UUID) => string[];
   /** Role le mieux place parmi ceux portes : c'est lui qui donne la couleur. */
@@ -150,8 +150,11 @@ export const useRoles = create<RolesState>((set, get) => ({
   loading: {},
   error: null,
 
-  loadSpace: async (spaceId) => {
-    if (get().roles[spaceId] || get().loading[spaceId]) return;
+  loadSpace: async (spaceId, forcer = false) => {
+    // Sans `forcer`, on ne recharge pas : la liste ne bouge presque jamais, et
+    // la relire a chaque ouverture de fiche ferait un aller-retour pour rien.
+    if (get().loading[spaceId]) return;
+    if (!forcer && get().roles[spaceId]) return;
 
     set((state) => ({ loading: { ...state.loading, [spaceId]: true } }));
 
@@ -197,11 +200,27 @@ export const useRoles = create<RolesState>((set, get) => ({
     const existants = get().getSpaceRoles(spaceId);
     const position = existants.reduce((haut, role) => Math.max(haut, role.position), 0) + 1;
 
+    /*
+     * Le nom est rendu unique avant l'envoi.
+     *
+     * Deux roles ne peuvent pas porter le meme nom dans un espace — la base y
+     * veille, et elle a raison : un role sert a etre designe. Mais le bouton
+     * proposait toujours « Nouveau role », si bien qu'il ne marchait qu'une
+     * fois : au second clic, la base renvoyait « duplicate key value violates
+     * unique constraint », affiche tel quel. On avait un bouton qui echouait
+     * en jargon, et rien qui explique quoi faire.
+     */
+    const pris = new Set(existants.map((role) => role.name.toLowerCase()));
+    let nomLibre = name;
+    for (let suffixe = 2; pris.has(nomLibre.toLowerCase()); suffixe += 1) {
+      nomLibre = `${name} ${suffixe}`;
+    }
+
     const { data, error } = await supabase
       .from('roles')
       .insert({
         space_id: spaceId,
-        name,
+        name: nomLibre,
         color,
         position,
         // Le minimum pour qu'un nouveau role ne soit pas une coquille vide :
@@ -212,7 +231,13 @@ export const useRoles = create<RolesState>((set, get) => ({
       .single();
 
     if (error || !data) {
-      set({ error: errorMessage(error) });
+      // Le doublon reste possible si quelqu'un d'autre a cree le meme nom
+      // entre-temps. Le dire en francais vaut mieux que de recopier Postgres.
+      set({
+        error: error?.message.includes('roles_space_id_name_key')
+          ? 'Un role porte deja ce nom dans cet espace.'
+          : errorMessage(error),
+      });
       return null;
     }
 

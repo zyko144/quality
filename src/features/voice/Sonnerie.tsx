@@ -33,6 +33,7 @@ export function Sonnerie() {
   const salonRejoint = useVoice((state) => state.channelId);
   const connecting = useVoice((state) => state.connecting);
   const join = useVoice((state) => state.join);
+  const refuserAppel = useVoice((state) => state.refuserAppel);
 
   const [refuses, setRefuses] = useState<UUID[]>([]);
 
@@ -114,6 +115,9 @@ export function Sonnerie() {
         className="btn btn--sm btn--danger"
         onClick={() => {
           stopRing();
+          // L'appelant est prevenu : sans cela il restait seul dans un salon
+          // vide, sans savoir si l'on arrivait ou si l'on avait dit non.
+          refuserAppel(appel.channel.id, appel.appelant);
           setRefuses((liste) => [...liste, appel.channel.id]);
         }}
         title="Refuser"

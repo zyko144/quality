@@ -4,6 +4,7 @@ import { LIMITS } from '@/constants';
 import { notify, preview } from '@/lib/notify';
 import { playCue } from '@/lib/sounds';
 import { useSession } from '@/store/session';
+import { useSpacePrefs } from '@/store/spacePrefs';
 import type {
   Attachment,
   Bookmark,
@@ -1010,13 +1011,30 @@ export const useChat = create<ChatState>((set, get) => ({
        * une conversation a deux, chaque message est deja une interpellation, et
        * attendre une mention explicite reviendrait a ne jamais sonner.
        */
-      const enPrive = state.channels.find((item) => item.id === raw.channel_id)?.space_id === null;
+      const salon = state.channels.find((item) => item.id === raw.channel_id);
+      const enPrive = salon?.space_id === null;
+
+      /*
+       * Les reglages du serveur passent avant ceux de l'application.
+       *
+       * Mettre un serveur en sourdine doit valoir meme pour une mention : c'est
+       * tout l'interet du geste. Un reglage general qui l'emporterait rendrait
+       * le bouton decoratif.
+       */
+      const espace = salon?.space_id ? useSpacePrefs.getState().pour(salon.space_id) : null;
+
+      if (espace?.muet) return;
+      if (espace?.notifications === 'rien') return;
+      if (espace?.notifications === 'mentions' && !mentioned) return;
+      // `@everyone` interpelle sans nommer : on peut vouloir des mentions sans
+      // celles-la.
+      if (espace?.ignorerGlobales && mentioned && /@(everyone|here)/.test(raw.content)) return;
 
       if ((mentioned || enPrive) && preferences.mentionSound) playCue('mention');
 
       if (mentioned || enPrive || preferences.notifyEveryMessage) {
         const author = state.profiles[raw.author_id];
-        const channel = state.channels.find((item) => item.id === raw.channel_id);
+        const channel = salon;
         void notify({
           title: mentioned
             ? `${author?.display_name ?? 'Quelqu’un'} vous a mentionne`

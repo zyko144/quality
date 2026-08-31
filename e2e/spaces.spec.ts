@@ -324,4 +324,110 @@ test.describe('Espaces et salons', () => {
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
   });
+
+  /*
+   * Les reglages d'un espace ont sept onglets.
+   *
+   * Chacun est verifie separement : un panneau qui plante n'emporte pas le
+   * bandeau d'onglets, si bien qu'un menu casse a l'air intact tant qu'on ne
+   * l'ouvre pas.
+   */
+  test('les reglages de l espace ouvrent leurs sept onglets', async ({ page }) => {
+    await openApp(page);
+
+    await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
+
+    const onglets = page.locator('.mod-tab');
+    await expect(onglets).toHaveCount(7);
+
+    const attendus = [
+      'General',
+      'Membres',
+      'Salons',
+      'Categories',
+      'Roles',
+      'Mes preferences',
+      'Zone sensible',
+    ];
+    expect(await onglets.allTextContents()).toEqual(attendus);
+
+    /*
+     * Chaque onglet est reconnu a un element qui n'appartient qu'a lui.
+     *
+     * Un selecteur commun aurait suffi a rendre le test vert sans rien
+     * prouver : le bandeau d'onglets reste en place meme si le panneau
+     * au-dessous ne rend rien du tout.
+     */
+    const marqueurs: Record<string, string> = {
+      General: '.espace-images',
+      Membres: '.membres__barre',
+      Salons: '.salons__entete',
+      // Le texte plutot qu'une classe : `.field__hint` sert dans plusieurs
+      // fenetres, dont une fermee, et le premier trouve n'etait pas le bon.
+      Categories: 'text=Une categorie regroupe des salons',
+      Roles: '.roles__liste',
+      'Mes preferences': '.switchrow',
+      'Zone sensible': '.danger-zone',
+    };
+
+    for (const nom of attendus) {
+      await page.locator('.mod-tab', { hasText: nom }).first().click();
+      await expect(page.locator(marqueurs[nom]!).first()).toBeVisible();
+    }
+
+    await page.keyboard.press('Escape');
+  });
+
+  test('la liste des membres se cherche et se filtre', async ({ page }) => {
+    await openApp(page);
+
+    await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
+    await page.locator('.mod-tab', { hasText: 'Membres' }).first().click();
+
+    const lignes = page.locator('.membres__ligne');
+    await expect(lignes.first()).toBeVisible();
+    const total = await lignes.count();
+    expect(total).toBeGreaterThan(0);
+
+    // Une recherche qui ne peut correspondre a personne vide la liste et le dit,
+    // plutot que de laisser un blanc.
+    await page.getByLabel('Chercher un membre').fill('zzzzzzpersonne');
+    await expect(page.locator('.roles__vide')).toBeVisible();
+
+    await page.getByLabel('Chercher un membre').fill('');
+    await expect(lignes).toHaveCount(total);
+
+    await page.keyboard.press('Escape');
+  });
+
+  test('les preferences d un espace se retiennent', async ({ page }) => {
+    await openApp(page);
+
+    await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
+    await page.locator('.mod-tab', { hasText: 'Mes preferences' }).first().click();
+
+    // L'interrupteur est une case masquee derriere un libelle dessine : c'est
+    // le libelle qu'on clique, comme le ferait quelqu'un.
+    const ligne = page.locator('.switchrow', { hasText: 'Mettre ce serveur en sourdine' });
+    const sourdine = ligne.locator('input[type="checkbox"]');
+
+    const avant = await sourdine.isChecked();
+    await ligne.click();
+    await expect(sourdine).toBeChecked({ checked: !avant });
+
+    // Elles vivent sur la machine : un rechargement est le seul vrai test.
+    await page.reload();
+    await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
+    await page.locator('.mod-tab', { hasText: 'Mes preferences' }).first().click();
+
+    const apresRechargement = page
+      .locator('.switchrow', { hasText: 'Mettre ce serveur en sourdine' });
+    await expect(apresRechargement.locator('input[type="checkbox"]')).toBeChecked({
+      checked: !avant,
+    });
+
+    // On repose l'etat d'origine : un test ne doit pas laisser le compte muet.
+    await apresRechargement.click();
+    await page.keyboard.press('Escape');
+  });
 });

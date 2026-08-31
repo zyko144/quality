@@ -2094,3 +2094,10 @@ button.userbar__voice-info:hover {
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
+
+/* La pastille change de couleur quand quelqu'un partage : le nombre seul ne
+   disait pas qu'il se passait quelque chose a regarder. */
+.rail__vocal.is-partage {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}

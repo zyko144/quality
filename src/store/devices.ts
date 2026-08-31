@@ -34,6 +34,15 @@ export interface MediaPreferences {
   autoGainControl: boolean;
 
   /**
+   * Porte de bruit : coupe le micro entre les phrases.
+   *
+   * La reduction de bruit du moteur travaille pendant qu'on parle ; elle ne
+   * fait rien du fond sonore qui reste entre les mots — or c'est celui-la que
+   * les autres entendent toute la journee. Voir `porte.ts`.
+   */
+  noiseGate: boolean;
+
+  /**
    * Qualite du son de la voix.
    *
    * WebRTC ouvre Opus a environ trente kilobits par seconde — un reglage pense
@@ -85,6 +94,7 @@ const DEFAULTS: MediaPreferences = {
   noiseSuppression: true,
   voiceIsolation: true,
   autoGainControl: true,
+  noiseGate: true,
   // « haute » par defaut : le debit double celui de WebRTC sans mettre en peril
   // une connexion ordinaire, et c'est la difference que l'on entend le plus.
   audioQuality: 'haute',

@@ -9,6 +9,7 @@ import type { UUID } from '@/types/db';
 import { useUI } from '@/store/ui';
 import { initialsFor } from '@/constants';
 import { Icon } from '@/components/Icon';
+import { useSpacePrefs } from '@/store/spacePrefs';
 
 /**
  * Colonne d'icones des espaces.
@@ -24,6 +25,9 @@ export function SpaceRail() {
   const readStates = useChat((state) => state.readStates);
   const profiles = useChat((state) => state.profiles);
   const participantsParSalon = useVoice((state) => state.participantsByChannel);
+  const teintePour = useSpacePrefs((state) => state.pour);
+  // Lu pour redeclencher le rendu quand une teinte change : `pour` est stable.
+  useSpacePrefs((state) => state.parEspace);
 
   const activeSpaceId = useUI((state) => state.activeSpaceId);
   const selectSpace = useUI((state) => state.selectSpace);
@@ -145,14 +149,23 @@ export function SpaceRail() {
           /*
            * Les participants de tous les salons vocaux de cet espace.
            *
-           * La presence n'est connue que des salons ou l'on est soi-meme
-           * connecte : ailleurs la liste reste vide et la pastille ne parait
-           * pas. C'est une limite du transport — la presence vit dans le canal
-           * du salon, qu'on ne rejoint qu'en y entrant — et non un oubli.
+           * Connus meme sans avoir ouvert le serveur : `EcouteVocale` ecoute la
+           * presence de tous les salons joignables, pas seulement celle du
+           * salon rejoint. C'etait la limite d'avant, et elle privait la
+           * pastille de son seul interet — dire que quelqu'un discute ailleurs
+           * avant qu'on aille voir.
            */
           const enVocal = channels
             .filter((channel) => channel.space_id === space.id && channel.kind === 'voice')
             .flatMap((channel) => participantsParSalon[channel.id] ?? []);
+
+          // Un partage en cours vaut d'etre annonce a part : on rejoint un
+          // salon pour ce qu'on y montre autant que pour ce qu'on y dit.
+          const enPartage = enVocal.some((participant) => participant.sharing);
+
+          // La teinte choisie pour ce serveur, s'il y en a une. Sur dix
+          // serveurs, la couleur se retrouve plus vite qu'un nom.
+          const teinte = teintePour(space.id).couleur;
 
           let unread = 0;
           let mentions = 0;
@@ -213,10 +226,24 @@ export function SpaceRail() {
                 un panneau.
               */}
               {enVocal.length > 0 ? (
-                <span className="rail__vocal" title={`${enVocal.length} en vocal`}>
-                  <span className="rail__vocal-point" aria-hidden="true" />
+                <span
+                  className={'rail__vocal' + (enPartage ? ' is-partage' : '')}
+                  style={teinte ? { background: teinte, color: '#0b0b0f' } : undefined}
+                  title={
+                    enPartage
+                      ? `${enVocal.length} en vocal, dont un partage d’ecran`
+                      : `${enVocal.length} en vocal`
+                  }
+                >
+                  {enPartage ? (
+                    <Icon name="screen" size={11} />
+                  ) : (
+                    <span className="rail__vocal-point" aria-hidden="true" />
+                  )}
                   {enVocal.length}
-                  <span className="visually-hidden">personnes en vocal</span>
+                  <span className="visually-hidden">
+                    personnes en vocal{enPartage ? ', dont un partage d’ecran' : ''}
+                  </span>
                 </span>
               ) : null}
 

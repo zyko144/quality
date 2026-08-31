@@ -15,6 +15,9 @@ import {
   applyEncodingWithRetry,
   preferVideoCodec,
 } from '@/store/devices';
+import { useChat } from '@/store/chat';
+import { useSpacePrefs } from '@/store/spacePrefs';
+import { ouvrirPorte, type Porte } from './porte';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
 /**
@@ -54,7 +57,24 @@ interface Deconnexion {
   to: UUID;
 }
 
-type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion;
+/**
+ * Refus d'un appel.
+ *
+ * Envoye par quelqu'un qui n'est pas dans le salon — c'est tout l'interet :
+ * sans lui, refuser ne faisait taire que sa propre sonnerie, et l'appelant
+ * restait seul dans un salon vide sans savoir si l'autre arrivait, n'avait rien
+ * vu, ou avait dit non.
+ *
+ * Il passe par le canal du salon, auquel on est deja abonne pour savoir qui s'y
+ * trouve. Rien de nouveau a ouvrir.
+ */
+interface Refus {
+  kind: 'refus';
+  from: UUID;
+  to: UUID;
+}
+
+type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion | Refus;
 
 /**
  * Salons vocaux en WebRTC maille.
@@ -172,6 +192,8 @@ interface VoiceState {
   deconnecter: (userId: UUID) => void;
   /** Ecoute la presence des salons vocaux donnes, sans y entrer. */
   observerSalons: (channelIds: UUID[]) => void;
+  /** Dit non a un appel : l'appelant raccroche. Voir `Refus`. */
+  refuserAppel: (channelId: UUID, appelant: UUID) => void;
   /** Ouvre ou ferme le partage de quelqu'un. Ferme, il n'est plus decode. */
   toggleWatch: (userId: UUID) => void;
 }
@@ -187,6 +209,70 @@ interface VoiceState {
  * une piste deja ouverte, il faut la recapturer.
  */
 let arretSuiviMicro: (() => void) | null = null;
+
+/**
+ * Micro brut et porte de bruit en cours.
+ *
+ * Ce qu'on emet n'est plus forcement ce que le systeme nous donne : quand la
+ * porte est active, on emet sa sortie. Le flux brut doit rester sous la main —
+ * c'est lui qu'il faudra fermer, la porte ne le tenant pas.
+ */
+let microBrut: MediaStream | null = null;
+let porteEnCours: Porte | null = null;
+
+/**
+ * Le serveur de ce salon autorise-t-il le signal d'arrivee ?
+ *
+ * Les conversations privees n'ont pas de serveur : elles sonnent toujours,
+ * quelqu'un qui arrive dans une privee etant precisement ce qu'on attend.
+ */
+function sonVocalActif(channelId: UUID | null): boolean {
+  if (!channelId) return true;
+
+  const salon = useChat.getState().channels.find((item) => item.id === channelId);
+  if (!salon?.space_id) return true;
+
+  return useSpacePrefs.getState().pour(salon.space_id).sonVocal;
+}
+
+/** Ferme la porte et le micro brut, dans cet ordre. */
+function relacherMicro(): void {
+  porteEnCours?.arreter();
+  porteEnCours = null;
+
+  for (const piste of microBrut?.getTracks() ?? []) piste.stop();
+  microBrut = null;
+}
+
+/**
+ * Capture le micro, porte comprise.
+ *
+ * Le reste du magasin ne voit qu'un `MediaStream` : que la voix passe ou non
+ * par la porte ne change rien a ce qu'on en fait ensuite.
+ */
+async function capturerMicro(): Promise<MediaStream> {
+  const media = useDevices.getState().media;
+  const brut = await capturer({ audio: audioConstraints(media), video: false });
+
+  // Le mode musique coupe la porte : elle est faite pour la parole, et
+  // avalerait la fin des notes tenues.
+  if (!media.noiseGate || media.audioQuality === 'musique') {
+    microBrut = brut;
+    return brut;
+  }
+
+  // Le seuil de la porte suit celui du detecteur de parole, deja regle par
+  // l'utilisateur : deux curseurs pour la meme question se contrediraient.
+  const porte = ouvrirPorte(brut, media.speakingThreshold);
+  if (!porte) {
+    microBrut = brut;
+    return brut;
+  }
+
+  microBrut = brut;
+  porteEnCours = porte;
+  return porte.flux;
+}
 
 /**
  * Canaux ecoutes sans y entrer, un par salon vocal visible.
@@ -477,6 +563,8 @@ export const useVoice = create<VoiceState>((set, get) => {
         media.voiceIsolation,
         media.autoGainControl,
         media.audioQuality,
+        media.noiseGate,
+        media.speakingThreshold,
       ].join('|');
 
     let precedent = interessant(useDevices.getState().media);
@@ -495,10 +583,20 @@ export const useVoice = create<VoiceState>((set, get) => {
 
     const media = useDevices.getState().media;
 
+    // L'ancienne porte et l'ancien micro tombent avec la piste qu'ils
+    // alimentaient — mais seulement une fois la nouvelle en place, pour ne pas
+    // laisser un silence pendant la bascule.
+    const ancienneP = porteEnCours;
+    const ancienBrut = microBrut;
+    porteEnCours = null;
+    microBrut = null;
+
     let remplacant: MediaStream;
     try {
-      remplacant = await capturer({ audio: audioConstraints(media), video: false });
+      remplacant = await capturerMicro();
     } catch {
+      porteEnCours = ancienneP;
+      microBrut = ancienBrut;
       // Le micro precedent continue de servir : mieux vaut un reglage qui ne
       // prend pas qu'un salon devenu muet.
       return;
@@ -506,7 +604,9 @@ export const useVoice = create<VoiceState>((set, get) => {
 
     // Le salon a pu se fermer pendant la capture.
     if (get().channelId !== channelId) {
-      for (const piste of remplacant.getTracks()) piste.stop();
+      relacherMicro();
+      porteEnCours = ancienneP;
+      microBrut = ancienBrut;
       return;
     }
 
@@ -527,6 +627,8 @@ export const useVoice = create<VoiceState>((set, get) => {
     set({ localStream: remplacant });
     attachAnalyser(userId, remplacant);
 
+    ancienneP?.arreter();
+    for (const piste of ancienBrut?.getTracks() ?? []) piste.stop();
     for (const ancienne of localStream?.getTracks() ?? []) ancienne.stop();
   }
 
@@ -934,6 +1036,7 @@ export const useVoice = create<VoiceState>((set, get) => {
     // dans le type sert seulement a ce que le compilateur nous rappelle de la
     // couvrir si un nouveau chemin l'oublie.
     if ('kind' in signal && signal.kind === 'deconnexion') return;
+    if ('kind' in signal && signal.kind === 'refus') return;
 
     // Annonce du role d'un flux : on l'enregistre, puis on reclasse la piste
     // si elle etait deja arrivee.
@@ -1008,7 +1111,9 @@ export const useVoice = create<VoiceState>((set, get) => {
       const peerId = participant.user_id;
       if (peers.has(peerId)) continue;
 
-      playCue('peer-join');
+      // Le signal d'arrivee se coupe par serveur : precieux a trois, penible
+      // a deux cents.
+      if (sonVocalActif(get().channelId)) playCue('peer-join');
 
       // Un seul cote amorce, sinon les deux negocient en meme temps. La
       // comparaison des identifiants donne un arbitre stable ; l'autre attend
@@ -1065,10 +1170,7 @@ export const useVoice = create<VoiceState>((set, get) => {
 
       let localStream: MediaStream;
       try {
-        localStream = await capturer({
-          audio: audioConstraints(useDevices.getState().media),
-          video: false,
-        });
+        localStream = await capturerMicro();
       } catch (cause) {
         set({ connecting: false, error: messageDeCapture(cause, 'micro') });
         return;
@@ -1098,6 +1200,14 @@ export const useVoice = create<VoiceState>((set, get) => {
 
           if ('kind' in message && message.kind === 'deconnexion') {
             set({ error: 'Vous avez ete deconnecte du salon vocal.' });
+            void get().leave();
+            return;
+          }
+
+          if ('kind' in message && message.kind === 'refus') {
+            // Rester seul dans le salon apres un refus n'a aucun sens : on
+            // raccroche, en disant pourquoi.
+            set({ error: 'Votre appel a ete refuse.' });
             void get().leave();
             return;
           }
@@ -1149,6 +1259,7 @@ export const useVoice = create<VoiceState>((set, get) => {
       streamPurposes.clear();
       pendingStreams.clear();
 
+      relacherMicro();
       for (const track of localStream?.getTracks() ?? []) track.stop();
       for (const track of localScreen?.getTracks() ?? []) track.stop();
       for (const track of localCamera?.getTracks() ?? []) track.stop();
@@ -1494,6 +1605,25 @@ export const useVoice = create<VoiceState>((set, get) => {
      * L'appelant redonne la liste entiere a chaque changement ; on n'ouvre que
      * ce qui manque et on ferme ce qui n'y est plus.
      */
+    /*
+     * Refuse un appel sans jamais entrer dans le salon.
+     *
+     * Le message part par le canal deja ouvert pour observer ce salon. On ne
+     * s'y connecte pas : refuser un appel ne doit pas allumer son micro, ne
+     * serait-ce qu'une seconde.
+     */
+    refuserAppel: (channelId, appelant) => {
+      const moi = get().userId;
+      const canal = observateurs.get(channelId);
+      if (!moi || !canal) return;
+
+      void canal.send({
+        type: 'broadcast',
+        event: 'voice-signal',
+        payload: { kind: 'refus', from: moi, to: appelant } satisfies Refus,
+      });
+    },
+
     observerSalons: (channelIds) => {
       salonsVoulus = channelIds;
       reconcilierObservateurs();
