@@ -154,6 +154,32 @@ fn regler_son_systeme(_actif: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Le selecteur de Windows est-il en place pour cette execution ?
+///
+/// Fige au demarrage. L'interface a besoin de le savoir : c'est la seule facon
+/// de dire « il faut relancer » a bon escient, plutot que de comparer la
+/// preference a une valeur devinee. Deviner etait precisement le defaut —
+/// l'application supposait que le son etait demande par defaut, le lanceur
+/// supposait l'inverse, et le message n'apparaissait donc jamais.
+#[cfg(windows)]
+static SELECTEUR_WINDOWS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Vrai si le son du systeme peut etre capture pendant cette execution.
+#[cfg(windows)]
+#[tauri::command]
+fn son_systeme_disponible() -> bool {
+    SELECTEUR_WINDOWS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+fn son_systeme_disponible() -> bool {
+    // Ailleurs, aucun drapeau n'est pose : le selecteur du systeme est celui
+    // qu'on obtient, avec ce qu'il propose.
+    true
+}
+
 #[cfg(windows)]
 fn desactiver_selecteur_webview() {
     /*
@@ -172,6 +198,7 @@ fn desactiver_selecteur_webview() {
      * une seule fois, avant d'exister.
      */
     if veut_le_son_systeme() {
+        SELECTEUR_WINDOWS.store(true, std::sync::atomic::Ordering::Relaxed);
         return;
     }
 
@@ -195,7 +222,8 @@ pub fn run() {
             capture::sources_partageables,
             capture::zone_source,
             capture::masquer_barre_partage,
-            regler_son_systeme
+            regler_son_systeme,
+            son_systeme_disponible
         ])
         // Une seconde instance ne cree pas de fenetre : elle reveille celle qui
         // existe deja. Sans cela, cliquer deux fois sur l'icone ouvrirait deux

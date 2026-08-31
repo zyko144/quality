@@ -46,23 +46,6 @@ function surEcranPrincipal(source: Source): boolean {
 
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
-/**
- * Ce que valait le reglage au lancement.
- *
- * Fige au chargement du module : c'est l'etat sur lequel le drapeau a ete pose,
- * et donc la seule reference pour savoir si relancer changerait quelque chose.
- * Le comparer au reglage courant evite d'annoncer un redemarrage a qui coche
- * puis decoche.
- */
-const SON_AU_DEMARRAGE = (() => {
-  try {
-    const brut = localStorage.getItem('orbit:media');
-    return brut ? (JSON.parse(brut) as { shareSystemAudio?: boolean }).shareSystemAudio !== false : true;
-  } catch {
-    return true;
-  }
-})();
-
 export function SourcePicker({
   open,
   onClose,
@@ -72,12 +55,44 @@ export function SourcePicker({
   onClose: () => void;
   onStart: (source: Source | null) => void;
 }) {
+  /*
+   * A l'ouverture : on demande l'etat, et on reaffirme la preference.
+   *
+   * La reaffirmer a chaque fois plutot qu'au seul changement corrige le cas ou
+   * la preference vaut deja ce qu'on veut : cocher une case deja cochee
+   * n'ecrivait rien, et le lanceur restait sur son defaut.
+   */
+  useEffect(() => {
+    if (!open || !DANS_TAURI) return;
+
+    void import('@tauri-apps/api/core')
+      .then(async ({ invoke }) => {
+        await invoke('regler_son_systeme', {
+          actif: useDevices.getState().media.shareSystemAudio,
+        });
+        setSonPossible(await invoke<boolean>('son_systeme_disponible'));
+      })
+      .catch(() => setSonPossible(null));
+  }, [open]);
+
   const media = useDevices((state) => state.media);
   const setMedia = useDevices((state) => state.setMedia);
 
   const [sources, setSources] = useState<Source[] | null>(null);
-  const sonAuDemarrage = SON_AU_DEMARRAGE;
-  const [relanceRequise, setRelanceRequise] = useState(false);
+  /*
+   * Ce que le lancement a reellement decide, demande au lanceur.
+   *
+   * La version precedente le devinait depuis le reglage enregistre, et se
+   * trompait : l'application suppose que le son est demande par defaut, le
+   * lanceur suppose l'inverse tant qu'aucun fichier ne dit le contraire. Les
+   * deux valeurs par defaut ne s'accordaient pas, et l'avertissement
+   * n'apparaissait donc jamais — on cochait une case deja cochee, rien n'etait
+   * ecrit, et rien ne changeait au redemarrage.
+   *
+   * `null` tant que la reponse n'est pas arrivee, ou hors application de
+   * bureau : on n'affirme rien dans ce cas.
+   */
+  const [sonPossible, setSonPossible] = useState<boolean | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [onglet, setOnglet] = useState<'ecran' | 'fenetre'>('ecran');
   const [choisie, setChoisie] = useState<string | null>(null);
@@ -305,10 +320,8 @@ export function SourcePicker({
               onChange={(event) => {
                 const veut = event.target.checked;
                 setMedia('shareSystemAudio', veut);
-                setRelanceRequise(veut !== sonAuDemarrage);
-
-                // Note pour le prochain demarrage : c'est Rust qui pose ou non
-                // le drapeau, avant que la vue web n'existe.
+                // Note pour le prochain demarrage : c'est le lanceur qui pose
+                // ou non le drapeau, avant que la vue web n'existe.
                 void import('@tauri-apps/api/core')
                   .then(({ invoke }) => invoke('regler_son_systeme', { actif: veut }))
                   .catch(() => undefined);
@@ -317,7 +330,12 @@ export function SourcePicker({
             Partager le son de l&rsquo;ordinateur
           </label>
 
-          {relanceRequise ? (
+          {/*
+            L'ecart entre ce qui est demande et ce que ce lancement permet.
+            C'est une comparaison, pas une supposition : `sonPossible` vient du
+            lanceur lui-meme.
+          */}
+          {sonPossible !== null && media.shareSystemAudio !== sonPossible ? (
             <p className="picker__avertissement" role="status">
               <Icon name="refresh" size={14} />
               <span>

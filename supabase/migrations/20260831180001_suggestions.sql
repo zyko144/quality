@@ -115,7 +115,13 @@ as $$
     s.created_at,
     coalesce(count(*) filter (where v.pour), 0)       as pour,
     coalesce(count(*) filter (where not v.pour), 0)   as contre,
-    max(case when v.user_id = (select auth.uid()) then v.pour end) as mon_vote
+    -- `bool_or` filtre sur la seule ligne qui nous concerne : la cle primaire
+    -- garantit au plus un vote par personne et par suggestion, donc l'agregat
+    -- rend cette valeur telle quelle, ou NULL si l'on n'a pas vote.
+    --
+    -- `max()` avait ete employe ici et n'existe pas pour les booleens en
+    -- PostgreSQL : la migration echouait a cette ligne.
+    bool_or(v.pour) filter (where v.user_id = (select auth.uid())) as mon_vote
   from public.suggestions s
   left join public.suggestion_votes v on v.suggestion_id = s.id
   group by s.id

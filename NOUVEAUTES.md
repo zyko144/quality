@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.3.4
+
+### Corrige
+
+- Cocher « Partager le son de l'ordinateur » ne changeait rien, meme apres un redemarrage. La case etait deja cochee par defaut : la cocher n'ecrivait donc rien, et le lanceur — qui supposait l'inverse tant qu'aucun fichier ne le contredit — restait sur son choix. Les deux valeurs par defaut ne s'accordaient pas.
+- L'application demande maintenant au lanceur ce qu'il a reellement decide, au lieu de le deviner. L'avertissement « relancez » apparait donc quand il le faut, et la preference est reaffirmee a chaque ouverture du selecteur.
+- La liste des suggestions ne s'installait pas : `max()` n'existe pas pour les booleens en PostgreSQL.
+
 ## 0.3.3
 
 ### Nouveau
