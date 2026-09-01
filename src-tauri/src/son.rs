@@ -35,10 +35,11 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::ipc::{Channel, InvokeResponseBody};
 
 #[cfg(windows)]
+use windows::core::PCWSTR;
 use windows::Win32::Media::Audio::{
     eConsole, eRender, IAudioCaptureClient, IAudioClient, IMMDevice, IMMDeviceEnumerator,
     MMDeviceEnumerator, AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_SHAREMODE_SHARED,
-    AUDCLNT_STREAMFLAGS_LOOPBACK, WAVEFORMATEX, WAVEFORMATEXTENSIBLE,
+    AUDCLNT_STREAMFLAGS_LOOPBACK, DEVICE_STATE_ACTIVE, WAVEFORMATEX, WAVEFORMATEXTENSIBLE,
 };
 use windows::Win32::System::Com::STGM_READ;
 use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
@@ -112,6 +113,99 @@ pub struct FormatSon {
     pub peripherique: Option<String>,
 }
 
+/// Une sortie audio, telle qu'on la propose a l'utilisateur.
+#[derive(Clone, serde::Serialize)]
+#[allow(dead_code)]
+pub struct SortieAudio {
+    /// Identifiant stable, celui que Windows attribue au point de terminaison.
+    pub id: String,
+    pub nom: String,
+    /// Vrai pour la sortie par defaut de Windows.
+    pub defaut: bool,
+}
+
+/// Enumere les sorties audio actives.
+///
+/// Pourquoi l'interface en a besoin
+/// --------------------------------
+/// Le bouclage porte ce que joue UN point de terminaison. Nous prenions
+/// toujours celui par defaut, ce qui parait evident et ne l'est pas : sur une
+/// machine equipee d'un routeur audio virtuel — Voicemeeter, VB-Cable, ceux
+/// qu'on installe justement pour separer les sons — la sortie par defaut est
+/// une entree virtuelle sur laquelle rien ne joue. La capture reussit alors
+/// parfaitement et ne transporte que du silence.
+///
+/// Rien ne le distingue d'un partage muet, et le corriger demandait de changer
+/// le peripherique par defaut de Windows pour toute la machine. D'ou ce choix,
+/// rendu a qui partage.
+#[cfg(windows)]
+#[tauri::command]
+pub fn lister_sorties_audio() -> Result<Vec<SortieAudio>, String> {
+    unsafe {
+        let _com = GardeCom::prendre();
+
+        let enumerateur: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+                .map_err(|_| "Impossible d'interroger les peripheriques audio.".to_string())?;
+
+        let defaut = enumerateur
+            .GetDefaultAudioEndpoint(eRender, eConsole)
+            .ok()
+            .and_then(|d| d.GetId().ok())
+            .map(|id| id.to_string().unwrap_or_default());
+
+        let collection = enumerateur
+            .EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)
+            .map_err(|_| "Aucune sortie audio active.".to_string())?;
+
+        let combien = collection.GetCount().unwrap_or(0);
+        let mut sorties = Vec::with_capacity(combien as usize);
+
+        for index in 0..combien {
+            let Ok(appareil) = collection.Item(index) else {
+                continue;
+            };
+
+            let Ok(id) = appareil.GetId() else { continue };
+            let id = id.to_string().unwrap_or_default();
+            if id.is_empty() {
+                continue;
+            }
+
+            sorties.push(SortieAudio {
+                defaut: defaut.as_deref() == Some(id.as_str()),
+                nom: nom_du_peripherique(&appareil).unwrap_or_else(|| id.clone()),
+                id,
+            });
+        }
+
+        Ok(sorties)
+    }
+}
+
+/// Le peripherique demande, ou celui par defaut.
+///
+/// Un identifiant qui ne correspond plus a rien — casque debranche, pilote
+/// reinstalle — retombe sur le defaut plutot que d'echouer : perdre le son
+/// parce qu'on a change de casque serait absurde, et le niveau mesure cote
+/// interface dira si le repli ne convient pas.
+#[cfg(windows)]
+unsafe fn choisir_peripherique(
+    enumerateur: &IMMDeviceEnumerator,
+    voulu: Option<&str>,
+) -> Result<IMMDevice, String> {
+    if let Some(id) = voulu.filter(|id| !id.is_empty()) {
+        let large: Vec<u16> = id.encode_utf16().chain(std::iter::once(0)).collect();
+        if let Ok(appareil) = enumerateur.GetDevice(PCWSTR(large.as_ptr())) {
+            return Ok(appareil);
+        }
+    }
+
+    enumerateur
+        .GetDefaultAudioEndpoint(eRender, eConsole)
+        .map_err(|_| echec("Aucun peripherique de sortie audio."))
+}
+
 /// Erreur rendue a l'interface, en francais et sans code Windows.
 #[cfg(windows)]
 fn echec(quoi: &str) -> String {
@@ -125,18 +219,21 @@ fn echec(quoi: &str) -> String {
 /// transpose, ce qui s'entend immediatement et ne se diagnostique pas.
 #[cfg(windows)]
 #[tauri::command]
-pub fn demarrer_son_systeme(canal: Channel<InvokeResponseBody>) -> Result<FormatSon, String> {
+pub fn demarrer_son_systeme(
+    canal: Channel<InvokeResponseBody>,
+    peripherique: Option<String>,
+) -> Result<FormatSon, String> {
     // Le format est lu ici, sur le fil de la commande, pour pouvoir le rendre
     // tout de suite. Le fil de capture rouvre son propre client : les objets
     // COM ne traversent pas les fils sans precautions qui n'en valent pas la
     // peine pour deux appels.
-    let format = unsafe { lire_format() }?;
+    let format = unsafe { lire_format(peripherique.as_deref()) }?;
 
     // Ouvrir une generation coupe la precedente, s'il en restait une.
     let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
 
     std::thread::spawn(move || {
-        if let Err(erreur) = unsafe { capturer(&canal, generation) } {
+        if let Err(erreur) = unsafe { capturer(&canal, generation, peripherique.as_deref()) } {
             eprintln!("Capture du son du systeme : {erreur}");
         }
     });
@@ -184,7 +281,7 @@ impl Drop for GardeCom {
 
 /// Le format du peripherique de sortie par defaut.
 #[cfg(windows)]
-unsafe fn lire_format() -> Result<FormatSon, String> {
+unsafe fn lire_format(voulu: Option<&str>) -> Result<FormatSon, String> {
     let _com = GardeCom::prendre();
 
     let resultat = (|| {
@@ -192,9 +289,7 @@ unsafe fn lire_format() -> Result<FormatSon, String> {
             CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
                 .map_err(|_| echec("Impossible d'interroger les peripheriques audio."))?;
 
-        let peripherique = enumerateur
-            .GetDefaultAudioEndpoint(eRender, eConsole)
-            .map_err(|_| echec("Aucun peripherique de sortie audio."))?;
+        let peripherique = choisir_peripherique(&enumerateur, voulu)?;
 
         let client: IAudioClient = peripherique
             .Activate(CLSCTX_ALL, None)
@@ -245,10 +340,14 @@ unsafe fn nom_du_peripherique(peripherique: &IMMDevice) -> Option<String> {
 
 /// Le fil de capture : ouvre, boucle, ferme.
 #[cfg(windows)]
-unsafe fn capturer(canal: &Channel<InvokeResponseBody>, generation: u64) -> Result<(), String> {
+unsafe fn capturer(
+    canal: &Channel<InvokeResponseBody>,
+    generation: u64,
+    voulu: Option<&str>,
+) -> Result<(), String> {
     let _com = GardeCom::prendre();
 
-    capturer_interne(canal, generation)
+    capturer_interne(canal, generation, voulu)
 }
 
 /// Vrai si le format decrit des flottants 32 bits.
@@ -291,13 +390,12 @@ unsafe fn est_flottant(format: *const WAVEFORMATEX) -> bool {
 unsafe fn capturer_interne(
     canal: &Channel<InvokeResponseBody>,
     generation: u64,
+    voulu: Option<&str>,
 ) -> Result<(), String> {
     let enumerateur: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
         .map_err(|_| echec("Impossible d'interroger les peripheriques audio."))?;
 
-    let peripherique = enumerateur
-        .GetDefaultAudioEndpoint(eRender, eConsole)
-        .map_err(|_| echec("Aucun peripherique de sortie audio."))?;
+    let peripherique = choisir_peripherique(&enumerateur, voulu)?;
 
     let client: IAudioClient = peripherique
         .Activate(CLSCTX_ALL, None)
@@ -417,8 +515,15 @@ unsafe fn capturer_interne(
 #[tauri::command]
 pub fn demarrer_son_systeme(
     _canal: tauri::ipc::Channel<tauri::ipc::InvokeResponseBody>,
+    _peripherique: Option<String>,
 ) -> Result<FormatSon, String> {
     Err("La capture du son du systeme n'existe que sous Windows.".into())
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+pub fn lister_sorties_audio() -> Result<Vec<SortieAudio>, String> {
+    Ok(Vec::new())
 }
 
 #[cfg(not(windows))]

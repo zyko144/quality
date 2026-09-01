@@ -2002,7 +2002,25 @@ let qualiteJournalisee = false;
          * comme si elle en venait — sans un seul cas particulier plus loin.
          */
         if (!audioTrack && media.shareSystemAudio) {
-          const resultat = await capturerSonSysteme();
+          /*
+           * Le rappel se declenche quelques secondes apres le debut, quand la
+           * mesure a eu le temps d'ecouter. Il ne peut donc pas etre traite
+           * comme un echec de capture : le partage est deja parti, et la piste
+           * existe. Ce qu'on annonce n'est pas « pas de son » mais « du son
+           * qui ne porte rien », ce qui appelle une autre reponse.
+           */
+          const resultat = await capturerSonSysteme(media.loopbackDeviceId, (nom) => {
+            if (!get().sharing) return;
+
+            set({
+              partageSansSon: true,
+              raisonSansSon:
+                (nom
+                  ? `Windows capture « ${nom} », ou rien ne joue.`
+                  : 'Le peripherique capture ne joue rien.') +
+                ' Choisissez la bonne sortie dans Parametres › Voix et video, ou changez la sortie par defaut de Windows.',
+            });
+          });
 
           if (resultat.ok) {
             sonNatif = resultat.son;

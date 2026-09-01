@@ -1,6 +1,15 @@
+import { useEffect, useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { Icon } from '@/components/Icon';
 import { useDevices } from '@/store/devices';
+
+const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+interface SortieAudio {
+  id: string;
+  nom: string;
+  defaut: boolean;
+}
 
 /**
  * Ce qu'on regle avant de partager son ecran.
@@ -40,6 +49,38 @@ export function SharePanel({
 }) {
   const media = useDevices((state) => state.media);
   const setMedia = useDevices((state) => state.setMedia);
+
+  /*
+   * La liste des sorties est demandee a l'ouverture du panneau, pas au
+   * demarrage de l'application.
+   *
+   * Elle change quand on branche un casque, et la garder en memoire depuis le
+   * lancement afficherait un peripherique disparu. Le seul moment ou elle
+   * compte est celui-ci.
+   */
+  const [sorties, setSorties] = useState<SortieAudio[]>([]);
+
+  useEffect(() => {
+    if (!DANS_TAURI || !open) return;
+
+    let vivant = true;
+
+    void import('@tauri-apps/api/core')
+      .then(({ invoke }) => invoke<SortieAudio[]>('lister_sorties_audio'))
+      .then((liste) => {
+        if (vivant) setSorties(liste);
+      })
+      .catch(() => {
+        // Sans liste, le choix se reduit au defaut : c'est le comportement
+        // qu'on avait avant ce reglage, pas une panne.
+      });
+
+    return () => {
+      vivant = false;
+    };
+  }, [open]);
+
+  const defaut = sorties.find((sortie) => sortie.defaut)?.nom ?? null;
 
   return (
     <Modal
@@ -152,6 +193,50 @@ export function SharePanel({
             <span className="switchrow__thumb" />
           </span>
         </label>
+
+        {/*
+          Quelle sortie ecouter.
+
+          Ce choix a l'air d'un reglage d'expert et n'en est pas un : sur toute
+          machine equipee d'un routeur audio virtuel — Voicemeeter, VB-Cable,
+          ceux qu'installe la plupart de ceux qui streament — la sortie par
+          defaut de Windows est une entree virtuelle sur laquelle rien ne joue.
+          Le bouclage s'ouvre alors sans erreur et ne transporte que du silence,
+          ce que rien ne distingue d'un partage muet.
+
+          Il ne s'affiche que la ou il veut dire quelque chose : dans
+          l'application de bureau, et seulement si le son est demande.
+        */}
+        {DANS_TAURI && media.shareSystemAudio ? (
+          <label className="share-panel__sortie">
+            <span className="share-panel__sortie-label">Son capture depuis</span>
+
+            <select
+              className="share-panel__sortie-champ"
+              value={media.loopbackDeviceId ?? ''}
+              onChange={(event) =>
+                setMedia('loopbackDeviceId', event.target.value === '' ? null : event.target.value)
+              }
+            >
+              <option value="">
+                Sortie par defaut de Windows
+                {defaut ? ` — ${defaut}` : ''}
+              </option>
+
+              {sorties.map((sortie) => (
+                <option key={sortie.id} value={sortie.id}>
+                  {sortie.nom}
+                </option>
+              ))}
+            </select>
+
+            <span className="share-panel__sortie-aide">
+              Choisissez la sortie sur laquelle votre jeu joue reellement. Si le
+              son ne passe pas alors que tout parait normal, c&rsquo;est presque
+              toujours ici.
+            </span>
+          </label>
+        ) : null}
       </div>
     </Modal>
   );

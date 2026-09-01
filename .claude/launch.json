@@ -29,6 +29,17 @@
         "C:/Users/noamb/Documents/quality-support/serveur.mjs"
       ],
       "port": 4180
+    },
+    {
+      "name": "apercu",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--port",
+        "4173"
+      ],
+      "port": 4173
     }
   ]
 }

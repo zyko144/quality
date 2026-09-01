@@ -98,6 +98,22 @@ export interface MediaPreferences {
    * systemes la capture est refusee et le partage part sans son, sans echouer.
    */
   shareSystemAudio: boolean;
+
+  /**
+   * Sortie dont on capture le son pour le partage. `null` = celle de Windows.
+   *
+   * Ce reglage existe a cause d'un cas qui n'a rien d'exotique : sur une
+   * machine equipee d'un routeur audio virtuel — Voicemeeter, VB-Cable, ceux
+   * qu'installent la plupart de ceux qui streament — la sortie par defaut de
+   * Windows est une entree virtuelle sur laquelle rien ne joue. Le bouclage
+   * s'ouvre alors sans erreur et ne transporte que du silence, ce que rien ne
+   * distingue d'un partage muet.
+   *
+   * Sans ce choix, la seule facon d'avoir du son etait de changer le
+   * peripherique par defaut de Windows — pour toute la machine, et pour toutes
+   * les applications.
+   */
+  loopbackDeviceId: string | null;
 }
 
 const DEFAULTS: MediaPreferences = {
@@ -137,6 +153,7 @@ const DEFAULTS: MediaPreferences = {
   screenPriority: 'motion',
   cueVolume: 0.6,
   shareSystemAudio: true,
+  loopbackDeviceId: null,
 };
 
 const STORAGE_KEY = 'orbit:media';

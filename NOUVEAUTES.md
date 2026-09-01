@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.7
+
+### Corrige
+
+- **Le son du partage ne partait pas, et ce n'etait pas un defaut du code.** Windows capture le son de la sortie **par defaut**. Sur une machine equipee d'un routeur audio virtuel — Voicemeeter, VB-Cable, ceux qu'installent la plupart de ceux qui streament — cette sortie par defaut est une entree virtuelle sur laquelle rien ne joue : la capture s'ouvrait sans erreur et ne transportait que du silence. Rien ne le distinguait d'un partage muet, et la seule facon d'en sortir etait de changer le peripherique par defaut de Windows pour toute la machine.
+
+### Nouveau
+
+- **On choisit desormais la sortie a capturer**, dans le panneau de partage, sous l'interrupteur du son. Choisissez celle sur laquelle votre jeu joue reellement.
+- **Le partage dit quand il capture du silence**, en nommant le peripherique concerne et ou le changer. Le probleme se voyait jusqu'ici de l'exterieur — les autres n'entendaient rien — et jamais de celui qui partage.
+
 ## 0.4.6
 
 ### Corrige

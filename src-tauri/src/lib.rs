@@ -147,7 +147,8 @@ pub fn run() {
             capture::zone_source,
             capture::masquer_barre_partage,
             son::demarrer_son_systeme,
-            son::arreter_son_systeme
+            son::arreter_son_systeme,
+            son::lister_sorties_audio
         ])
         // Une seconde instance ne cree pas de fenetre : elle reveille celle qui
         // existe deja. Sans cela, cliquer deux fois sur l'icone ouvrirait deux

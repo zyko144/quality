@@ -62,7 +62,12 @@ const ECOUTE_MS = 4000;
  * tout fonctionne. Ce qu'on cherche a distinguer, c'est « jamais rien » de
  * « quelque chose, parfois ».
  */
-function mesurerNiveau(ctx: AudioContext, flux: MediaStream) {
+function mesurerNiveau(
+  ctx: AudioContext,
+  flux: MediaStream,
+  nomPeripherique: string | null,
+  prevenir?: (peripherique: string | null) => void,
+) {
   try {
     const source = ctx.createMediaStreamSource(flux);
     const analyseur = ctx.createAnalyser();
@@ -85,10 +90,17 @@ function mesurerNiveau(ctx: AudioContext, flux: MediaStream) {
       // le silence numerique exact donnerait -Infinity.
       const dbfs = sommet > 0 ? Math.round(20 * Math.log10(sommet)) : -120;
 
+      const muet = dbfs <= -60;
+
       journal.info('partage', 'Niveau du son capture', {
         dbfs,
-        muet: dbfs <= -60,
+        muet,
+        peripherique: nomPeripherique,
       });
+
+      // L'interface le dit a qui partage : voir `VoiceStage`. Le journal seul
+      // ne sert qu'a moi, et le probleme se corrige de son cote a lui.
+      if (muet) prevenir?.(nomPeripherique);
     }, ECOUTE_MS);
   } catch {
     // La mesure est un confort de diagnostic : son echec ne doit rien couper.
@@ -104,7 +116,10 @@ function mesurerNiveau(ctx: AudioContext, flux: MediaStream) {
  * qui partage. Lui dire laquelle est le seul moyen qu'il puisse y faire quoi
  * que ce soit.
  */
-export async function capturerSonSysteme(): Promise<ResultatSon> {
+export async function capturerSonSysteme(
+  peripherique?: string | null,
+  surSilence?: (peripherique: string | null) => void,
+): Promise<ResultatSon> {
   if (!DANS_TAURI) {
     return {
       ok: false,
@@ -142,7 +157,10 @@ export async function capturerSonSysteme(): Promise<ResultatSon> {
    */
   let format: FormatSon;
   try {
-    format = await invoke<FormatSon>('demarrer_son_systeme', { canal });
+    format = await invoke<FormatSon>('demarrer_son_systeme', {
+      canal,
+      peripherique: peripherique ?? null,
+    });
 
     journal.info('partage', 'Bouclage ouvert', {
       peripherique: format.peripherique ?? null,
@@ -241,7 +259,7 @@ export async function capturerSonSysteme(): Promise<ResultatSon> {
    * corrige pas dans le code : il se corrige en changeant le peripherique par
    * defaut de Windows. Encore faut-il savoir que c'est ca. D'ou cette mesure.
    */
-  mesurerNiveau(ctx, sortie.stream);
+  mesurerNiveau(ctx, sortie.stream, format.peripherique ?? null, surSilence);
 
   return {
     ok: true,
