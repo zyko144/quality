@@ -12,6 +12,16 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.8
+
+### Corrige
+
+- **Windows affichait encore « Quality » chez ceux qui l'avaient installe sous ce nom.** L'application s'est appelee Orbit, puis Quality, puis Echow, et l'installateur range chaque version sous son nom de produit : un dossier, un raccourci et une ligne dans « Applications installees » par nom. Renommer n'a donc pas renomme l'installation existante, il en a cree une seconde a cote — et le raccourci qu'on avait l'habitude de cliquer lancait toujours l'ancienne. L'installateur retire desormais les installations laissees par les anciens noms, sans toucher aux donnees : sessions, reglages et raccourcis clavier sont conserves.
+
+### Ameliore
+
+- **Les commandes de fenetre retrouvent leurs dessins**, mieux traces : trait, cadre et croix a bouts arrondis dans une cible de vingt-huit pixels. La couleur reste, mais ne s'allume que sous le curseur — vert, orange, rouge. En permanence, trois taches vives dans un coin sombre tirent l'oeil vers ce qu'on utilise le moins ; au survol, elles disent ce qu'on s'apprete a faire.
+
 ## 0.4.7
 
 ### Corrige

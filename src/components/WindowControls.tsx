@@ -90,18 +90,20 @@ export function WindowControls() {
   };
 
   /*
-   * Trois pastilles de couleur, sans dessin a l'interieur.
+   * Le dessin et la couleur, plutot que l'un ou l'autre.
    *
-   * Le trait, le carre et la croix disaient la meme chose que la position :
-   * a droite d'une fenetre, on sait depuis trente ans ce que font ces trois
-   * boutons dans cet ordre. La couleur suffit donc, et elle se lit de plus
-   * loin qu'un trait d'un pixel — vert pour reduire, orange pour agrandir,
-   * rouge pour fermer.
+   * Une version precedente n'avait garde que des pastilles de couleur. La
+   * couleur se lit de loin, mais elle ne dit pas laquelle des trois fait quoi a
+   * qui ne le sait pas deja — et elle ne dit rien du tout a qui ne distingue
+   * pas le vert du rouge, ce qui est frequent.
    *
-   * Ce qui n'est PAS retire, c'est le nom : `aria-label` et `title` restent.
-   * Une couleur ne se lit ni au clavier, ni par un lecteur d'ecran, ni par qui
-   * ne distingue pas le vert du rouge — et ils sont nombreux. Sans ces deux
-   * attributs, ce changement aurait rendu la fenetre impilotable pour eux.
+   * Le dessin est donc revenu, et la couleur reste : discrete au repos, elle
+   * s'allume sous le curseur. On voit ce qu'on s'apprete a faire au moment ou
+   * cela compte, c'est-a-dire juste avant de cliquer.
+   *
+   * Les traits sont dessines en coordonnees de dix par dix et rendus a douze
+   * pixels : les extremites tombent sur des demi-pixels, ce qui evite le trait
+   * gris et fantome qu'on obtient en visant les bords entiers.
    */
   return (
     <div className="window-controls">
@@ -111,7 +113,11 @@ export function WindowControls() {
         onClick={() => agir('reduire')}
         aria-label="Reduire la fenetre"
         title="Reduire"
-      />
+      >
+        <svg viewBox="0 0 10 10" aria-hidden="true">
+          <path d="M1.5 5.5h7" />
+        </svg>
+      </button>
 
       <button
         type="button"
@@ -119,7 +125,21 @@ export function WindowControls() {
         onClick={() => agir('basculer')}
         aria-label={agrandie ? 'Restaurer la fenetre' : 'Agrandir la fenetre'}
         title={agrandie ? 'Restaurer' : 'Agrandir'}
-      />
+      >
+        {agrandie ? (
+          // Deux cadres decales : la fenetre qu'on va rendre a sa taille, et
+          // celle qu'elle laisse derriere. Le trait interrompu evite que les
+          // deux se confondent en une grille.
+          <svg viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M3.5 3.5V1.5h5v5h-2" />
+            <rect x="1.5" y="3.5" width="5" height="5" rx="0.8" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 10 10" aria-hidden="true">
+            <rect x="1.5" y="1.5" width="7" height="7" rx="1" />
+          </svg>
+        )}
+      </button>
 
       <button
         type="button"
@@ -127,7 +147,11 @@ export function WindowControls() {
         onClick={() => agir('fermer')}
         aria-label="Fermer la fenetre"
         title="Fermer"
-      />
+      >
+        <svg viewBox="0 0 10 10" aria-hidden="true">
+          <path d="M2 2l6 6M8 2l-6 6" />
+        </svg>
+      </button>
     </div>
   );
 }

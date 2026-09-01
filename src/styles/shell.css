@@ -1596,79 +1596,89 @@
   z-index: 900;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   height: 34px;
   padding: 0 var(--space-4);
   -webkit-app-region: no-drag;
 }
 
 /*
- * Une pastille par action, la couleur pour seule indication.
+ * Un bouton par action : le dessin au centre, la couleur derriere.
  *
- * La zone cliquable est plus grande que le disque : le disque fait dix pixels,
- * le bouton vingt-deux. Viser un cercle de dix pixels au coin d'un ecran est
- * penible, et le geste est frequent — on paie donc douze pixels de vide autour
- * plutot qu'une cible qu'on rate.
+ * La cible fait vingt-huit pixels pour un dessin de douze. Viser douze pixels
+ * au coin d'un ecran est penible, et le geste est frequent : on paie du vide
+ * autour plutot qu'une cible qu'on rate.
  */
 .window-control {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
-}
-
-.window-control::before {
-  content: '';
-  width: 11px;
-  height: 11px;
-  border-radius: var(--radius-full);
-  background: var(--pastille);
-  /*
-   * Les pastilles sont legerement eteintes au repos et s'allument au survol.
-   * A pleine intensite en permanence, trois disques vifs dans un coin sombre
-   * tirent l'oeil en continu vers ce qu'on utilise le moins.
-   */
-  opacity: 0.72;
   transition:
-    opacity var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
-.window-control:hover::before {
-  opacity: 1;
-  transform: scale(1.12);
-}
-
-.window-control:active::before {
-  transform: scale(0.94);
+.window-control svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  /*
+   * Bouts et angles arrondis : a un pixel d'epaisseur, un bout carre laisse un
+   * ergot visible au bout de chaque trait, surtout sur la croix ou quatre bouts
+   * se rejoignent.
+   */
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /*
- * Le focus clavier ne peut pas reposer sur la couleur.
+ * La couleur ne s'allume que sous le curseur.
  *
- * Il n'y a plus de contour de bouton a epaissir : sans cet anneau, se deplacer
- * au clavier jusqu'a « Fermer » ne se verrait nulle part.
+ * En permanence, trois taches vives dans un coin sombre tirent l'oeil en
+ * continu vers ce qu'on utilise le moins. Au survol, en revanche, elle dit ce
+ * qu'on s'apprete a faire — et « fermer » merite d'etre dit avant le clic.
  */
+.window-control:hover {
+  background: color-mix(in oklab, var(--teinte) 22%, transparent);
+  color: var(--teinte);
+}
+
+.window-control:active {
+  background: color-mix(in oklab, var(--teinte) 34%, transparent);
+}
+
+/* Fermer va plus loin : fond plein et trait blanc, comme partout sous Windows.
+   C'est le repere qui evite de la confondre avec « reduire » en visant vite. */
+.window-control--fermer:hover,
+.window-control--fermer:active {
+  background: var(--danger);
+  color: #fff;
+}
+
 .window-control:focus-visible {
   outline: 2px solid var(--focus-ring, var(--text-primary));
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 
 .window-control--reduire {
-  --pastille: var(--success, #23a559);
+  --teinte: var(--success, #23a559);
 }
 
 .window-control--agrandir {
-  --pastille: var(--warning, #f0b232);
+  --teinte: var(--warning, #f0b232);
 }
 
 .window-control--fermer {
-  --pastille: var(--danger);
+  --teinte: var(--danger);
 }
 
 /*
@@ -1678,7 +1688,7 @@
  * boutons a droite sous Windows, les pastilles d'Apple a gauche sous macOS.
  */
 /*
- * La place des pastilles est reservee dans tous les en-tetes de page.
+ * La place des commandes est reservee dans tous les en-tetes de page.
  *
  * Elles sont en position fixe, au-dessus de tout : sans cette reserve, le
  * dernier bouton d'un en-tete passe dessous et devient incliquable. Seul
@@ -1686,14 +1696,14 @@
  * depuis gagne des boutons a droite, et « Support » finissait sous la pastille
  * de fermeture des que la fenetre etait etroite.
  *
- * Cent deux pixels, mesures : trois cibles de vingt-deux, deux ecarts de huit,
- * deux marges de seize.
+ * Cent vingt pixels, mesures : trois cibles de vingt-huit, deux ecarts de
+ * quatre, deux marges de seize.
  */
 :root[data-chrome='windows'] .channel-header,
 :root[data-chrome='windows'] .friends__bar,
 :root[data-chrome='windows'] .support__entete,
 :root[data-chrome='windows'] .suggestions__entete {
-  padding-right: calc(var(--space-4) + 102px);
+  padding-right: calc(var(--space-4) + 120px);
 }
 
 /*
