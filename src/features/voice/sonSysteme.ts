@@ -49,6 +49,10 @@ interface FormatSon {
   canaux: number;
   /** Nom du peripherique dont on capture la sortie. */
   peripherique?: string;
+  /** Port local ou le son coule. */
+  port: number;
+  /** Jeton exige a la connexion, tire a chaque partage. */
+  jeton: string;
 }
 
 /** Duree d'ecoute avant de dire si le bouclage porte quelque chose. */
@@ -62,6 +66,35 @@ const ECOUTE_MS = 4000;
  * paquet pendant tout le partage.
  */
 const PAQUETS_MESURES = 200;
+
+/**
+ * Ouvre la connexion locale et rend de quoi la lire.
+ *
+ * Rend `null` si elle ne repond pas. Le cas n'est pas theorique : la connexion
+ * s'ouvre en meme temps que la capture, et l'interface peut arriver la premiere.
+ * On reessaie donc brievement plutot que d'abandonner sur une course perdue de
+ * quelques millisecondes.
+ */
+async function ouvrirFlux(
+  format: FormatSon,
+  arreterNatif: () => void,
+): Promise<ReadableStreamDefaultReader<Uint8Array> | null> {
+  const adresse = `http://127.0.0.1:${format.port}/${format.jeton}`;
+
+  for (const attente of [0, 60, 200, 500]) {
+    if (attente > 0) await new Promise((resoudre) => setTimeout(resoudre, attente));
+
+    try {
+      const reponse = await fetch(adresse, { cache: 'no-store' });
+      if (reponse.ok && reponse.body) return reponse.body.getReader();
+    } catch {
+      // Pas encore en ecoute : on retente.
+    }
+  }
+
+  arreterNatif();
+  return null;
+}
 
 /**
  * Ecoute la capture quelques secondes et journalise son niveau.
@@ -138,12 +171,9 @@ export async function capturerSonSysteme(
   }
 
   let invoke: typeof import('@tauri-apps/api/core').invoke;
-  let Channel: typeof import('@tauri-apps/api/core').Channel;
 
   try {
-    const noyau = await import('@tauri-apps/api/core');
-    invoke = noyau.invoke;
-    Channel = noyau.Channel;
+    invoke = (await import('@tauri-apps/api/core')).invoke;
   } catch {
     return { ok: false, raison: 'Le pont vers l’application n’a pas repondu.' };
   }
@@ -153,8 +183,6 @@ export async function capturerSonSysteme(
   if (!Contexte) {
     return { ok: false, raison: 'Ce moteur n’expose pas de contexte audio.' };
   }
-
-  const canal = new Channel<ArrayBuffer>();
 
   /*
    * Le format est demande AVANT d'ouvrir le contexte audio.
@@ -167,7 +195,6 @@ export async function capturerSonSysteme(
   let format: FormatSon;
   try {
     format = await invoke<FormatSon>('demarrer_son_systeme', {
-      canal,
       peripherique: peripherique ?? null,
     });
 
@@ -252,47 +279,86 @@ export async function capturerSonSysteme(
    * personne n'affiche.
    */
   /*
-   * Ce qui traverse le canal est compte avant d'etre transmis.
+   * Le son arrive par une connexion HTTP locale, pas par le canal Tauri.
    *
-   * Trois maillons peuvent rompre entre WASAPI et les oreilles d'en face :
-   * Windows peut ne rien donner, le canal peut ne rien livrer, le fil audio
-   * peut ne rien jouer. Le premier se mesure cote natif, le troisieme se
-   * mesure sur le flux resultant — et sans ce compteur-ci, on ne pouvait pas
-   * distinguer les deux premiers.
+   * Le canal a ete essaye, et mesure : sur quatre cents paquets produits par
+   * Windows, UN SEUL atteignait cette fonction. Au-dela d'un kilo-octet, il ne
+   * transmet pas la donnee directement — il fait executer a la page un script
+   * qui va la rechercher par une commande interne — et cinquante allers-retours
+   * par seconde de ce genre ne passent pas. Rien n'echouait pour autant : la
+   * capture s'ouvrait, les paquets partaient, et le silence arrivait au bout.
    *
-   * Le sommet est releve un echantillon sur seize : on cherche a savoir s'il y
-   * a du son, pas a le mesurer, et lire quarante-quatre mille flottants par
-   * seconde pour une reponse binaire serait payer cher.
+   * Une seule connexion est ouverte ici pour toute la duree du partage, et les
+   * echantillons y coulent sans etre annonces ni reassembles.
    */
+  const lecteur = await ouvrirFlux(format, arreterNatif);
+
+  if (!lecteur) {
+    return abandonner('Le passage du son n’a pas pu s’ouvrir.');
+  }
+
   let paquetsRecus = 0;
   let octetsRecus = 0;
   let sommetRecu = 0;
 
-  canal.onmessage = (paquet) => {
-    paquetsRecus += 1;
-    octetsRecus += paquet.byteLength;
-
-    // La mesure s'arrete avec la fenetre d'ecoute : au-dela, elle ne dirait
-    // rien de plus et couterait a chaque paquet, pendant tout le partage.
-    if (paquetsRecus <= PAQUETS_MESURES) {
-      const vue = new Float32Array(paquet);
-      for (let i = 0; i < vue.length; i += 16) {
-        const amplitude = Math.abs(vue[i]!);
-        if (amplitude > sommetRecu && Number.isFinite(amplitude)) sommetRecu = amplitude;
-      }
-    }
-
-    // Le transfert detache le tampon : toute lecture doit preceder cette ligne.
-    lecture.port.postMessage(paquet, [paquet]);
-  };
-
   /*
-   * Le releve part une fois, quand la fenetre d'ecoute se referme.
+   * Le reste d'une trame incomplete est reporte sur la lecture suivante.
    *
-   * Il rassemble les trois maillons dans une seule ligne, ce qui est le point :
-   * lus separement, ils demandent de recouper trois horodatages ; lus ensemble,
-   * ils designent le maillon rompu sans qu'on ait a reflechir.
+   * Une connexion ne rend pas les octets par paquets : elle les rend par
+   * morceaux quelconques, qui coupent volontiers un echantillon en deux. Les
+   * transmettre tels quels decalerait les canaux d'un demi-flottant et
+   * transformerait la musique en bruit — un defaut qui s'entend tout de suite
+   * mais ne se rattache a rien.
    */
+  const octetsParTrame = format.canaux * 4;
+  let reste = new Uint8Array(0);
+
+  void (async () => {
+    try {
+      for (;;) {
+        const { value, done } = await lecteur.read();
+        if (done) break;
+        if (!value || value.byteLength === 0) continue;
+
+        const complet =
+          reste.byteLength === 0
+            ? value
+            : (() => {
+                const joint = new Uint8Array(reste.byteLength + value.byteLength);
+                joint.set(reste, 0);
+                joint.set(value, reste.byteLength);
+                return joint;
+              })();
+
+        const utilisable = complet.byteLength - (complet.byteLength % octetsParTrame);
+
+        if (utilisable > 0) {
+          // La copie est necessaire : le tampon rendu par la lecture est
+          // reutilise, et le transferer au fil audio le detacherait sous les
+          // pieds de la lecture suivante.
+          const bloc = complet.slice(0, utilisable);
+
+          paquetsRecus += 1;
+          octetsRecus += utilisable;
+
+          if (paquetsRecus <= PAQUETS_MESURES) {
+            const vue = new Float32Array(bloc.buffer, bloc.byteOffset, utilisable / 4);
+            for (let k = 0; k < vue.length; k += 16) {
+              const amplitude = Math.abs(vue[k]!);
+              if (amplitude > sommetRecu && Number.isFinite(amplitude)) sommetRecu = amplitude;
+            }
+          }
+
+          lecture.port.postMessage(bloc.buffer, [bloc.buffer]);
+        }
+
+        reste = complet.slice(utilisable);
+      }
+    } catch {
+      // Connexion fermee : c'est ainsi que se termine un partage.
+    }
+  })();
+
   window.setTimeout(() => {
     void (async () => {
       let natif: Record<string, number> | null = null;
@@ -304,15 +370,13 @@ export async function capturerSonSysteme(
       }
 
       journal.info('partage', 'Trajet du son', {
-        // Ce que Windows a donne.
         natifPaquets: natif?.paquets ?? -1,
         natifTrames: natif?.trames ?? -1,
         natifSommet: natif?.sommet ?? -1,
         natifSilencieux: natif?.silencieux ?? -1,
-        // Ce que le canal a livre.
-        canalPaquets: paquetsRecus,
-        canalOctets: octetsRecus,
-        canalSommet: Math.round(sommetRecu * 1000),
+        fluxBlocs: paquetsRecus,
+        fluxOctets: octetsRecus,
+        fluxSommet: Math.round(sommetRecu * 1000),
       });
     })();
   }, ECOUTE_MS);
@@ -338,6 +402,17 @@ export async function capturerSonSysteme(
       flux: sortie.stream,
       arreter: () => {
         arreterNatif();
+
+        /*
+         * La connexion est fermee de notre cote aussi.
+         *
+         * Couper la capture suffirait a la longue — le serveur voit sa
+         * generation changer et referme — mais laisser une lecture en attente
+         * garde le contexte audio et le fil de lecture en vie jusque-la. Deux
+         * partages a la suite en laisseraient deux.
+         */
+        void lecteur.cancel().catch(() => undefined);
+
         try {
           lecture.port.postMessage('stop');
           lecture.disconnect();

@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.5.0
+
+### Corrige
+
+- **Le son du partage ne passait pas, et la cause n'etait ni la capture ni le reseau.** Windows livrait bien le son — quatre cents paquets, cent quatre-vingt-treize mille trames, du signal mesure. Mais entre lui et l'application, le passage interne qui transportait ces paquets n'en livrait **qu'un seul sur quatre cents**. Au-dela d'un kilo-octet, ce passage ne transmet pas la donnee directement : il fait executer a l'interface un script qui va la rechercher, et cinquante allers-retours par seconde de ce genre ne tiennent pas. Rien n'echouait pour autant, ce qui explique la longueur de la recherche : la capture s'ouvrait, les paquets partaient, et le silence arrivait au bout.
+- Le son passe desormais par une **connexion unique**, ouverte pour toute la duree du partage, sur laquelle les echantillons coulent sans etre annonces ni reassembles — le meme transport qu'une video en lecture continue, pour la meme raison. Elle n'ecoute que la machine elle-meme, n'accepte qu'une connexion, et exige un jeton tire au hasard a chaque partage.
+
 ## 0.4.9
 
 ### Ameliore

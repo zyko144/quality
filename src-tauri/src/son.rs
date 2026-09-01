@@ -23,18 +23,39 @@
 //!
 //! Comment le son remonte
 //! ----------------------
-//! Les echantillons partent vers l'interface par un canal Tauri, en binaire
-//! brut. Les passer en JSON couterait plus cher que le son lui-meme : 48 000
-//! echantillons par seconde et par canal, chacun devenant une suite de
-//! chiffres. Cote web, un `AudioWorklet` les rejoue et en refait une piste.
+//! Par une connexion HTTP sur la boucle locale, et non par le canal Tauri.
+//!
+//! Le canal a ete essaye, et mesure : sur quatre cents paquets produits par
+//! WASAPI, **un seul** atteignait l'interface. Au-dela d'un kilo-octet, ce
+//! canal ne transmet pas la donnee directement — il fait executer a la page un
+//! script qui va la rechercher par une commande interne, et cinquante
+//! allers-retours par seconde de ce genre ne passent pas. Le defaut etait
+//! d'autant plus trompeur que rien n'echouait : la capture s'ouvrait, les
+//! paquets partaient, et le silence arrivait au bout.
+//!
+//! Ici, une seule connexion est ouverte pour toute la duree du partage, et les
+//! echantillons y coulent sans etre annonces, decoupes ni reassembles. C'est
+//! le meme transport que celui d'une video en lecture continue, pour la meme
+//! raison : il est fait pour cela.
+//!
+//! Ce que la connexion n'est pas
+//! -----------------------------
+//! Elle n'ecoute que sur 127.0.0.1, n'accepte qu'une seule connexion, et exige
+//! un jeton tire au hasard a chaque partage. Aucun autre programme de la
+//! machine ne peut s'y brancher sans l'avoir devine, et elle se ferme avec le
+//! partage.
 
 #[cfg(windows)]
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[cfg(windows)]
-use tauri::ipc::{Channel, InvokeResponseBody};
+use std::collections::hash_map::RandomState;
+use std::hash::{BuildHasher, Hasher};
+use std::io::Write;
+use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use std::time::Duration;
 
-#[cfg(windows)]
 use windows::core::PCWSTR;
 use windows::Win32::Media::Audio::{
     eConsole, eRender, IAudioCaptureClient, IAudioClient, IMMDevice, IMMDeviceEnumerator,
@@ -149,6 +170,12 @@ pub struct FormatSon {
     pub frequence: u32,
     /// Nombre de canaux. Deux le plus souvent, mais rien ne le garantit.
     pub canaux: u16,
+
+    /// Port local ou le son coule, sur 127.0.0.1.
+    pub port: u16,
+
+    /// Jeton exige a la connexion. Tire au hasard a chaque partage.
+    pub jeton: String,
 
     /// Nom lisible du peripherique dont on capture la sortie.
     ///
@@ -267,15 +294,29 @@ fn echec(quoi: &str) -> String {
 /// transpose, ce qui s'entend immediatement et ne se diagnostique pas.
 #[cfg(windows)]
 #[tauri::command]
-pub fn demarrer_son_systeme(
-    canal: Channel<InvokeResponseBody>,
-    peripherique: Option<String>,
-) -> Result<FormatSon, String> {
+pub fn demarrer_son_systeme(peripherique: Option<String>) -> Result<FormatSon, String> {
     // Le format est lu ici, sur le fil de la commande, pour pouvoir le rendre
     // tout de suite. Le fil de capture rouvre son propre client : les objets
     // COM ne traversent pas les fils sans precautions qui n'en valent pas la
     // peine pour deux appels.
-    let format = unsafe { lire_format(peripherique.as_deref()) }?;
+    let mut format = unsafe { lire_format(peripherique.as_deref()) }?;
+
+    /*
+     * Le port est choisi par le systeme, pas par nous.
+     *
+     * Un port fixe se heurte a ce qui l'occupe deja, et deux fenetres de
+     * l'application ne pourraient pas partager en meme temps. Zero demande au
+     * systeme de trouver quelque chose de libre, et il le dit.
+     */
+    let ecouteur = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0))
+        .map_err(|_| echec("Impossible d'ouvrir le passage du son."))?;
+
+    let port = ecouteur
+        .local_addr()
+        .map_err(|_| echec("Impossible de lire le port du son."))?
+        .port();
+
+    let jeton = jeton_aleatoire();
 
     // Ouvrir une generation coupe la precedente, s'il en restait une.
     let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
@@ -287,13 +328,162 @@ pub fn demarrer_son_systeme(
     SOMMET_MILLIEME.store(0, Ordering::Relaxed);
     SILENCIEUX.store(0, Ordering::Relaxed);
 
+    /*
+     * Deux fils, relies par une file bornee.
+     *
+     * Le premier lit WASAPI, qui n'attend pas : rester trop longtemps hors de
+     * sa boucle fait perdre des echantillons. Le second ecrit dans la
+     * connexion, ce qui peut bloquer. Les melanger ferait payer a la capture
+     * les hesitations du reseau local.
+     *
+     * La file est bornee a cinquante paquets — une seconde environ. Pleine,
+     * l'envoi le plus ancien est abandonne plutot qu'attendu : du son en retard
+     * d'une seconde ne sert a personne, et le retard ne se resorberait jamais.
+     */
+    let (expediteur, receveur) = sync_channel::<Vec<u8>>(50);
+
+    let voulu = peripherique.clone();
     std::thread::spawn(move || {
-        if let Err(erreur) = unsafe { capturer(&canal, generation, peripherique.as_deref()) } {
+        if let Err(erreur) = unsafe { capturer(&expediteur, generation, voulu.as_deref()) } {
             eprintln!("Capture du son du systeme : {erreur}");
         }
     });
 
+    let jeton_du_fil = jeton.clone();
+    std::thread::spawn(move || servir(ecouteur, receveur, generation, jeton_du_fil));
+
+    format.port = port;
+    format.jeton = jeton;
     Ok(format)
+}
+
+/// Un jeton imprevisible, tire a chaque partage.
+///
+/// `RandomState` est ensemence par le systeme a chaque construction : c'est ce
+/// qui protege les tables de hachage de Rust contre les collisions provoquees.
+/// Deux ensemencements independants donnent trente-deux caracteres, ce qui est
+/// largement assez pour un jeton qui ne vit que le temps d'un partage, sur une
+/// connexion qui n'ecoute que la boucle locale.
+#[cfg(windows)]
+fn jeton_aleatoire() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0);
+
+    let mut premier = RandomState::new().build_hasher();
+    premier.write_u64(nanos);
+
+    let mut second = RandomState::new().build_hasher();
+    second.write_u64(nanos.rotate_left(32));
+
+    format!("{:016x}{:016x}", premier.finish(), second.finish())
+}
+
+/// Sert le son sur la connexion locale, tant que la generation est la bonne.
+///
+/// Une seule connexion est acceptee. Les suivantes sont refermees sans un mot :
+/// il n'y a qu'un partage a la fois, et laisser plusieurs lecteurs se brancher
+/// n'ouvrirait que des questions sans reponse — lequel recoit quoi.
+#[cfg(windows)]
+fn servir(ecouteur: TcpListener, receveur: Receiver<Vec<u8>>, generation: u64, jeton: String) {
+    // Sans delai, `accept` bloque pour toujours et le fil survit au partage.
+    let _ = ecouteur.set_nonblocking(true);
+
+    let mut flux: Option<TcpStream> = None;
+
+    while GENERATION.load(Ordering::SeqCst) == generation {
+        if flux.is_none() {
+            match ecouteur.accept() {
+                Ok((mut candidat, _)) => {
+                    /*
+                     * La socket acceptee repasse en mode bloquant, explicitement.
+                     *
+                     * L'ecouteur est en mode non bloquant pour que `accept` rende
+                     * la main ; ce que les sockets acceptees en heritent depend du
+                     * systeme. Lire l'en-tete sur une socket non bloquante
+                     * rendrait `WouldBlock` avant meme que la requete arrive, et
+                     * l'on refuserait un client parfaitement valable — avec, pour
+                     * seul symptome, un partage muet de plus.
+                     */
+                    let _ = candidat.set_nonblocking(false);
+
+                    if entete_valide(&mut candidat, &jeton) {
+                        let _ = candidat.set_nodelay(true);
+                        flux = Some(candidat);
+                    }
+                }
+                Err(ref erreur) if erreur.kind() == std::io::ErrorKind::WouldBlock => {
+                    /*
+                     * Personne n'ecoute encore : on vide ce qui s'accumule.
+                     *
+                     * Sans cela, la file se remplit pendant que l'interface
+                     * ouvre sa connexion, et le premier son qu'elle recoit est
+                     * une seconde de passe — jouee d'un coup, en decalage avec
+                     * l'image, et jamais rattrapee.
+                     */
+                    while receveur.try_recv().is_ok() {}
+
+                    std::thread::sleep(Duration::from_millis(10));
+                    continue;
+                }
+                Err(_) => break,
+            }
+        }
+
+        let Ok(paquet) = receveur.recv_timeout(Duration::from_millis(200)) else {
+            continue;
+        };
+
+        if let Some(sortie) = flux.as_mut() {
+            if sortie.write_all(&paquet).is_err() {
+                break;
+            }
+        }
+    }
+}
+
+/// Lit la requete, verifie le jeton, et repond.
+///
+/// Le protocole est le minimum utile : une ligne de requete dont le chemin doit
+/// contenir le jeton, et une reponse sans longueur annoncee — le son n'a pas de
+/// fin connue d'avance. `fetch` cote web lit le corps a mesure qu'il arrive.
+#[cfg(windows)]
+fn entete_valide(flux: &mut TcpStream, jeton: &str) -> bool {
+    use std::io::Read;
+
+    let _ = flux.set_read_timeout(Some(Duration::from_millis(500)));
+
+    let mut tampon = [0u8; 1024];
+    let Ok(lus) = flux.read(&mut tampon) else {
+        return false;
+    };
+
+    let requete = String::from_utf8_lossy(&tampon[..lus]);
+
+    // Le jeton est cherche dans la requete entiere plutot que dans un chemin
+    // decoupe : un jeton hexadecimal de trente-deux caracteres n'apparait pas
+    // par hasard dans un en-tete HTTP.
+    if jeton.is_empty() || !requete.contains(jeton) {
+        let _ = flux.write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n");
+        return false;
+    }
+
+    let entete = concat!(
+        "HTTP/1.1 200 OK\r\n",
+        "Content-Type: application/octet-stream\r\n",
+        "Cache-Control: no-store\r\n",
+        // La page vit sur un autre port : sans cet en-tete, le moteur refuse de
+        // lui donner le corps de la reponse.
+        "Access-Control-Allow-Origin: *\r\n",
+        "Connection: close\r\n",
+        "\r\n"
+    );
+
+    // Le delai de lecture ne vaut plus rien une fois l'en-tete passe : la suite
+    // n'est qu'ecriture.
+    let _ = flux.set_read_timeout(None);
+    flux.write_all(entete.as_bytes()).is_ok()
 }
 
 /// Arrete la capture. Sans effet si elle ne tourne pas.
@@ -358,6 +548,9 @@ unsafe fn lire_format(voulu: Option<&str>) -> Result<FormatSon, String> {
             frequence: (*format).nSamplesPerSec,
             canaux: (*format).nChannels,
             peripherique: nom_du_peripherique(&peripherique),
+            // Renseignes par l'appelant, qui seul connait la connexion ouverte.
+            port: 0,
+            jeton: String::new(),
         };
 
         CoTaskMemFree(Some(format as *const _));
@@ -396,13 +589,13 @@ unsafe fn nom_du_peripherique(peripherique: &IMMDevice) -> Option<String> {
 /// Le fil de capture : ouvre, boucle, ferme.
 #[cfg(windows)]
 unsafe fn capturer(
-    canal: &Channel<InvokeResponseBody>,
+    file: &SyncSender<Vec<u8>>,
     generation: u64,
     voulu: Option<&str>,
 ) -> Result<(), String> {
     let _com = GardeCom::prendre();
 
-    capturer_interne(canal, generation, voulu)
+    capturer_interne(file, generation, voulu)
 }
 
 /// Vrai si le format decrit des flottants 32 bits.
@@ -443,7 +636,7 @@ unsafe fn est_flottant(format: *const WAVEFORMATEX) -> bool {
 
 #[cfg(windows)]
 unsafe fn capturer_interne(
-    canal: &Channel<InvokeResponseBody>,
+    file: &SyncSender<Vec<u8>>,
     generation: u64,
     voulu: Option<&str>,
 ) -> Result<(), String> {
@@ -507,7 +700,7 @@ unsafe fn capturer_interne(
              * pause, une syllabe suspendue qui repartirait bien plus tard.
              */
             if !groupe.is_empty() {
-                let _ = canal.send(InvokeResponseBody::Raw(std::mem::take(&mut groupe)));
+                let _ = file.try_send(std::mem::take(&mut groupe));
                 groupe.reserve(seuil_envoi * 2);
             }
 
@@ -576,8 +769,17 @@ unsafe fn capturer_interne(
 
         let _ = capture.ReleaseBuffer(trames);
 
+        /*
+         * `try_send` et non `send` : on n'attend jamais le lecteur.
+         *
+         * WASAPI n'attend pas non plus. Rester bloque sur une file pleine ferait
+         * perdre des echantillons a la source pour livrer plus tard ceux qu'on
+         * tient deja — c'est-a-dire troquer un trou contre un retard, puis
+         * garder les deux. Un paquet abandonne se traduit par quelques
+         * millisecondes de silence chez celui qui ecoute, et rien de plus.
+         */
         if groupe.len() >= seuil_envoi {
-            let _ = canal.send(InvokeResponseBody::Raw(std::mem::take(&mut groupe)));
+            let _ = file.try_send(std::mem::take(&mut groupe));
             groupe.reserve(seuil_envoi * 2);
         }
     }
@@ -598,10 +800,7 @@ unsafe fn capturer_interne(
 
 #[cfg(not(windows))]
 #[tauri::command]
-pub fn demarrer_son_systeme(
-    _canal: tauri::ipc::Channel<tauri::ipc::InvokeResponseBody>,
-    _peripherique: Option<String>,
-) -> Result<FormatSon, String> {
+pub fn demarrer_son_systeme(_peripherique: Option<String>) -> Result<FormatSon, String> {
     Err("La capture du son du systeme n'existe que sous Windows.".into())
 }
 
@@ -625,3 +824,85 @@ pub fn diagnostic_son() -> DiagnosticSon {
 #[cfg(not(windows))]
 #[tauri::command]
 pub fn arreter_son_systeme() {}
+
+/* -------------------------------------------------------------------------- */
+/* Tests                                                                       */
+/* -------------------------------------------------------------------------- */
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use std::io::Read;
+    use std::net::TcpStream;
+
+    /// Ouvre un ecouteur local et joue le role du serveur pour une requete.
+    fn repondre_a(requete: &str, jeton: &str) -> (bool, String) {
+        let ecouteur = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let port = ecouteur.local_addr().unwrap().port();
+
+        let a_ecrire = requete.to_string();
+        let client = std::thread::spawn(move || {
+            let mut flux = TcpStream::connect(("127.0.0.1", port)).unwrap();
+            flux.write_all(a_ecrire.as_bytes()).unwrap();
+
+            let mut reponse = String::new();
+            let _ = flux.set_read_timeout(Some(Duration::from_millis(500)));
+            let _ = flux.read_to_string(&mut reponse);
+            reponse
+        });
+
+        let (mut candidat, _) = ecouteur.accept().unwrap();
+        let accepte = entete_valide(&mut candidat, jeton);
+
+        // La connexion se ferme ici : le client peut finir sa lecture.
+        drop(candidat);
+
+        (accepte, client.join().unwrap())
+    }
+
+    #[test]
+    fn le_bon_jeton_est_accepte() {
+        let (accepte, reponse) = repondre_a(
+            "GET /abcdef0123456789abcdef0123456789 HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+            "abcdef0123456789abcdef0123456789",
+        );
+
+        assert!(accepte, "un jeton correct doit ouvrir le flux");
+        assert!(reponse.starts_with("HTTP/1.1 200 OK"), "reponse : {reponse}");
+        assert!(
+            reponse.contains("application/octet-stream"),
+            "le corps doit etre annonce binaire : {reponse}"
+        );
+    }
+
+    #[test]
+    fn un_mauvais_jeton_est_refuse() {
+        let (accepte, reponse) = repondre_a(
+            "GET /00000000000000000000000000000000 HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+            "abcdef0123456789abcdef0123456789",
+        );
+
+        assert!(!accepte, "un jeton faux ne doit rien ouvrir");
+        assert!(reponse.starts_with("HTTP/1.1 403"), "reponse : {reponse}");
+    }
+
+    /// Le cas qui compte le plus : un jeton vide ne doit ouvrir a personne.
+    ///
+    /// Sans ce test, une regression qui laisserait le jeton vide passerait
+    /// inapercue — et ouvrirait le son du bureau a tout ce qui tourne sur la
+    /// machine, puisque la requete « contient » alors toujours le jeton.
+    #[test]
+    fn un_jeton_vide_refuse_tout() {
+        let (accepte, _) = repondre_a("GET / HTTP/1.1\r\n\r\n", "");
+        assert!(!accepte, "un jeton vide ne doit jamais ouvrir le flux");
+    }
+
+    #[test]
+    fn le_jeton_est_imprevisible() {
+        let premier = jeton_aleatoire();
+        let second = jeton_aleatoire();
+
+        assert_eq!(premier.len(), 32);
+        assert_ne!(premier, second, "deux partages ne partagent pas leur jeton");
+    }
+}

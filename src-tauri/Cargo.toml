@@ -1,6 +1,6 @@
 [package]
 name = "echow"
-version = "0.4.9"
+version = "0.5.0"
 description = "Echow - discussion d'equipe en temps reel"
 edition = "2021"
 rust-version = "1.77"
