@@ -37,6 +37,16 @@ interface EtatSuggestions {
 export const SUGGESTION_MIN = 8;
 export const SUGGESTION_MAX = 600;
 
+/**
+ * La commande, ecrite une seule fois.
+ *
+ * Deux endroits la reconnaissent, et pour des raisons opposees : l'espace des
+ * suggestions la retire quand on l'ecrit par habitude, le composeur des salons
+ * la refuse en disant ou aller. Deux expressions regulieres se seraient
+ * separees le jour ou l'une aurait accepte une majuscule que l'autre refuse.
+ */
+export const COMMANDE = /^\/suggestions?\b\s*/i;
+
 export const useSuggestions = create<EtatSuggestions>((set, get) => ({
   liste: [],
   chargement: false,

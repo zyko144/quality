@@ -12,6 +12,27 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.1
+
+### Corrige
+
+- **Le son du partage part enfin.** Il etait capture par le moteur web, qui ne l'accorde qu'apres une case a cocher vivant dans la fenetre de selection de Windows — celle-la meme qu'on supprime pour afficher la notre. Deux contournements avaient echoue, le second en tuant l'application a chaque partage. La capture se fait desormais cote natif, par le bouclage audio de Windows : le moteur n'a plus son mot a dire.
+- **Un partage qu'on demandait a voir pouvait ne rien afficher.** Le role d'un flux — partage ou camera — voyage par le canal de signalisation, l'image par la connexion media. Quand l'annonce se perdait, la piste restait en attente pour toujours : le bouton passait a « Masquer » et rien n'apparaissait, sans que celui qui partageait puisse s'en douter. La presence dit deja qui partage ; elle sert desormais de repli, et cliquer « Regarder » tranche a lui seul.
+- **Ouvrir Amis, Waves, Suggestions ou Support depuis un espace ne faisait rien.** Ces quatre pages liberent le salon actif en passant en vue privee — et un garde-fou voyait alors un espace ouvert sans salon choisi, et en rouvrait un aussitot. La page s'ouvrait et se refermait dans le meme rendu. Le defaut ne se voyait pas depuis la vue privee, ou aucun espace n'est actif : c'est-a-dire partout ou l'on pense a essayer.
+- **Les images sautaient dans les jeux rapides.** Deux causes. Le partage d'une fenetre repassait par un canevas dont la cadence tournait a son propre rythme, sans rapport avec celui de la source : les deux horloges derivaient, et une image etait prise deux fois ou pas du tout. Ce meme canevas travaillait de plus a la taille de la fenetre a l'ecran, meme quand la capture arrivait deja reduite — on agrandissait une image reduite avant de l'encoder, et l'encodeur payait ce surcout en images perdues.
+- **Un partage muet ne dit plus « deux chemins ont ete essayes ».** Il dit lequel a echoue et pourquoi : peripherique introuvable, bouclage refuse par Windows, format inconnu. Ces raisons existaient deja cote systeme ; elles etaient jetees en chemin.
+
+### Nouveau
+
+- **Un espace Support**, en rouge a droite d'« Ajouter un ami ». On y depose une demande, on suit l'echange, et on la clot soi-meme quand elle est reglee. Ce qu'on y ecrit n'est lu que par l'equipe : ni les proprietaires d'espaces, ni personne d'autre n'y ont acces.
+- **Les suggestions sont devenues un salon.** La liste au-dessus, le champ en bas, comme partout ailleurs. La commande `/suggestion` repondait depuis n'importe quel salon : elle partait donc d'une conversation ou plus personne ne la reverrait, vers une page que son auteur decouvrait au moment de l'envoi — sans avoir vu ce qui avait deja ete propose. Elle ne repond plus qu'ici, ou elle n'est d'ailleurs plus necessaire.
+- **Un compte peut etre suspendu.** Datee et motivee : la levee se fait toute seule, et le motif est lu par la personne concernee. La suspension empeche d'ecrire, jamais de lire ni de joindre le support — c'est la qu'on conteste une decision, et une decision peut etre une erreur.
+- **L'application tient un journal de ses propres defauts** et le fait remonter, pour que « ca a coupe » devienne quelque chose qu'on puisse corriger. Il ne contient ni contenu de message, ni nom de fichier partage, ni adresse IP : des identifiants, des nombres et des noms d'etats. Ce qu'on n'y met pas ne peut pas fuir.
+
+### Ameliore
+
+- **Rejoindre un salon vocal est plus rapide.** Une attente d'un dixieme de seconde etait payee a chaque changement de salon, le temps que le systeme rende le micro precedent — pour un echec qui n'arrive presque jamais, et qui savait deja se rattraper seul. Les canaux restants se ferment desormais de front plutot qu'a la file.
+
 ## 0.4.0
 
 ### Corrige

@@ -1,6 +1,6 @@
 [package]
 name = "echow"
-version = "0.4.0"
+version = "0.4.1"
 description = "Echow - discussion d'equipe en temps reel"
 edition = "2021"
 rust-version = "1.77"
@@ -40,6 +40,12 @@ windows = { version = "0.58", features = [
   "Win32_Graphics_Dwm",
   "Win32_System_Threading",
   "Win32_Storage_FileSystem",
+  # Capture du son du systeme : WASAPI en mode bouclage. Voir `son.rs`.
+  "Win32_Media_Audio",
+  "Win32_System_Com",
+  "Win32_System_Variant",
+  "Win32_Media_KernelStreaming",
+  "Win32_Media_Multimedia",
 ] }
 
 [profile.release]

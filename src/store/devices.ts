@@ -505,10 +505,26 @@ export async function applyEncoding(
 
     for (const encoding of parameters.encodings) {
       encoding.maxBitrate = bitrate;
-      // Aucune reduction de definition imposee : sans cela Chrome se garde le
-      // droit de diviser la resolution par deux des le premier a-coup.
-      encoding.scaleResolutionDownBy = 1;
       encoding.maxFramerate = undefined;
+
+      /*
+       * En fluidite, le moteur a le droit d'adoucir l'image.
+       *
+       * `scaleResolutionDownBy = 1` le lui interdisait, dans les deux modes.
+       * L'intention etait d'empecher Chrome de diviser la definition par deux
+       * au premier a-coup — mais le priver de ce recours ne supprime pas la
+       * surcharge, il supprime la seule reponse douce qu'il avait. Il ne lui
+       * restait alors qu'a jeter des images.
+       *
+       * C'est le pire moment pour cela : la surcharge arrive quand toute
+       * l'image change d'une trame a l'autre, c'est-a-dire dans un jeu rapide,
+       * c'est-a-dire quand on regarde le mouvement. Une image legerement plus
+       * douce se remarque a peine ; des saccades, aussitot.
+       *
+       * En nettete, on garde l'interdiction : c'est le sens meme de ce mode —
+       * tenir la definition d'un texte, quitte a perdre des images.
+       */
+      encoding.scaleResolutionDownBy = priority === 'detail' ? 1 : undefined;
     }
 
     parameters.degradationPreference =

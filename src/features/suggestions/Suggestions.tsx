@@ -1,5 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useSuggestions, SUGGESTION_MIN, SUGGESTION_MAX } from '@/store/suggestions';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useSuggestions,
+  COMMANDE,
+  SUGGESTION_MIN,
+  SUGGESTION_MAX,
+} from '@/store/suggestions';
 import { useChat } from '@/store/chat';
 import { useSession } from '@/store/session';
 import { useUI } from '@/store/ui';
@@ -18,9 +23,18 @@ import { formatRelative } from '@/lib/time';
  * « j'aime » — ne dirait que la moitie de ce qu'on veut savoir : une idee peut
  * deranger autant qu'elle plait, et c'est utile de le voir.
  *
- * On propose par la commande `/suggestion`, dans n'importe quel salon. C'est
- * une contrainte assumee : ecrire une commande demande d'avoir voulu proposer,
- * la ou un champ toujours ouvert recueille surtout des essais.
+ * On propose ici, et nulle part ailleurs.
+ *
+ * La commande `/suggestion` repondait depuis n'importe quel salon. L'idee etait
+ * qu'ecrire une commande demande d'avoir voulu proposer — mais elle partait
+ * alors d'une conversation ou plus personne ne la reverrait, vers une page que
+ * son auteur decouvrait au moment de l'envoi. On proposait sans voir ou l'on
+ * posait, ni ce qui avait deja ete propose.
+ *
+ * Cet espace est donc devenu un salon : la liste au-dessus, le champ en bas,
+ * comme partout ailleurs. On lit avant d'ecrire, ce qui est la seule facon
+ * d'eviter les doublons — et la commande ne repond plus qu'ici, ou elle n'est
+ * d'ailleurs plus necessaire.
  */
 export function Suggestions() {
   const liste = useSuggestions((state) => state.liste);
@@ -34,14 +48,76 @@ export function Suggestions() {
   const moi = useSession((state) => state.profile);
   const openModal = useUI((state) => state.openModal);
 
+  const proposer = useSuggestions((state) => state.proposer);
+
   const [aRetirer, setARetirer] = useState<string | null>(null);
+  const [texte, setTexte] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+  const [avis, setAvis] = useState<string | null>(null);
+
+  const champRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     void charger();
   }, [charger]);
 
+  /*
+   * Le champ grandit avec le texte.
+   *
+   * Une suggestion tient en six cents caracteres : sur une seule ligne, on
+   * relirait la sienne par la fenetre d'un mot. La hauteur reste bornee, sans
+   * quoi le champ finirait par manger la liste qu'il sert a alimenter.
+   */
+  const redimensionner = useCallback(() => {
+    const champ = champRef.current;
+    if (!champ) return;
+
+    champ.style.height = 'auto';
+    champ.style.height = `${Math.min(champ.scrollHeight, 180)}px`;
+  }, []);
+
+  useEffect(redimensionner, [texte, redimensionner]);
+
+  const envoyer = useCallback(async () => {
+    if (envoi) return;
+
+    /*
+     * Un `/suggestion` en tete est retire, pas refuse.
+     *
+     * La commande a longtemps ete la seule porte d'entree, et elle reste dans
+     * les doigts de ceux qui s'en servaient. Ici elle ne veut plus rien dire —
+     * on est deja dans l'espace des suggestions — mais la refuser punirait une
+     * habitude que nous avions nous-memes installee.
+     */
+    const idee = texte.trim().replace(COMMANDE, '').trim();
+
+    if (idee.length < SUGGESTION_MIN) {
+      setAvis(`Une suggestion tient en ${SUGGESTION_MIN} caracteres au moins.`);
+      return;
+    }
+
+    if (idee.length > SUGGESTION_MAX) {
+      setAvis(`Une suggestion tient en ${SUGGESTION_MAX} caracteres.`);
+      return;
+    }
+
+    setEnvoi(true);
+    const pose = await proposer(idee);
+    setEnvoi(false);
+
+    if (!pose) {
+      setAvis('La suggestion n’a pas pu etre enregistree.');
+      return;
+    }
+
+    setTexte('');
+    setAvis(null);
+    champRef.current?.focus();
+  }, [envoi, texte, proposer]);
+
   return (
     <div className="suggestions">
+      <div className="suggestions__fil scroll">
       <header className="suggestions__entete">
         <h1 className="suggestions__titre">
           <span className="suggestions__marque" aria-hidden="true">
@@ -56,13 +132,12 @@ export function Suggestions() {
         </p>
 
         {/*
-          La commande est rappelee, avec sa forme exacte.
-          Une fonctionnalite qui ne s'atteint que par une commande n'existe que
-          pour qui connait la commande.
+          Le champ est en bas de la page : on le dit, parce qu'une liste longue
+          le pousse hors de vue, et qu'on ne cherche pas ce qu'on ignore.
         */}
         <p className="suggestions__commande">
-          Pour proposer, ecrivez <code>/suggestion</code> suivi de votre idee,
-          dans n&rsquo;importe quel salon.
+          Pour proposer, ecrivez votre idee dans le champ en bas de cette page.
+          C&rsquo;est le seul endroit d&rsquo;ou l&rsquo;on propose.
         </p>
       </header>
 
@@ -81,8 +156,7 @@ export function Suggestions() {
         <div className="suggestions__vide">
           <p>Aucune suggestion pour l&rsquo;instant.</p>
           <p className="suggestions__vide-note">
-            La premiere sera la votre : <code>/suggestion</code> suivi de ce qui
-            vous manque.
+            La premiere sera la votre : ecrivez ce qui vous manque, en bas.
           </p>
         </div>
       ) : (
@@ -200,6 +274,56 @@ export function Suggestions() {
         suggestion : deux idees dans la meme ligne obligent a voter pour les
         deux ou aucune.
       </p>
+      </div>
+
+      {/*
+        Le champ est hors de la zone qui defile.
+        Dans le flux, il descendrait avec la liste, et il faudrait derouler
+        cinquante suggestions pour proposer la cinquante-et-unieme.
+      */}
+      <div className="suggestions__composeur">
+        <div className="suggestions__champ">
+          <textarea
+            ref={champRef}
+            className="suggestions__saisie"
+            rows={1}
+            value={texte}
+            maxLength={SUGGESTION_MAX}
+            placeholder="Proposez une idee"
+            aria-label="Proposer une suggestion"
+            disabled={envoi}
+            onChange={(event) => {
+              setTexte(event.target.value);
+              if (avis) setAvis(null);
+            }}
+            onKeyDown={(event) => {
+              // Entree envoie, Maj+Entree passe a la ligne : c'est ce que fait
+              // le composeur des salons, et deux conventions dans la meme
+              // application vaudraient pire qu'une mauvaise.
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                void envoyer();
+              }
+            }}
+          />
+
+          <button
+            type="button"
+            className="suggestions__envoyer"
+            onClick={() => void envoyer()}
+            disabled={envoi || texte.trim().length === 0}
+            title="Proposer"
+            aria-label="Proposer"
+          >
+            {envoi ? <span className="spinner" /> : <Icon name="send" size={17} />}
+          </button>
+        </div>
+
+        <p className={'suggestions__avis' + (avis ? ' is-alerte' : '')} role="status">
+          {avis ??
+            `${texte.trim().length} / ${SUGGESTION_MAX} caracteres. Entree envoie, Maj+Entree passe a la ligne.`}
+        </p>
+      </div>
     </div>
   );
 }

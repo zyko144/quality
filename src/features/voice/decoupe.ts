@@ -104,10 +104,14 @@ export async function decouperSource(
   await video.play().catch(() => undefined);
 
   const canevas = document.createElement('canvas');
-  canevas.width = zone.largeur;
-  canevas.height = zone.hauteur;
 
-  const pinceau = canevas.getContext('2d', { alpha: false });
+  /*
+   * `desynchronized` : le canevas n'a pas a suivre le rythme de l'affichage.
+   *
+   * Il ne sert a personne a l'ecran — il n'est meme pas dans le document — et
+   * l'attendre au rythme du moniteur ajoute une image de retard a chaque etape.
+   */
+  const pinceau = canevas.getContext('2d', { alpha: false, desynchronized: true });
   if (!pinceau) return { piste: pisteEcran, arreter: () => {} };
 
   /*
@@ -133,29 +137,98 @@ export async function decouperSource(
 
   let vivant = true;
 
+  /*
+   * Le canevas travaille dans le repere de l'IMAGE CAPTUREE, pas dans celui de
+   * l'ecran.
+   *
+   * Un ecran 1440p partage en 1080p arrive deja reduit. Dessiner la decoupe a
+   * la taille qu'a la fenetre a l'ecran reviendrait a agrandir cette image
+   * reduite, puis a encoder le resultat : on paierait deux fois, avec une image
+   * plus floue que la source et un encodage a une definition qu'aucun pixel ne
+   * justifie. Ce surcout ne se voit pas sur un texte fixe ; il se voit dans un
+   * jeu, sous forme de saccades, parce que l'encodeur n'a plus le temps.
+   */
+  const ajuster = () => {
+    const facteur = video.videoWidth > 0 ? video.videoWidth / window.screen.width : 1;
+
+    // Un canevas de taille nulle ne rend aucune image : le minimum evite qu'une
+    // fenetre reduite fige le partage jusqu'a sa reouverture.
+    const largeur = Math.max(2, Math.round(zone.largeur * facteur));
+    const hauteur = Math.max(2, Math.round(zone.hauteur * facteur));
+
+    // Redimensionner remet le contenu a zero : on ne le fait qu'au changement.
+    if (canevas.width !== largeur || canevas.height !== hauteur) {
+      canevas.width = largeur;
+      canevas.height = hauteur;
+    }
+
+    return facteur;
+  };
+
+  ajuster();
+
   const suivre = window.setInterval(() => {
     void invoke<Zone>('zone_source', { id: sourceId })
       .then((suivante) => {
         if (!vivant || !suivante.visible || suivante.largeur <= 0) return;
         zone = suivante;
-
-        // Redimensionner le canevas remet son contenu a zero : on ne le fait
-        // que lorsque la taille change reellement.
-        if (canevas.width !== zone.largeur || canevas.height !== zone.hauteur) {
-          canevas.width = zone.largeur;
-          canevas.height = zone.hauteur;
-        }
       })
       .catch(() => undefined);
   }, SUIVI);
 
+  // `requestVideoFrameCallback` cale le dessin sur les images reellement
+  // recues : dessiner plus souvent recopierait deux fois la meme image, moins
+  // souvent perdrait de la fluidite.
+  // Le type l'annonce comme toujours present ; les moteurs, non. On garde donc
+  // le repli, et l'annotation dit explicitement qu'il peut manquer.
+  const parImage: ((rappel: () => void) => number) | undefined =
+    typeof video.requestVideoFrameCallback === 'function'
+      ? video.requestVideoFrameCallback.bind(video)
+      : undefined;
+
+  /*
+   * Le canevas n'emet que sur demande, une image pour une image.
+   *
+   * Lui donner une cadence — `captureStream(60)` — le fait echantillonner le
+   * canevas a intervalle fixe, sans aucun rapport avec le moment ou l'on y
+   * dessine. Quand la source tourne elle aussi a soixante images, les deux
+   * horloges derivent l'une par rapport a l'autre : certaines images sont
+   * prises deux fois, d'autres jamais. Le resultat n'est pas un ralentissement
+   * — le compte y est — mais un battement, une saccade reguliere d'autant plus
+   * visible que l'image bouge vite. C'est exactement ce qu'on voit dans un jeu.
+   *
+   * `captureStream(0)` supprime cette seconde horloge : chaque dessin produit
+   * une image, et une seule.
+   */
+  const surDemande =
+    typeof (
+      window as unknown as {
+        CanvasCaptureMediaStreamTrack?: { prototype?: { requestFrame?: unknown } };
+      }
+    ).CanvasCaptureMediaStreamTrack?.prototype?.requestFrame === 'function';
+
+  const cadence = parImage && surDemande ? 0 : images;
+  const flux = canevas.captureStream(cadence);
+  const [piste] = flux.getVideoTracks();
+
+  // Un canevas rend toujours une piste ; le typage ne le sait pas.
+  if (!piste) {
+    window.clearInterval(suivre);
+    return { piste: pisteEcran, arreter: () => {} };
+  }
+
+  const demanderImage =
+    cadence === 0
+      ? (piste as MediaStreamTrack & { requestFrame?: () => void }).requestFrame?.bind(piste)
+      : undefined;
+
   const dessiner = () => {
     if (!vivant) return;
 
-    // L'image capturee peut etre plus petite que l'ecran si le systeme
-    // applique une mise a l'echelle : on ramene les coordonnees dans le repere
-    // de la video plutot que de supposer qu'ils coincident.
-    const facteur = video.videoWidth > 0 ? video.videoWidth / window.screen.width : 1;
+    // L'image capturee peut etre plus petite que l'ecran si le systeme applique
+    // une mise a l'echelle : on ramene les coordonnees dans le repere de la
+    // video plutot que de supposer qu'ils coincident.
+    const facteur = ajuster();
 
     pinceau.drawImage(
       video,
@@ -168,16 +241,9 @@ export async function decouperSource(
       canevas.width,
       canevas.height,
     );
-  };
 
-  // `requestVideoFrameCallback` cale le dessin sur les images reellement
-  // recues : dessiner plus souvent recopierait deux fois la meme image, moins
-  // souvent perdrait de la fluidite.
-  const parImage = (
-    video as HTMLVideoElement & {
-      requestVideoFrameCallback?: (rappel: () => void) => number;
-    }
-  ).requestVideoFrameCallback?.bind(video);
+    demanderImage?.();
+  };
 
   let boucle = 0;
 
@@ -190,12 +256,6 @@ export async function decouperSource(
   } else {
     boucle = window.setInterval(dessiner, 1000 / images);
   }
-
-  const flux = canevas.captureStream(images);
-  const [piste] = flux.getVideoTracks();
-
-  // Un canevas rend toujours une piste ; le typage ne le sait pas.
-  if (!piste) return { piste: pisteEcran, arreter: () => {} };
 
   return {
     piste,

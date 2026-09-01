@@ -24,11 +24,7 @@ import { EmojiPicker } from '@/components/EmojiPicker';
 import { LIMITS } from '@/constants';
 import { formatBytes, formatRelative } from '@/lib/time';
 import type { Profile, UUID } from '@/types/db';
-import {
-  useSuggestions,
-  SUGGESTION_MIN,
-  SUGGESTION_MAX,
-} from '@/store/suggestions';
+import { COMMANDE } from '@/store/suggestions';
 
 interface ComposerProps {
   channelId: UUID;
@@ -107,6 +103,23 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
    * avant la frappe plutot qu'apres, par un message d'erreur.
    */
   const blocked = useMemo((): string | null => {
+    /*
+     * La suspension passe avant tout le reste.
+     *
+     * Elle vaut partout, alors que les autres raisons ne valent que pour un
+     * espace ou un salon. La citer en second aurait laisse croire, dans un
+     * salon verrouille, que c'est le verrou qui empeche d'ecrire — et l'on
+     * serait alle essayer ailleurs pour rien.
+     */
+    if (
+      profile?.suspendu_jusqu_a &&
+      new Date(profile.suspendu_jusqu_a).getTime() > Date.now()
+    ) {
+      return `Votre compte est suspendu ${formatRelative(profile.suspendu_jusqu_a)}${
+        profile.suspendu_motif ? ` — ${profile.suspendu_motif}` : ''
+      }. Vous pouvez toujours lire, et ecrire au support.`;
+    }
+
     if (timeout && new Date(timeout.expires_at).getTime() > Date.now()) {
       return `Vous ne pouvez pas ecrire dans cet espace ${formatRelative(timeout.expires_at)}${
         timeout.reason ? ` — ${timeout.reason}` : ''
@@ -116,7 +129,7 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
       return 'Ce salon est verrouille par la moderation.';
     }
     return null;
-  }, [timeout, channel?.locked, myRank]);
+  }, [timeout, channel?.locked, myRank, profile?.suspendu_jusqu_a, profile?.suspendu_motif]);
 
   /* --------------------------------------------------------- Message cite */
 
@@ -307,43 +320,22 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
     if ((!trimmed && uploads.length === 0) || !profile || sending || blocked) return;
 
     /*
-     * `/suggestion` n'envoie pas un message : il depose une suggestion.
+     * `/suggestion` ne repond plus ici.
      *
-     * La commande est la seule porte d'entree, et c'est voulu. Un champ
-     * toujours ouvert recueille surtout des essais ; ecrire une commande
-     * demande d'avoir voulu proposer. Ce qui suit n'atteint donc jamais le
-     * salon : une suggestion n'est pas une conversation, et la laisser aussi
-     * dans le fil obligerait a la lire deux fois.
+     * La commande deposait une suggestion depuis n'importe quel salon. Elle
+     * partait donc d'une conversation ou plus personne ne la reverrait, vers
+     * une page que son auteur decouvrait au moment de l'envoi — sans avoir vu
+     * ce qui avait deja ete propose, ni par qui.
+     *
+     * L'espace Suggestions est desormais un salon a part entiere, avec son
+     * champ. La commande y est meme superflue. Ce qui reste ici n'est donc pas
+     * un refus mais une indication : on ouvre la page, et le texte deja ecrit
+     * n'est pas perdu — il attend dans le champ que l'on quitte.
      */
-    const commande = /^\/suggestion\b\s*([\s\S]*)$/i.exec(trimmed);
-
-    if (commande) {
-      const idee = (commande[1] ?? '').trim();
-
-      if (idee.length < SUGGESTION_MIN) {
-        setNotice(
-          `Ecrivez votre idee apres la commande, en ${SUGGESTION_MIN} caracteres au moins.`,
-        );
-        return;
-      }
-
-      if (idee.length > SUGGESTION_MAX) {
-        setNotice(`Une suggestion tient en ${SUGGESTION_MAX} caracteres.`);
-        return;
-      }
-
-      setSending(true);
-      const pose = await useSuggestions.getState().proposer(idee);
-      setSending(false);
-
-      if (!pose) {
-        setNotice('La suggestion n’a pas pu etre enregistree.');
-        return;
-      }
-
-      setValue('');
-      setNotice(null);
-      // On ouvre la liste : sans cela, la suggestion part sans qu'on voie ou.
+    if (COMMANDE.test(trimmed)) {
+      setNotice(
+        'Les suggestions se proposent dans leur espace, ou l’on voit celles qui existent deja.',
+      );
       useUI.getState().showSuggestions();
       return;
     }

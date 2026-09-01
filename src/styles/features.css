@@ -1598,11 +1598,110 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
    ceux qui font Quality plutot qu'a ses autres utilisateurs.
    ========================================================================== */
 
+/*
+ * L'espace est un salon : une zone qui defile, un champ qui ne defile pas.
+ *
+ * La page entiere defilait auparavant. Le champ ajoute en bas serait alors
+ * descendu avec la liste, et proposer une idee aurait demande de derouler
+ * toutes les precedentes — l'inverse exact de ce qu'on veut d'un salon.
+ */
 .suggestions {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.suggestions__fil {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-8) var(--space-7) var(--space-9);
+  padding: var(--space-8) var(--space-7) var(--space-6);
+}
+
+.suggestions__composeur {
+  flex-shrink: 0;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-7) var(--space-5);
+}
+
+.suggestions__champ {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input, var(--bg-sunken));
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.suggestions__champ:focus-within {
+  border-color: color-mix(in oklab, var(--warning, #f0b232) 55%, transparent);
+}
+
+.suggestions__saisie {
+  flex: 1;
+  min-width: 0;
+  /* La hauteur est posee par le composant, au caractere pres : une hauteur en
+     CSS se battrait avec elle a chaque frappe. */
+  padding: var(--space-3) 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-base);
+  line-height: 1.45;
+  resize: none;
+  outline: none;
+}
+
+.suggestions__saisie::placeholder {
+  color: var(--text-muted);
+}
+
+.suggestions__envoyer {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--warning, #f0b232);
+  color: #1a1a1a;
+  cursor: pointer;
+  transition:
+    filter var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+
+.suggestions__envoyer:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.suggestions__envoyer:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/*
+ * Le compteur et l'erreur occupent la meme ligne.
+ *
+ * Deux lignes distinctes feraient sauter le champ d'un cran a la premiere
+ * erreur, au moment precis ou l'on relit ce qu'on vient d'ecrire.
+ */
+.suggestions__avis {
+  margin: var(--space-2) 0 0;
+  min-height: 1.2em;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.suggestions__avis.is-alerte {
+  color: var(--danger);
 }
 
 .suggestions__entete {
@@ -2153,8 +2252,3 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   padding: var(--space-9) 0;
 }
 
-/* L'entree dans la liste, en rouge comme la page. */
-.dm-support.is-active,
-.dm-support:hover {
-  color: var(--danger);
-}

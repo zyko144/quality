@@ -51,6 +51,7 @@ export function VoiceStage({ channel }: { channel: Channel }) {
   const deafened = useVoice((state) => state.deafened);
   const sharing = useVoice((state) => state.sharing);
   const partageSansSon = useVoice((state) => state.partageSansSon);
+  const raisonSansSon = useVoice((state) => state.raisonSansSon);
   const stats = useVoice((state) => state.outboundStats);
   const qualite = useContextMenu();
 
@@ -324,10 +325,8 @@ export function VoiceStage({ channel }: { channel: Channel }) {
       {partageSansSon ? (
         <p className="voice-stage__note" role="status">
           <Icon name="volume" size={14} />
-          Votre partage part sans le son. Deux chemins ont ete essayes et
-          refuses par le systeme. Dites-le-moi si cela persiste : la capture de
-          la sortie audio se fait alors cote application, ce qui reste a
-          construire.
+          Votre partage part sans le son.
+          {raisonSansSon ? ` ${raisonSansSon}` : null}
         </p>
       ) : null}
 

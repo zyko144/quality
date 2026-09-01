@@ -71,6 +71,9 @@ mod capture;
 #[path = "capture_autre.rs"]
 mod capture;
 
+/// Capture du son du systeme, par le bouclage de Windows. Voir `son.rs`.
+mod son;
+
 /// Retire la fenetre de selection de partage imposee par WebView2.
 ///
 /// A chaque appel de `getDisplayMedia`, le moteur ouvre sa propre fenetre —
@@ -142,7 +145,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             capture::sources_partageables,
             capture::zone_source,
-            capture::masquer_barre_partage
+            capture::masquer_barre_partage,
+            son::demarrer_son_systeme,
+            son::arreter_son_systeme
         ])
         // Une seconde instance ne cree pas de fenetre : elle reveille celle qui
         // existe deja. Sans cela, cliquer deux fois sur l'icone ouvrirait deux

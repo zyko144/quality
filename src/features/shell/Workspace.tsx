@@ -186,13 +186,27 @@ export function Workspace() {
   }, [ready, spaces, activeSpaceId, selectSpace, view]);
 
   useEffect(() => {
+    /*
+     * La meme reserve qu'au-dessus, et pour la meme raison.
+     *
+     * Amis, Waves, Suggestions et Support vident le salon actif en passant en
+     * vue privee. Sans ce test, cet effet voyait un espace ouvert sans salon
+     * choisi et en rouvrait un aussitot — ce qui remettait la vue sur l'espace.
+     * Depuis un espace, ces quatre pages s'ouvraient donc et se refermaient
+     * dans le meme rendu : on cliquait, et rien ne se passait.
+     *
+     * Le defaut ne se voyait pas depuis la vue privee, ou aucun espace n'est
+     * actif — c'est-a-dire partout ou l'on pense a essayer.
+     */
+    if (view === 'direct') return;
     if (!activeSpaceId) return;
+
     const inSpace = channels.filter((channel) => channel.space_id === activeSpaceId);
     if (activeChannelId && inSpace.some((channel) => channel.id === activeChannelId)) return;
 
     const firstText = inSpace.find((channel) => channel.kind === 'text') ?? inSpace[0];
     if (firstText) selectChannel(firstText.id);
-  }, [activeSpaceId, activeChannelId, channels, selectChannel]);
+  }, [activeSpaceId, activeChannelId, channels, selectChannel, view]);
 
   /* ------------------------------------------------------- Presence en ligne */
 

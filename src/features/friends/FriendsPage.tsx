@@ -38,6 +38,7 @@ export function FriendsPage() {
   const profiles = useFriends((state) => state.profiles);
 
   const userId = useSession((state) => state.session?.user.id);
+  const showSupport = useUI((state) => state.showSupport);
 
   const [tab, setTab] = useState<Tab>('online');
   const [query, setQuery] = useState('');
@@ -110,6 +111,23 @@ export function FriendsPage() {
         >
           <Icon name="user-plus" size={15} />
           Ajouter un ami
+        </button>
+
+        {/*
+          Le support se tient a cote des amis, en rouge.
+
+          Il n'est pas un onglet : il ouvre une autre page. La couleur dit les
+          deux choses a la fois — qu'on ne reste pas ici, et que c'est le
+          bouton qu'on cherche quand quelque chose va mal. Le vert d'a cote
+          repond a une envie, ce rouge repond a un probleme.
+        */}
+        <button
+          type="button"
+          className="friends__support"
+          onClick={showSupport}
+        >
+          <Icon name="mail" size={15} />
+          Support
         </button>
       </header>
 

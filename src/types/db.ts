@@ -48,6 +48,22 @@ export interface Profile {
    */
   terms_accepted_at: ISODate | null;
   terms_version: number | null;
+
+  /**
+   * Echeance de la suspension du compte, si le compte est suspendu.
+   *
+   * Datee, jamais definitive : la levee se fait toute seule. Un drapeau
+   * booleen aurait demande qu'on pense a le retirer, ce que personne ne fait,
+   * et les suspensions « temporaires » seraient devenues perpetuelles.
+   *
+   * Nulle, ou passee, veut dire « rien a signaler » : c'est la base qui
+   * tranche, cette valeur ne sert qu'a l'expliquer a l'interessé.
+   */
+  suspendu_jusqu_a?: ISODate | null;
+
+  /** Pourquoi. Une sanction dont on ignore la cause ne corrige rien. */
+  suspendu_motif?: string | null;
+
   created_at: ISODate;
 }
 

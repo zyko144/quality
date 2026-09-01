@@ -23,6 +23,7 @@ import './styles/depth.css';
 import './styles/mobile.css';
 import { useSession } from '@/store/session';
 import { suivreLesLiens } from './lib/liens';
+import { installerJournal, journalAuteur } from './lib/journal';
 import { useChat } from './store/chat';
 
 // Le volume des signaux est lu au demarrage : sans cela, le reglage
@@ -97,6 +98,25 @@ function dismissSplash(): void {
 
 // Les liens sortants partent vers le navigateur du systeme : voir `liens.ts`.
 suivreLesLiens();
+
+/*
+ * Le journal est installe avant le premier rendu.
+ *
+ * Une erreur au montage est precisement celle qu'on ne voit jamais : elle
+ * arrive avant que quoi que ce soit puisse l'afficher, et la fenetre reste
+ * blanche. L'installer plus tard reviendrait a n'attraper que les defauts
+ * survenant dans une application deja debout — les moins mysterieux.
+ */
+installerJournal();
+
+/*
+ * Les lignes suivantes portent le nom de qui est connecte.
+ *
+ * Sans cela, la console montrerait un journal sans auteur : on saurait qu'une
+ * erreur a eu lieu, jamais chez qui, et l'on ne pourrait pas relier une plainte
+ * a sa trace — ce qui est tout l'interet.
+ */
+useSession.subscribe((etat) => journalAuteur(etat.profile?.id ?? null));
 
 void root().then((screen) => {
   createRoot(container).render(<StrictMode>{screen}</StrictMode>);

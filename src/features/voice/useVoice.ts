@@ -18,6 +18,8 @@ import {
 import { useChat } from '@/store/chat';
 import { useSpacePrefs } from '@/store/spacePrefs';
 import { ouvrirPorte, type Porte } from './porte';
+import { capturerSonSysteme, type SonSysteme } from './sonSysteme';
+import { journal } from '@/lib/journal';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -191,6 +193,17 @@ interface VoiceState {
   partageSansSon: boolean;
 
   /**
+   * Pourquoi le partage part sans son, quand c'est le cas.
+   *
+   * Distinct de `partageSansSon` : le booleen dit qu'il faut prevenir, cette
+   * chaine dit quoi. La partie native rend des raisons precises et differentes
+   * — peripherique introuvable, bouclage refuse par Windows, format inconnu —
+   * et les remplacer par une phrase unique revenait a jeter la seule chose
+   * grace a laquelle on peut agir.
+   */
+  raisonSansSon: string | null;
+
+  /**
    * Ou en est le masquage d'adresse, constate a la derniere entree.
    *
    * `sans-relais` n'est pas une erreur : c'est un souhait qu'aucune
@@ -247,6 +260,20 @@ let arretSuiviMicro: (() => void) | null = null;
  * c'est lui qu'il faudra fermer, la porte ne le tenant pas.
  */
 let microBrut: MediaStream | null = null;
+
+/**
+ * Capture du son de l'ordinateur en cours, ou `null`.
+ *
+ * Rangee hors de l'etat React : elle n'a rien a afficher, et sa piste vit
+ * deja dans le flux du partage. Ce qu'on garde ici, c'est de quoi l'arreter.
+ */
+let sonNatif: SonSysteme | null = null;
+
+/** Arrete la capture native s'il y en a une, et oublie la. */
+function couperSonNatif() {
+  sonNatif?.arreter();
+  sonNatif = null;
+}
 let porteEnCours: Porte | null = null;
 
 /**
@@ -351,6 +378,15 @@ const peers = new Map<UUID, Peer>();
  * un ordre imprevisible : on garde donc les deux, et l'on resout des que les
  * deux moities sont la.
  */
+/**
+ * Delai avant de classer un flux sans attendre son annonce, en millisecondes.
+ *
+ * Assez long pour que l'annonce arrive dans le cas normal — elle prend quelques
+ * dizaines de millisecondes — et assez court pour qu'un partage qu'on a demande
+ * a voir n'ait pas le temps de paraitre casse.
+ */
+const REPLI_CLASSEMENT = 1500;
+
 const streamPurposes = new Map<string, StreamPurpose>();
 /** Pistes recues avant leur annonce, a reclasser une fois celle-ci arrivee. */
 const pendingStreams = new Map<string, { peerId: UUID; stream: MediaStream }>();
@@ -889,6 +925,27 @@ export const useVoice = create<VoiceState>((set, get) => {
     set({ speaking: {} });
   }
 
+  /**
+   * Devine le role d'un flux a partir de ce que la presence annonce.
+   *
+   * Rend `null` des que la reponse est ambigue — personne introuvable, ou bien
+   * partage ET camera en meme temps. Deviner faux afficherait une camera en
+   * plein ecran a la place d'un jeu, ce qui est pire que d'attendre.
+   */
+  function classerParPresence(peerId: UUID): StreamPurpose | null {
+    const salon = get().channelId;
+    if (!salon) return null;
+
+    const qui = (get().participantsByChannel[salon] ?? []).find(
+      (participant) => participant.user_id === peerId,
+    );
+
+    if (!qui) return null;
+    if (qui.sharing && !qui.video) return 'screen';
+    if (qui.video && !qui.sharing) return 'camera';
+    return null;
+  }
+
   /** Fait savoir a un pair a quoi correspond un flux qu'on lui envoie. */
   function announceStream(peerId: UUID, streamId: string, purpose: StreamPurpose): void {
     const me = get().userId;
@@ -930,11 +987,42 @@ export const useVoice = create<VoiceState>((set, get) => {
    * que devine : classer une camera comme partage d'ecran l'afficherait en
    * grand au milieu de la fenetre.
    */
-  function placeVideoStream(peerId: UUID, stream: MediaStream): void {
-    const purpose = streamPurposes.get(stream.id);
+  function placeVideoStream(peerId: UUID, stream: MediaStream, repli?: StreamPurpose): void {
+    const purpose = streamPurposes.get(stream.id) ?? repli;
 
     if (!purpose) {
       pendingStreams.set(stream.id, { peerId, stream });
+
+      /*
+       * L'annonce peut ne jamais venir. On ne reste pas bloque pour autant.
+       *
+       * Le role d'un flux voyage par le canal de signalisation, la piste par la
+       * connexion media. Si l'annonce se perd — canal rouvert entre-temps,
+       * message emis pendant que le destinataire se reabonnait — la piste reste
+       * en attente pour toujours : on clique « Regarder », le bouton passe a
+       * « Masquer », et rien n'apparait. C'est exactement ce qui a ete
+       * rapporte, et c'etait invisible a l'emetteur, qui partageait bel et bien.
+       *
+       * La presence dit deja qui partage et qui montre sa camera. Quand une
+       * seule des deux est vraie, elle repond a la question sans qu'on ait
+       * besoin de l'annonce. Quand les deux le sont, elle ne tranche pas, et
+       * l'on continue d'attendre — mieux vaut un flux en retard qu'une camera
+       * affichee en grand a la place d'un jeu.
+       */
+      window.setTimeout(() => {
+        if (!pendingStreams.has(stream.id)) return;
+
+        const devine = classerParPresence(peerId);
+        if (!devine) return;
+
+        journal.alerte('vocal', 'Flux classe sans son annonce', {
+          pair: peerId,
+          suppose: devine,
+        });
+
+        placeVideoStream(peerId, stream, devine);
+      }, REPLI_CLASSEMENT);
+
       return;
     }
 
@@ -1274,6 +1362,7 @@ export const useVoice = create<VoiceState>((set, get) => {
     participantsByChannel: {},
     masquageActif: 'inconnu',
     partageSansSon: false,
+    raisonSansSon: null,
     outboundStats: null,
 
     join: async (channelId, userId) => {
@@ -1281,14 +1370,19 @@ export const useVoice = create<VoiceState>((set, get) => {
 
       set({ connecting: true, error: null });
 
-      if (get().channelId) {
-        await get().leave();
-        // Le systeme ne rend pas le micro instantanement : le redemander
-        // aussitot echoue avec « peripherique inaccessible », surtout quand un
-        // logiciel de routage audio est en jeu. Une image d'attente suffit a
-        // laisser la liberation aboutir.
-        await new Promise((resoudre) => setTimeout(resoudre, 120));
-      }
+      /*
+       * On enchaine sans pause.
+       *
+       * Une attente de cent vingt millisecondes se tenait ici, le temps que le
+       * systeme rende le micro de la session precedente. Elle etait payee a
+       * CHAQUE changement de salon pour un echec qui n'arrive presque jamais —
+       * et quand il arrive, `capturer` reessaie deja de lui-meme une
+       * demi-seconde plus tard.
+       *
+       * Autrement dit : on ralentissait tout le monde en permanence pour un
+       * cas rare qui savait se rattraper seul.
+       */
+      if (get().channelId) await get().leave();
 
       /*
        * Le micro s'ouvre pendant qu'on libere le sujet, pas apres.
@@ -1337,18 +1431,29 @@ export const useVoice = create<VoiceState>((set, get) => {
        * D'ou l'attente : `removeChannel` est un aller-retour, et le lancer sans
        * l'attendre laissait la course ouverte.
        */
+      const aFermer = new Set<ReturnType<typeof supabase.channel>>();
+
       const observateur = observateurs.get(channelId);
       if (observateur) {
         observateurs.delete(channelId);
-        await supabase.removeChannel(observateur);
+        aFermer.add(observateur);
       }
 
       // Ceinture : un canal sur ce sujet peut venir d'ailleurs — un salon
       // precedent mal referme, une reconciliation en vol.
       for (const reste of supabase.getChannels()) {
-        if (!reste.topic.endsWith(`orbit:voice:${channelId}`)) continue;
-        await supabase.removeChannel(reste);
+        if (reste.topic.endsWith(`orbit:voice:${channelId}`)) aFermer.add(reste);
       }
+
+      /*
+       * Fermes de front, pas l'un apres l'autre.
+       *
+       * Chaque fermeture est un aller-retour vers le serveur. En file, deux
+       * canaux restants coutaient deux fois le temps d'un ; menes ensemble, ils
+       * ne coutent que le plus lent. C'est la meme raison qui fait ouvrir le
+       * micro plus haut sans l'attendre.
+       */
+      await Promise.all([...aFermer].map((canal) => supabase.removeChannel(canal)));
 
       let localStream: MediaStream;
       try {
@@ -1380,6 +1485,14 @@ export const useVoice = create<VoiceState>((set, get) => {
 
       instantArrivee = Date.now();
       set({ channelId, userId, localStream, connecting: false });
+
+      journal.info('vocal', 'Salon rejoint', {
+        salon: channelId,
+        // Le temps mis a ouvrir le micro est la moitie du delai ressenti a la
+        // connexion : sans le mesurer, on ne discute que d'impressions.
+        relais: relaisImpose,
+        serveurs: serveursDuSalon.length,
+      });
 
       // Son propre micro passe par le meme analyseur que ceux des autres.
       // Sans cela, la pastille de parole ne s'allumait jamais pour soi : on
@@ -1445,7 +1558,10 @@ export const useVoice = create<VoiceState>((set, get) => {
     },
 
     leave: async () => {
-      if (get().channelId) playCue('leave');
+      if (get().channelId) {
+        playCue('leave');
+        journal.info('vocal', 'Salon quitte', { salon: get().channelId });
+      }
       const { localStream, localScreen, localCamera, channelId } = get();
 
       // La publication differee doit s'arreter avec le salon : sinon elle
@@ -1468,6 +1584,7 @@ export const useVoice = create<VoiceState>((set, get) => {
       pendingStreams.clear();
 
       relacherMicro();
+      couperSonNatif();
       for (const track of localStream?.getTracks() ?? []) track.stop();
       for (const track of localScreen?.getTracks() ?? []) track.stop();
       for (const track of localCamera?.getTracks() ?? []) track.stop();
@@ -1586,7 +1703,14 @@ export const useVoice = create<VoiceState>((set, get) => {
           arreterDecoupe?.();
           arreterDecoupe = null;
 
-          set({ sharing: false, localScreen: null, partageSansSon: false });
+          couperSonNatif();
+
+          set({
+            sharing: false,
+            localScreen: null,
+            partageSansSon: false,
+            raisonSansSon: null,
+          });
           stopStats();
           playCue('share-stop');
           publishState();
@@ -1698,7 +1822,13 @@ export const useVoice = create<VoiceState>((set, get) => {
               peer.screenAudioSender = null;
             }
           }
-          set({ sharing: false, localScreen: null });
+          couperSonNatif();
+          set({
+            sharing: false,
+            localScreen: null,
+            partageSansSon: false,
+            raisonSansSon: null,
+          });
           publishState();
         });
 
@@ -1706,25 +1836,49 @@ export const useVoice = create<VoiceState>((set, get) => {
 
         // Le son du partage, quand la source en fournit. Il voyage dans le meme
         // flux que l'image : le separer obligerait a resynchroniser a l'arrivee.
-        const [audioTrack] = display.getAudioTracks();
+        let [audioTrack] = display.getAudioTracks();
+        let raisonNatif: string | null = null;
 
         /*
-         * Le detour par `chromeMediaSource` a ete retire.
+         * Sans son du moteur, on va le prendre a Windows.
          *
-         * Il demandait la sortie du systeme par les contraintes heritees de
-         * Chromium, sans identifiant de source — ce que WebView2 traite comme
-         * un message malforme et sanctionne en tuant le processus de rendu :
-         * `RESULT_CODE_KILLED_BAD_MESSAGE`, page blanche, application a
-         * relancer, a chaque tentative de partage.
+         * `getDisplayMedia` ne l'accorde que par une case a cocher qui vit dans
+         * le selecteur du systeme — celui-la meme que nous sautons pour
+         * afficher le notre. Deux contournements cote web ont echoue ; le
+         * second, `chromeMediaSource`, tuait le processus de rendu a chaque
+         * partage. Leur trace complete est dans `sonSysteme.ts`.
          *
-         * Ces contraintes n'existent que couplees a un identifiant obtenu par
-         * `desktopCapturer`, une interface propre a Electron que Tauri n'a pas.
-         * Il n'y avait donc pas de demi-mesure a trouver : sans cet
-         * identifiant, l'appel est invalide par construction.
-         *
-         * Un partage muet vaut infiniment mieux qu'une application qui tombe.
-         * La capture de la sortie audio se fera cote natif — voir `sonSysteme.ts`.
+         * Ce chemin-ci ne passe pas par le moteur : la partie native lit le
+         * bouclage de WASAPI et nous rend une piste. Elle rejoint le flux du
+         * partage, si bien que l'emission, l'annonce et l'arret la traitent
+         * comme si elle en venait — sans un seul cas particulier plus loin.
          */
+        if (!audioTrack && media.shareSystemAudio) {
+          const resultat = await capturerSonSysteme();
+
+          if (resultat.ok) {
+            sonNatif = resultat.son;
+            const pisteNative = resultat.son.flux.getAudioTracks()[0] ?? null;
+
+            if (pisteNative) {
+              display.addTrack(pisteNative);
+              audioTrack = pisteNative;
+              raisonNatif = null;
+            } else {
+              // Un flux sans piste ne devrait pas arriver ; s'il arrive, on le
+              // dit plutot que de laisser croire a un jeu silencieux.
+              couperSonNatif();
+              raisonNatif = 'La capture s’est ouverte mais n’a rendu aucune piste.';
+            }
+          } else {
+            raisonNatif = resultat.raison;
+          }
+
+          journal.info('partage', 'Son du systeme demande', {
+            obtenu: Boolean(audioTrack),
+            raison: raisonNatif,
+          });
+        }
 
         /*
          * Le son demande n'est pas toujours accorde, et cela ne se voit pas.
@@ -1740,7 +1894,8 @@ export const useVoice = create<VoiceState>((set, get) => {
          * de bruit. On le dit donc, une fois, a qui partage.
          */
         set({
-          partageSansSon: useDevices.getState().media.shareSystemAudio && !audioTrack,
+          partageSansSon: media.shareSystemAudio && !audioTrack,
+          raisonSansSon: audioTrack ? null : raisonNatif,
         });
 
         for (const [peerId, peer] of peers) {
@@ -1913,6 +2068,23 @@ export const useVoice = create<VoiceState>((set, get) => {
      */
     toggleWatch: (userId) => {
       const suivant = !get().watchedShares[userId];
+
+      /*
+       * Demander a voir un partage vaut classement.
+       *
+       * Si un flux de cette personne attend toujours son annonce, le clic leve
+       * l'ambiguite mieux que n'importe quelle heuristique : on ne demande pas
+       * a regarder le partage de quelqu'un qui n'en fait pas. Sans cela, il
+       * fallait attendre le repli — et pendant ce temps, la vignette restait
+       * vide sans rien expliquer.
+       */
+      if (suivant && !get().remoteScreens[userId]) {
+        for (const [, attente] of pendingStreams) {
+          if (attente.peerId !== userId) continue;
+          placeVideoStream(userId, attente.stream, 'screen');
+          break;
+        }
+      }
 
       const flux = get().remoteScreens[userId];
       for (const piste of flux?.getVideoTracks() ?? []) piste.enabled = suivant;

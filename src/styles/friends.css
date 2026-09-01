@@ -153,6 +153,45 @@
   box-shadow: inset 0 0 0 1px var(--success);
 }
 
+/*
+ * Le support, a cote d'« Ajouter un ami ».
+ *
+ * Meme forme, autre couleur, et surtout autre nature : celui-la n'est pas un
+ * onglet, il quitte la page. Le contour plutot que l'aplat le dit sans un mot
+ * — deux boutons pleins cote a cote se liraient comme deux choix du meme
+ * genre, alors que l'un ajoute quelqu'un et l'autre signale un probleme.
+ *
+ * Le rouge est celui de l'urgence partout ailleurs dans l'application ; c'est
+ * ce qui permet de trouver ce bouton sans le lire, le jour ou l'on en a besoin.
+ */
+.friends__support {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 26px;
+  padding: 0 var(--space-4);
+  margin-left: var(--space-3);
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--danger);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.friends__support:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
 /* ---------------------------------------------------------------- Corps */
 
 .friends__body {

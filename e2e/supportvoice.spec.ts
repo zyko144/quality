@@ -4,8 +4,10 @@ import { openApp } from './session';
 /**
  * L'onglet Support.
  *
- * Nomme pour tomber dans le projet « authentifie » : la page vit sous la liste
- * des conversations privees, a cote des suggestions.
+ * Nomme pour tomber dans le projet « authentifie ». L'entree se tient dans
+ * l'en-tete de la page Amis, a droite d'« Ajouter un ami » : c'est la qu'elle a
+ * ete demandee, et c'est aussi le seul endroit de l'application ou une barre
+ * horizontale existe deja — la barre laterale, elle, est une colonne.
  *
  * Aucun test ne depose de demande. Les tables n'existent que sur une base
  * migree, et surtout une demande deposee ici resterait dans la file de
@@ -17,8 +19,9 @@ test.describe('Support', () => {
   test('la page s ouvre et dit qui peut lire les demandes', async ({ page }) => {
     await openApp(page);
     await page.locator('.rail__button--home').first().click();
+    await page.getByRole('button', { name: 'Amis', exact: true }).click();
 
-    const entree = page.getByRole('button', { name: 'Support' });
+    const entree = page.locator('.friends__support');
     await expect(entree).toBeVisible({ timeout: 15_000 });
     await entree.click();
 
@@ -39,8 +42,8 @@ test.describe('Support', () => {
   test('le formulaire refuse un envoi incomplet', async ({ page }) => {
     await openApp(page);
     await page.locator('.rail__button--home').first().click();
-
-    await page.getByRole('button', { name: 'Support' }).click();
+    await page.getByRole('button', { name: 'Amis', exact: true }).click();
+    await page.locator('.friends__support').click();
     await page.getByRole('button', { name: 'Nouvelle demande' }).click();
 
     const envoyer = page.getByRole('button', { name: 'Envoyer la demande' });
@@ -67,8 +70,8 @@ test.describe('Support', () => {
   test('les categories couvrent les cas et se decrivent', async ({ page }) => {
     await openApp(page);
     await page.locator('.rail__button--home').first().click();
-
-    await page.getByRole('button', { name: 'Support' }).click();
+    await page.getByRole('button', { name: 'Amis', exact: true }).click();
+    await page.locator('.friends__support').click();
     await page.getByRole('button', { name: 'Nouvelle demande' }).click();
 
     const categorie = page.getByLabel('Categorie');

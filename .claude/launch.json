@@ -21,6 +21,14 @@
         "4321"
       ],
       "port": 4321
+    },
+    {
+      "name": "console",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/noamb/Documents/quality-support/serveur.mjs"
+      ],
+      "port": 4180
     }
   ]
 }
