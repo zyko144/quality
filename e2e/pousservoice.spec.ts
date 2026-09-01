@@ -34,10 +34,10 @@ test.describe('Touches maintenues', () => {
     await page.getByRole('button', { name: 'Raccourcis', exact: true }).click();
 
     await expect(
-      page.locator('.raccourcis__ligne', { hasText: /parler en maintenant/i }),
+      page.locator('.raccourcis__ligne', { hasText: /push-to-talk/i }),
     ).toBeVisible({ timeout: 10_000 });
 
-    const seTaire = page.locator('.raccourcis__ligne', { hasText: /se taire en maintenant/i });
+    const seTaire = page.locator('.raccourcis__ligne', { hasText: /push-to-mute/i });
     await expect(seTaire).toBeVisible();
 
     /*
@@ -54,7 +54,7 @@ test.describe('Touches maintenues', () => {
     await page.getByRole('button', { name: 'Preferences' }).click();
     await page.getByRole('button', { name: 'Raccourcis', exact: true }).click();
 
-    const ligne = page.locator('.raccourcis__ligne', { hasText: /se taire en maintenant/i });
+    const ligne = page.locator('.raccourcis__ligne', { hasText: /push-to-mute/i });
     await expect(ligne).toBeVisible({ timeout: 10_000 });
 
     await ligne.locator('.raccourcis__touche').click();
@@ -114,6 +114,31 @@ test.describe('Touches maintenues', () => {
     expect(tenir(etat, 'bas', false, true)).toEqual({ micro: true, tenue: true });
     // Et le lacher rend l'ouverture.
     expect(tenir(etat, 'haut', true, true)).toEqual({ micro: false, tenue: false });
+  });
+
+  /*
+   * Le relachement doit toujours aboutir, meme hors d'un salon.
+   *
+   * La mecanique notait le relachement, puis l'application verifiait qu'on
+   * etait bien dans un salon — et abandonnait sinon. Or cette verification
+   * echoue pendant les fractions de seconde ou l'on rejoint. Le relachement
+   * etait alors enregistre sans etre applique : la touche comptait pour lachee,
+   * le micro restait coupe, et plus rien ne le rouvrait.
+   */
+  test('le relachement rend toujours l etat, quoi qu il arrive ensuite', () => {
+    const etat = etatTenueVide();
+
+    // On tient la touche « se taire » depuis un micro ouvert.
+    expect(tenir(etat, 'bas', false, true)).toEqual({ micro: true, tenue: true });
+
+    // La mecanique a note la touche comme tenue : elle DOIT rendre au
+    // relachement, et rendre l'ouverture.
+    const rendu = tenir(etat, 'haut', true, true);
+    expect(rendu.micro).toBe(false);
+    expect(rendu.tenue).toBe(false);
+
+    // Et l'etat est propre : un second relachement ne rend plus rien.
+    expect(tenir(etat, 'haut', false, true)).toEqual({ micro: null, tenue: false });
   });
 
   test('« parler » depuis un micro deja ouvert ne le coupe pas au relachement', () => {

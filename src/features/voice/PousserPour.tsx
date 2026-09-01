@@ -78,19 +78,46 @@ function brancher(sens: Sens, combinaison: Combinaison | null): () => void {
     );
   };
 
-  /** Applique ce que la mecanique a decide. */
+  /**
+   * Applique ce que la mecanique a decide.
+   *
+   * Aucune sortie anticipee entre la decision et son application, et c'est le
+   * point le plus important de cette fonction.
+   *
+   * La version precedente verifiait qu'on etait bien dans un salon APRES avoir
+   * consulte la mecanique — laquelle avait deja note que la touche etait
+   * relachee. Quand la verification echouait, et elle echoue pendant les
+   * fractions de seconde ou l'on rejoint un salon, le relachement etait
+   * enregistre sans etre applique : le micro restait coupe, la touche etait
+   * consideree comme lachee, et plus rien ne le rouvrait. On ne pouvait ni
+   * parler ni s'en sortir autrement qu'en cliquant le bouton.
+   *
+   * Rendre un etat de micro hors d'un salon est sans consequence — il n'y a
+   * pas de piste a couper — alors qu'omettre de le rendre coute la parole.
+   */
   const appliquer = (evenement: Evenement) => {
     const voix = useVoice.getState();
     const suite = tenir(etat, evenement, voix.muted, voulu);
 
     useVoice.getState().signalerPoussee(suite.tenue && voulu);
-
     if (suite.micro === null) return;
-    if (!voix.channelId) return;
 
     // La sourdine se leve aussi : tenir « parler » en etant sourd doit rendre
     // la parole, sinon la touche ne fait rien et l'on ne sait pas pourquoi.
-    if (evenement === 'bas' && sens === 'parler' && voix.deafened) voix.toggleDeafen();
+    if (evenement === 'bas' && sens === 'parler' && useVoice.getState().deafened) {
+      useVoice.getState().toggleDeafen();
+    }
+
+    /*
+     * Le relachement rend aussi l'audition.
+     *
+     * Se retrouver sourd en lachant une touche n'a aucun sens, et c'est
+     * pourtant arrive : la sourdine coupe le micro, si bien qu'un etat
+     * « sourd » pris pour un simple « micro coupe » etait rendu comme tel.
+     */
+    if (evenement !== 'bas' && !suite.micro && useVoice.getState().deafened) {
+      useVoice.getState().toggleDeafen();
+    }
 
     // La mecanique rend une valeur VOULUE, pas une bascule : on ne bascule donc
     // que si l'on n'y est pas deja. C'est ce qui rend le martelement inoffensif.

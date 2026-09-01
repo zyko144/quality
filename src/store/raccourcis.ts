@@ -64,14 +64,16 @@ const DEFAUTS: Raccourci[] = [
   },
   {
     action: 'pousser-pour-parler',
-    libelle: 'Parler en maintenant la touche',
+    // Le nom usuel plutot qu'une paraphrase : c'est celui que les gens
+    // emploient entre eux, et celui qu'ils cherchent dans une liste.
+    libelle: 'Push-to-talk — parler en maintenant',
     detail:
       'Le micro s’ouvre tant que la touche est enfoncee, et se referme des qu’on la lache. Aucun raccourci par defaut : la touche depend trop de ce qu’on fait a cote.',
     combinaison: null,
   },
   {
     action: 'pousser-pour-couper',
-    libelle: 'Se taire en maintenant la touche',
+    libelle: 'Push-to-mute — se taire en maintenant',
     detail:
       'L’inverse du precedent : le micro se ferme tant que la touche est enfoncee. Utile quand on parle la plupart du temps et qu’on veut se taire un instant — tousser, repondre a cote. Aucun raccourci par defaut.',
     combinaison: null,

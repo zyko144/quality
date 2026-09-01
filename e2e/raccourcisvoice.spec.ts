@@ -29,8 +29,8 @@ test.describe('Raccourcis vocaux', () => {
      * veut pouvoir se taire un instant — tousser, repondre a cote — sans
      * chercher un bouton.
      */
-    await expect(page.locator('.raccourcis')).toContainText('Parler en maintenant');
-    await expect(page.locator('.raccourcis')).toContainText('Se taire en maintenant');
+    await expect(page.locator('.raccourcis')).toContainText('Push-to-talk');
+    await expect(page.locator('.raccourcis')).toContainText('Push-to-mute');
   });
 
   test('appuyer sur une touche la prend, et Echap annule', async ({ page }) => {

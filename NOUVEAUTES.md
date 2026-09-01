@@ -12,6 +12,18 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.9
+
+### Corrige
+
+- **Lacher la touche pouvait laisser le micro coupe pour de bon.** La mecanique notait le relachement, puis l'application verifiait qu'on etait bien dans un salon — et abandonnait sinon. Or cette verification echoue pendant les fractions de seconde ou l'on rejoint. Le relachement etait alors enregistre sans etre applique : la touche comptait pour lachee, le micro restait ferme, et plus rien ne le rouvrait. Rendre un etat de micro hors d'un salon est sans consequence ; omettre de le rendre coute la parole.
+- **Lacher la touche rend aussi l'audition.** Se retrouver sourd apres avoir lache n'a aucun sens, et c'est pourtant arrive : la sourdine coupe le micro, si bien qu'un etat « sourd » etait retenu comme un simple « micro coupe » et rendu comme tel.
+- **La liste des salons suivait le serveur pour son propre etat.** La presence fait un aller-retour et se publie par fenetres : en enchainant les bascules plus vite qu'elles, on se voyait dans un etat perime — parfois plusieurs secondes, parfois jusqu'au changement suivant. On se croyait coupe en parlant, on recliquait, et le decalage empirait. Son propre etat vient desormais de chez soi, comme sur la scene vocale.
+
+### Ameliore
+
+- Les deux touches maintenues portent leur nom usuel : **push-to-talk** et **push-to-mute**. C'est celui qu'on emploie entre soi, et celui qu'on cherche dans une liste.
+
 ## 0.6.8
 
 ### Ameliore

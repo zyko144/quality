@@ -373,6 +373,18 @@ function ChannelItem({
   );
 
   const salonRejoint = useVoice((state) => state.channelId);
+
+  /*
+   * Son propre etat, lu chez soi.
+   *
+   * La presence fait un aller-retour et se publie par fenetres : en enchainant
+   * les bascules plus vite qu'elles, on se voyait dans un etat perime. Voir
+   * plus bas, ou ces valeurs remplacent celles de la presence pour soi.
+   */
+  const monMicroCoupe = useVoice((state) => state.muted);
+  const maSourdine = useVoice((state) => state.deafened);
+  const monPartage = useVoice((state) => state.sharing);
+  const maTouche = useVoice((state) => state.pousseePourCouper);
   const rejoindreVocal = useVoice((state) => state.join);
   const moi = useSession((state) => state.profile?.id);
 
@@ -546,6 +558,31 @@ function ChannelItem({
 
           {participants.map((participant) => {
             const profile = profiles[participant.user_id];
+
+            /*
+             * Son propre etat vient de chez soi, pas du serveur.
+             *
+             * La presence fait un aller-retour, et elle est volontairement
+             * espacee pour ne pas inonder le canal. En enchainant « couper » et
+             * « sourdine » plus vite que cet intervalle, on depassait l'annonce :
+             * la liste montrait un etat perime, parfois plusieurs secondes,
+             * parfois jusqu'au changement suivant. On se voyait coupe en
+             * parlant, et l'on recliquait — ce qui empirait le decalage.
+             *
+             * La scene vocale lisait deja l'etat local pour soi ; cette liste ne
+             * le faisait pas, et c'est tout l'ecart entre les deux. Pour les
+             * autres, la presence reste la seule source possible.
+             */
+            const etat =
+              participant.user_id === moi
+                ? {
+                    muted: monMicroCoupe,
+                    deafened: maSourdine,
+                    sharing: monPartage,
+                    pousse_pour_couper: maTouche,
+                  }
+                : participant;
+
             return (
               <li
                 key={participant.user_id}
@@ -590,11 +627,11 @@ function ChannelItem({
                   <span
                     className={
                       'voice-member__face' +
-                      (participant.pousse_pour_couper
+                      (etat.pousse_pour_couper
                         ? ' is-tenu'
-                        : participant.deafened
+                        : etat.deafened
                           ? ' is-deafened'
-                          : participant.muted
+                          : etat.muted
                             ? ' is-muted'
                             : '')
                     }
@@ -614,19 +651,19 @@ function ChannelItem({
                     d'un micro ; elles passent a quinze et prennent la couleur
                     de leur etat.
                   */}
-                  {participant.pousse_pour_couper ? (
+                  {etat.pousse_pour_couper ? (
                     <Icon name="mic-tenu" size={15} className="voice-member__signe is-tenu" />
-                  ) : participant.deafened ? (
+                  ) : etat.deafened ? (
                     <Icon
                       name="headphones-off"
                       size={15}
                       className="voice-member__signe is-deafened"
                     />
-                  ) : participant.muted ? (
+                  ) : etat.muted ? (
                     <Icon name="mic-off" size={15} className="voice-member__signe is-muted" />
                   ) : null}
 
-                  {participant.sharing ? (
+                  {etat.sharing ? (
                     <Icon name="screen" size={15} className="voice-member__signe is-partage" />
                   ) : null}
                 </button>
