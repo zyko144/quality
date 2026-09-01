@@ -1951,6 +1951,48 @@ button.userbar__voice-info:hover {
    Bannière de mise a jour
    -------------------------------------------------------------------------- */
 
+/*
+ * La pastille : ce que devient le bandeau une fois replie.
+ *
+ * Il disparaissait pour de bon quand on cliquait « plus tard », et rien ne le
+ * rappelait ensuite. Elle occupe le meme coin, ne demande rien, et un clic la
+ * redeploie. Tant qu'une version attend, il y a quelque chose a voir la.
+ */
+.maj-pastille {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.maj-pastille:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+/* Prete a relancer : elle passe a l'accent. C'est le seul etat ou l'on perd
+   quelque chose a ne rien faire — la correction est la, et n'est pas appliquee. */
+.maj-pastille.is-prete {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
 .maj {
   position: fixed;
   right: var(--space-5);

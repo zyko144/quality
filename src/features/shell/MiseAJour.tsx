@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
 import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
@@ -87,8 +87,24 @@ interface Disponible {
 
 export function MiseAJour() {
   const [disponible, setDisponible] = useState<Disponible | null>(null);
+
+  /*
+   * Fermer replie le bandeau, ne l'efface pas.
+   *
+   * Il disparaissait pour de bon, et rien ne le rappelait : on cliquait
+   * « plus tard » une fois, et l'on restait sur une ancienne version sans plus
+   * jamais rien voir. Deux personnes se sont ainsi retrouvees a cinq versions
+   * d'ecart, et la moitie des defauts qu'elles constataient venait de la.
+   *
+   * Replie, il devient une pastille dans le meme coin. Elle ne prend pas de
+   * place, elle ne demande rien, mais elle est la — et un clic la redeploie.
+   */
+  const [replie, setReplie] = useState(false);
   const [installation, setInstallation] = useState<'attente' | 'cours' | 'prete'>('attente');
   const [nouveautes, setNouveautes] = useState<{ version: string; notes: string } | null>(null);
+
+  /** Derniere version proposee, pour ne redeployer que sur du nouveau. */
+  const disponibleRef = useRef<string | null>(null);
 
   /*
    * Ce qui a change depuis la derniere fois.
@@ -183,6 +199,11 @@ export function MiseAJour() {
           proposee: mise.version,
         });
 
+        // Une version qu'on n'avait pas encore vue redeploie le bandeau : la
+        // pastille dit « il y a quelque chose », elle ne dit pas quoi.
+        setReplie((etait) => etait && disponibleRef.current === mise.version);
+        disponibleRef.current = mise.version;
+
         setDisponible({
           version: mise.version,
           notes: mise.body ?? '',
@@ -245,7 +266,25 @@ export function MiseAJour() {
 
   return (
     <>
-      {disponible ? (
+      {disponible && replie ? (
+        <button
+          type="button"
+          className={
+            'maj-pastille' + (installation === 'prete' ? ' is-prete' : '')
+          }
+          onClick={() => setReplie(false)}
+          title={
+            installation === 'prete'
+              ? 'Mise a jour prete — relancer'
+              : `Echow ${disponible.version} est disponible`
+          }
+        >
+          <Icon name={installation === 'prete' ? 'refresh' : 'arrow-down'} size={15} />
+          {disponible.version}
+        </button>
+      ) : null}
+
+      {disponible && !replie ? (
         <div className="maj" role="status">
           <span className="maj__marque" aria-hidden="true">
             <Icon name="arrow-down" size={16} />
@@ -272,7 +311,7 @@ export function MiseAJour() {
               <button
                 type="button"
                 className="btn btn--sm"
-                onClick={() => setDisponible(null)}
+                onClick={() => setReplie(true)}
               >
                 Plus tard
               </button>
@@ -292,7 +331,7 @@ export function MiseAJour() {
                 type="button"
                 className="btn btn--sm"
                 disabled={installation === 'cours'}
-                onClick={() => setDisponible(null)}
+                onClick={() => setReplie(true)}
               >
                 Plus tard
               </button>

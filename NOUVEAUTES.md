@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.5
+
+### Corrige
+
+- **Le bandeau de mise a jour ne disparait plus pour de bon.** « Plus tard » l'effacait, et rien ne le rappelait ensuite : un clic, et l'on restait sur une ancienne version sans plus jamais rien voir en bas a droite. Il se replie desormais en une pastille, dans le meme coin — elle ne prend pas de place, ne demande rien, et un clic la redeploie. Elle passe a la couleur d'accent quand la version est installee et n'attend qu'un redemarrage, seul etat ou l'on perd quelque chose a ne rien faire.
+
 ## 0.6.4
 
 ### Corrige
