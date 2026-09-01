@@ -1756,3 +1756,80 @@ button.voice-tile__name:hover {
   width: 0;
   opacity: 0;
 }
+
+/*
+ * Le menu du partage, ouvert au clic droit sur l'image.
+ *
+ * En position fixe et non absolue : la vignette peut etre en plein ecran,
+ * auquel cas un menu positionne dans son repere se retrouverait hors de
+ * l'ecran. Les coordonnees viennent du clic, donc de la fenetre.
+ */
+.menu-partage {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  gap: 2px;
+  width: 224px;
+  padding: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-floating);
+  box-shadow: var(--shadow-lg);
+}
+
+.menu-partage__volume {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 2px;
+}
+
+.menu-partage__ligne {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.menu-partage__ligne strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.menu-partage__volume input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.menu-partage__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-partage__item:hover {
+  background: var(--bg-hover);
+}
+
+/* Quitter est la seule action qui retire quelque chose : elle se distingue,
+   sans crier — un rouge plein pour « arreter de regarder » serait excessif. */
+.menu-partage__item--quitter {
+  color: var(--danger);
+}
+
+.menu-partage__item--quitter:hover {
+  background: var(--danger-soft);
+}

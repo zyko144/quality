@@ -12,6 +12,16 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.2
+
+### Corrige
+
+- **Le volume d'un partage se regle de nouveau.** Le curseur restait bloque tant qu'aucune piste sonore n'etait arrivee — ce qui parait logique et ne l'est pas : le son d'un partage arrive apres l'image, et parfois bien apres. On avait donc un curseur mort, sans savoir s'il etait casse ou s'il attendait. Il regle le volume de LECTURE : le poser d'avance est aussi sense que de baisser le sien avant de lancer une video.
+
+### Nouveau
+
+- **Un clic droit sur un partage ouvre ses commandes** : le volume, couper le son, le plein ecran, et arreter de regarder. Elles vivaient dans trois endroits differents — sur l'image, dans la liste des participants, dans un coin — et les boutons de l'image sont petits, puis recouverts des qu'on passe en plein ecran. Le clic droit tombe la ou l'on regarde.
+
 ## 0.6.1
 
 ### Nouveau

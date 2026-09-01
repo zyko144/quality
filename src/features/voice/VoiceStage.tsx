@@ -487,6 +487,9 @@ function ScreenTile({
   /** Cette vignette etait-elle celle en plein ecran ? Voir l'ecouteur global. */
   const etaitPleinEcran = useRef(false);
 
+  /** Ou poser le menu contextuel, ou `null` s'il est ferme. */
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
     const node = ref.current;
     if (!node || !stream) return;
@@ -562,6 +565,18 @@ function ScreenTile({
       className={
         'screen-tile' + (focused ? ' is-focused' : '') + (fullscreen ? ' is-fullscreen' : '')
       }
+      /*
+        Le clic droit ouvre les memes commandes que les boutons.
+
+        Les boutons vivent en bas a droite de l'image, ou ils sont petits et
+        recouverts des qu'on passe en plein ecran. Le clic droit, lui, tombe la
+        ou l'on regarde — et c'est le geste qu'on tente devant une video dont on
+        veut baisser le son sans la quitter des yeux.
+      */
+      onContextMenu={(event) => {
+        event.preventDefault();
+        setMenu({ x: event.clientX, y: event.clientY });
+      }}
     >
       {/*
         L'image elle-meme agrandit et reduit.
@@ -619,7 +634,144 @@ function ScreenTile({
           <Icon name={fullscreen ? 'minus' : 'expand'} size={16} />
         </button>
       </div>
+
+      {menu && auteur ? (
+        <MenuPartage
+          auteur={auteur}
+          x={menu.x}
+          y={menu.y}
+          pleinEcran={fullscreen}
+          onPleinEcran={() => void toggleFullscreen()}
+          onFermer={() => setMenu(null)}
+        />
+      ) : null}
     </figure>
+  );
+}
+
+/**
+ * Ce qu'on peut faire d'un partage qu'on regarde, au clic droit.
+ *
+ * Regrouper ici ce qui etait disperse : le volume vivait sur l'image, l'arret
+ * dans la liste des participants, et le plein ecran dans un coin. Devant une
+ * video trop forte ou qu'on veut quitter, on ne devrait pas avoir a chercher
+ * dans trois endroits.
+ */
+function MenuPartage({
+  auteur,
+  x,
+  y,
+  pleinEcran,
+  onPleinEcran,
+  onFermer,
+}: {
+  auteur: UUID;
+  x: number;
+  y: number;
+  pleinEcran: boolean;
+  onPleinEcran: () => void;
+  onFermer: () => void;
+}) {
+  const volume = useUserAudio((state) => state.getStreamVolume(auteur));
+  const regler = useUserAudio((state) => state.setStreamVolume);
+  const coupe = useUserAudio((state) => state.isMuted(auteur));
+  const basculerCoupure = useUserAudio((state) => state.toggleMute);
+  const toggleWatch = useVoice((state) => state.toggleWatch);
+
+  /*
+   * Un clic ailleurs, ou Echap, referme.
+   *
+   * En phase de capture : sans cela, le clic qui ferme active aussi ce qui se
+   * trouve dessous, et l'on quitte un partage en croyant fermer un menu.
+   */
+  useEffect(() => {
+    const fermer = (evenement: Event) => {
+      if (evenement instanceof KeyboardEvent && evenement.key !== 'Escape') return;
+      onFermer();
+    };
+
+    window.addEventListener('pointerdown', fermer, true);
+    window.addEventListener('keydown', fermer, true);
+
+    return () => {
+      window.removeEventListener('pointerdown', fermer, true);
+      window.removeEventListener('keydown', fermer, true);
+    };
+  }, [onFermer]);
+
+  return (
+    <div
+      className="menu-partage"
+      // Borne a la fenetre : un menu ouvert pres du bord droit sortirait de
+      // l'ecran, et l'on ne verrait que sa premiere colonne de pixels.
+      style={{
+        left: Math.min(x, window.innerWidth - 240),
+        top: Math.min(y, window.innerHeight - 200),
+      }}
+      onPointerDown={(evenement) => evenement.stopPropagation()}
+      role="menu"
+    >
+      <label className="menu-partage__volume">
+        <span className="menu-partage__ligne">
+          <span>Volume du partage</span>
+          <strong>{volume} %</strong>
+        </span>
+
+        <input
+          type="range"
+          min={0}
+          max={200}
+          step={1}
+          value={volume}
+          aria-label="Volume du partage"
+          onChange={(evenement) => {
+            const brut = Number(evenement.target.value);
+            // Meme aimantation qu'ailleurs : soixante-quinze est le repos d'un
+            // partage, et le retrouver ne doit pas demander d'adresse.
+            regler(auteur, Math.abs(brut - 75) <= 4 ? 75 : brut);
+          }}
+        />
+      </label>
+
+      <button
+        type="button"
+        className="menu-partage__item"
+        role="menuitem"
+        onClick={() => {
+          basculerCoupure(auteur);
+          onFermer();
+        }}
+      >
+        <Icon name={coupe ? 'volume' : 'mic-off'} size={15} />
+        {coupe ? 'Reactiver le son' : 'Couper le son'}
+      </button>
+
+      <button
+        type="button"
+        className="menu-partage__item"
+        role="menuitem"
+        onClick={() => {
+          onPleinEcran();
+          onFermer();
+        }}
+      >
+        <Icon name={pleinEcran ? 'minus' : 'expand'} size={15} />
+        {pleinEcran ? 'Quitter le plein ecran' : 'Plein ecran'}
+      </button>
+
+      <button
+        type="button"
+        className="menu-partage__item menu-partage__item--quitter"
+        role="menuitem"
+        onClick={() => {
+          toggleWatch(auteur);
+          onFermer();
+        }}
+      >
+        <Icon name="x" size={15} />
+        Arreter de regarder
+      </button>
+    </div>
   );
 }
 
@@ -670,6 +822,20 @@ function VolumePartage({ auteur }: { auteur: UUID }) {
         <Icon name={aDuSon && volume > 0 ? 'volume' : 'mic-off'} size={16} />
       </button>
 
+      {/*
+        Le curseur reste utilisable, meme quand aucun son n'arrive encore.
+
+        Il etait desactive tant que la piste sonore n'etait pas la. C'etait
+        logique et c'etait faux : le son d'un partage arrive apres l'image, et
+        parfois bien apres — le temps qu'une annonce se perde et qu'un repli
+        rattrape. On se retrouvait devant un curseur mort, sans savoir s'il
+        etait casse ou s'il attendait, et le reglage pose d'avance ne pouvait
+        pas s'appliquer a ce qui arrivait ensuite.
+
+        Ce curseur regle le volume de LECTURE. Le poser avant que le son
+        n'arrive est aussi sense que de baisser le sien avant de lancer une
+        video, et c'est ce qu'on fait quand on sait qu'un partage sera fort.
+      */}
       <input
         type="range"
         className="tuile-volume__curseur"
@@ -677,7 +843,6 @@ function VolumePartage({ auteur }: { auteur: UUID }) {
         max={200}
         step={1}
         value={volume}
-        disabled={!aDuSon}
         aria-label="Volume du partage d’ecran"
         onChange={(event) => {
           // Meme aimantation qu'ailleurs : soixante-quinze est le repos d'un
