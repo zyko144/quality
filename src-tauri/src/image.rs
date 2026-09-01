@@ -176,6 +176,20 @@ fn appareil() -> ResultatWin<(ID3D11Device, ID3D11DeviceContext, IDirect3DDevice
     let contexte = contexte.ok_or_else(|| windows::core::Error::from_win32())?;
 
     let dxgi: IDXGIDevice = materiel.cast()?;
+
+    /*
+     * Notre travail passe apres celui du jeu.
+     *
+     * La carte arbitre entre ceux qui la sollicitent, et rien ne lui dit
+     * spontanement que recopier une image de partage est moins urgent que
+     * dessiner la scene qu'on est en train de jouer. Ce reglage le lui dit.
+     *
+     * L'echelle va de moins sept a sept ; moins deux suffit a nous faire passer
+     * apres sans nous faire attendre indefiniment. Le pilote a le droit de
+     * refuser — d'ou l'echec ignore : c'est une preference, pas une garantie.
+     */
+    let _ = unsafe { dxgi.SetGPUThreadPriority(-2) };
+
     let winrt = unsafe { CreateDirect3D11DeviceFromDXGIDevice(&dxgi)? };
     let winrt: IDirect3DDevice = winrt.cast()?;
 
@@ -224,15 +238,7 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
     INTERVALLE_NS.store(intervalle_pour(images), Ordering::Relaxed);
     let mut precedente = std::time::Instant::now() - std::time::Duration::from_secs(1);
 
-    /*
-     * La texture d'attente est gardee d'une image a l'autre.
-     *
-     * En creer une par image demandait au pilote une allocation soixante fois
-     * par seconde, ce qui coute plus cher que la copie elle-meme. Les
-     * dimensions ne changent que si la source change de taille, et on la
-     * refait alors — c'est le seul cas ou elle ne convient plus.
-     */
-    let mut attente: Option<(ID3D11Texture2D, u32, u32)> = None;
+    let mut attente = Attente::default();
 
     let pour_evenement = reserve.clone();
     reserve.FrameArrived(&TypedEventHandler::new(
@@ -250,7 +256,7 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
             }
             precedente = maintenant;
 
-            if let Ok(lue) = lire(&materiel, &contexte, &image, &mut attente) {
+            if let Ok(Some(lue)) = lire(&materiel, &contexte, &image, &mut attente) {
                 let _ = expediteur.try_send(lue);
             }
 
@@ -279,18 +285,50 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
     })
 }
 
-/// Ramene une image du processeur graphique vers la memoire centrale.
+/// Les textures d'attente, gardees d'une image a l'autre.
+///
+/// **Deux, et lues en decale.** C'est le point qui coute des images par seconde
+/// a celui qui partage, et il ne se devine pas.
 ///
 /// La texture rendue par la capture vit sur la carte et ne se lit pas
-/// directement : il faut la recopier dans une texture « d'attente », faite pour
-/// etre lue par le processeur. C'est le seul passage couteux de ce fichier, et
-/// il disparaitra le jour ou l'encodage se fera sur la carte elle-meme.
+/// directement : il faut la recopier dans une texture faite pour etre lue par
+/// le processeur, puis demander l'acces a cette copie. Avec une seule texture,
+/// on demande l'acces a une copie qu'on vient d'ordonner : la carte doit donc
+/// terminer TOUT ce qu'elle a en cours avant de rendre la main. Le jeu, qui
+/// partage la meme carte, se retrouve arrete net soixante fois par seconde —
+/// et c'est cela qu'on paie en images perdues, bien plus que le temps de la
+/// copie elle-meme.
+///
+/// Avec deux, on ordonne la copie dans l'une et on lit l'autre, remplie a
+/// l'image precedente : la carte a eu tout le temps de la finir, et rien
+/// n'attend. Le prix est une image de retard, soit une quinzaine de
+/// millisecondes que personne ne remarque dans un partage d'ecran.
+///
+/// En creer une par image serait pire encore : le pilote allouerait soixante
+/// fois par seconde, ce qui coute plus cher que la copie. Les dimensions ne
+/// changent que si la source change de taille, et l'on refait alors les deux.
+#[derive(Default)]
+struct Attente {
+    textures: Option<[ID3D11Texture2D; 2]>,
+    largeur: u32,
+    hauteur: u32,
+    /// Celle qu'on va remplir. L'autre porte l'image precedente.
+    tour: usize,
+    /// Faux tant que la seconde texture n'a jamais ete remplie.
+    amorcee: bool,
+}
+
+/// Ramene une image du processeur graphique vers la memoire centrale.
+///
+/// Rend `Ok(None)` a la toute premiere image : il n'y a alors rien a lire dans
+/// l'autre texture, et rendre une image noire serait pire que n'en rendre
+/// aucune.
 fn lire(
     materiel: &ID3D11Device,
     contexte: &ID3D11DeviceContext,
     image: &windows::Graphics::Capture::Direct3D11CaptureFrame,
-    attente: &mut Option<(ID3D11Texture2D, u32, u32)>,
-) -> ResultatWin<Image> {
+    attente: &mut Attente,
+) -> ResultatWin<Option<Image>> {
     let surface = image.Surface()?;
     let acces: windows::Win32::System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess =
         surface.cast()?;
@@ -302,9 +340,10 @@ fn lire(
     let largeur = description.Width;
     let hauteur = description.Height;
 
-    // On refait la texture d'attente seulement si la taille a change : une
-    // fenetre redimensionnee pendant qu'on la partage, et rien d'autre.
-    let convient = matches!(attente, Some((_, l, h)) if *l == largeur && *h == hauteur);
+    // On refait les textures seulement si la taille a change : une fenetre
+    // redimensionnee pendant qu'on la partage, et rien d'autre.
+    let convient =
+        attente.textures.is_some() && attente.largeur == largeur && attente.hauteur == hauteur;
 
     if !convient {
         let forme = D3D11_TEXTURE2D_DESC {
@@ -315,19 +354,42 @@ fn lire(
             ..description
         };
 
-        let mut neuve: Option<ID3D11Texture2D> = None;
-        unsafe { materiel.CreateTexture2D(&forme, None, Some(&mut neuve))? };
-        *attente = Some((
-            neuve.ok_or_else(windows::core::Error::from_win32)?,
-            largeur,
-            hauteur,
-        ));
+        let faire = || -> ResultatWin<ID3D11Texture2D> {
+            let mut neuve: Option<ID3D11Texture2D> = None;
+            unsafe { materiel.CreateTexture2D(&forme, None, Some(&mut neuve))? };
+            neuve.ok_or_else(windows::core::Error::from_win32)
+        };
+
+        attente.textures = Some([faire()?, faire()?]);
+        attente.largeur = largeur;
+        attente.hauteur = hauteur;
+        attente.tour = 0;
+        // La taille a change : ce que porte l'autre texture ne vaut plus rien.
+        attente.amorcee = false;
     }
 
-    let copie = &attente.as_ref().expect("la texture vient d'etre posee").0;
+    let textures = attente.textures.as_ref().expect("les textures viennent d'etre posees");
 
-    unsafe { contexte.CopyResource(copie, &texture) };
+    // On ordonne la copie dans l'une, on lira l'autre.
+    unsafe { contexte.CopyResource(&textures[attente.tour], &texture) };
 
+    let precedente = 1 - attente.tour;
+    attente.tour = precedente;
+
+    if !attente.amorcee {
+        // Premiere image : l'autre texture n'a jamais rien recu. On amorce, et
+        // la prochaine sera lisible.
+        attente.amorcee = true;
+        return Ok(None);
+    }
+
+    let copie = &textures[precedente];
+
+    /*
+     * L'acces ne devrait pas attendre : cette copie a ete ordonnee a l'image
+     * precedente, et la carte l'a terminee depuis longtemps. C'est toute la
+     * raison d'etre des deux textures.
+     */
     let mut vue = D3D11_MAPPED_SUBRESOURCE::default();
     unsafe { contexte.Map(copie, 0, D3D11_MAP_READ, 0, Some(&mut vue))? };
 
@@ -363,11 +425,11 @@ fn lire(
 
     unsafe { contexte.Unmap(copie, 0) };
 
-    Ok(Image {
+    Ok(Some(Image {
         largeur,
         hauteur,
         pixels,
-    })
+    }))
 }
 
 /// La taille annoncee d'une source, sans ouvrir de capture.

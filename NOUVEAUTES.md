@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.3
+
+### Ameliore
+
+- **Partager ne bloque plus la carte graphique, et le jeu garde ses images.** C'est ici que partaient les images perdues, et le coupable ne se devine pas. Pour lire une image capturee, il faut la recopier dans une zone que le processeur sait lire, puis demander l'acces a cette copie. Nous demandions l'acces a une copie tout juste ordonnee : la carte devait donc finir TOUT ce qu'elle avait en cours avant de rendre la main — soixante fois par seconde, et le jeu qui partage la meme carte s'arretait avec elle. On garde desormais deux zones et l'on lit celle remplie a l'image precedente, que la carte a terminee depuis longtemps. Mesure sur cette machine, en 1080p : l'attente passe de 1,125 ms a 0,013 ms par image, et le rapatriement complet de 2,0 ms a 0,9 ms. Le prix est une image de retard, soit une quinzaine de millisecondes que personne ne remarque.
+- **Notre travail passe apres celui du jeu.** La carte arbitre entre ceux qui la sollicitent, et rien ne lui disait que recopier une image de partage est moins urgent que dessiner la scene qu'on joue. C'est dit.
+
 ## 0.7.2
 
 ### Ameliore

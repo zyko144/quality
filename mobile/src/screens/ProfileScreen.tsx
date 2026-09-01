@@ -34,7 +34,12 @@ export function ProfileScreen() {
 
       <div className="profile-info">
         <p>
-          Echow Mobile Web Player<br />
+          {/* Le numero est affiche parce qu'il repond a une question qu'on se
+              pose vraiment : un service worker sert volontiers l'ancienne
+              version depuis le cache du telephone, et sans lui on ne peut pas
+              distinguer « la publication n'est pas passee » de « mon telephone
+              garde l'ancienne ». */}
+          Echow Mobile Web Player {__APP_VERSION__}<br />
           <a href="https://qualityy.vercel.app/" target="_blank" rel="noopener noreferrer">
             Site officiel Echow
           </a>

@@ -1,9 +1,25 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
+/*
+ * La version, prise dans `package.json` plutot que recopiee.
+ *
+ * Elle est affichee dans l'application, et c'est ce qui rend une publication
+ * verifiable : un service worker sert volontiers l'ancienne version depuis le
+ * cache du telephone, et sans numero a l'ecran on ne peut pas distinguer
+ * « Vercel n'a pas publie » de « le telephone n'a pas repris ».
+ */
+const version = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+).version as string;
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   plugins: [
     react(),
     VitePWA({
