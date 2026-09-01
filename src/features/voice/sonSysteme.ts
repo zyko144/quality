@@ -55,6 +55,15 @@ interface FormatSon {
 const ECOUTE_MS = 4000;
 
 /**
+ * Nombre de paquets sur lesquels on releve le niveau a l'entree du canal.
+ *
+ * Deux cents paquets couvrent les quatre secondes d'ecoute a la cadence
+ * d'envoi. Au-dela, la mesure ne dirait rien de plus et se paierait a chaque
+ * paquet pendant tout le partage.
+ */
+const PAQUETS_MESURES = 200;
+
+/**
  * Ecoute la capture quelques secondes et journalise son niveau.
  *
  * Le maximum plutot que la moyenne : un jeu a des passages calmes, et une
@@ -242,9 +251,71 @@ export async function capturerSonSysteme(
    * par seconde, et chacun declencherait un rendu pour un tableau d'octets que
    * personne n'affiche.
    */
+  /*
+   * Ce qui traverse le canal est compte avant d'etre transmis.
+   *
+   * Trois maillons peuvent rompre entre WASAPI et les oreilles d'en face :
+   * Windows peut ne rien donner, le canal peut ne rien livrer, le fil audio
+   * peut ne rien jouer. Le premier se mesure cote natif, le troisieme se
+   * mesure sur le flux resultant — et sans ce compteur-ci, on ne pouvait pas
+   * distinguer les deux premiers.
+   *
+   * Le sommet est releve un echantillon sur seize : on cherche a savoir s'il y
+   * a du son, pas a le mesurer, et lire quarante-quatre mille flottants par
+   * seconde pour une reponse binaire serait payer cher.
+   */
+  let paquetsRecus = 0;
+  let octetsRecus = 0;
+  let sommetRecu = 0;
+
   canal.onmessage = (paquet) => {
+    paquetsRecus += 1;
+    octetsRecus += paquet.byteLength;
+
+    // La mesure s'arrete avec la fenetre d'ecoute : au-dela, elle ne dirait
+    // rien de plus et couterait a chaque paquet, pendant tout le partage.
+    if (paquetsRecus <= PAQUETS_MESURES) {
+      const vue = new Float32Array(paquet);
+      for (let i = 0; i < vue.length; i += 16) {
+        const amplitude = Math.abs(vue[i]!);
+        if (amplitude > sommetRecu && Number.isFinite(amplitude)) sommetRecu = amplitude;
+      }
+    }
+
+    // Le transfert detache le tampon : toute lecture doit preceder cette ligne.
     lecture.port.postMessage(paquet, [paquet]);
   };
+
+  /*
+   * Le releve part une fois, quand la fenetre d'ecoute se referme.
+   *
+   * Il rassemble les trois maillons dans une seule ligne, ce qui est le point :
+   * lus separement, ils demandent de recouper trois horodatages ; lus ensemble,
+   * ils designent le maillon rompu sans qu'on ait a reflechir.
+   */
+  window.setTimeout(() => {
+    void (async () => {
+      let natif: Record<string, number> | null = null;
+
+      try {
+        natif = await invoke<Record<string, number>>('diagnostic_son');
+      } catch {
+        // Version plus ancienne du binaire : on journalise ce qu'on a.
+      }
+
+      journal.info('partage', 'Trajet du son', {
+        // Ce que Windows a donne.
+        natifPaquets: natif?.paquets ?? -1,
+        natifTrames: natif?.trames ?? -1,
+        natifSommet: natif?.sommet ?? -1,
+        natifSilencieux: natif?.silencieux ?? -1,
+        // Ce que le canal a livre.
+        canalPaquets: paquetsRecus,
+        canalOctets: octetsRecus,
+        canalSommet: Math.round(sommetRecu * 1000),
+      });
+    })();
+  }, ECOUTE_MS);
 
   /*
    * On mesure ce que le bouclage porte vraiment.

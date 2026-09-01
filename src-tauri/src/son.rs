@@ -84,6 +84,54 @@ const REPOS_MS: u64 = 5;
 #[cfg(windows)]
 const GROUPE_MS: usize = 20;
 
+/// Ce que la capture a vu passer, pour le diagnostic.
+///
+/// Trois maillons peuvent rompre entre WASAPI et les oreilles de celui qui
+/// regarde : Windows peut ne rien donner, le canal peut ne rien transmettre, et
+/// le fil audio peut ne rien jouer. Les deux derniers se mesurent cote web ; ce
+/// compteur-ci mesure le premier, et c'est le seul moyen de les separer.
+///
+/// Le sommet est range en millieme, en entier : un flottant atomique n'existe
+/// pas, et une valeur approchee suffit largement a distinguer « du son » de
+/// « rien du tout ».
+#[cfg(windows)]
+static PAQUETS: AtomicU64 = AtomicU64::new(0);
+#[cfg(windows)]
+static TRAMES: AtomicU64 = AtomicU64::new(0);
+#[cfg(windows)]
+static SOMMET_MILLIEME: AtomicU64 = AtomicU64::new(0);
+#[cfg(windows)]
+static SILENCIEUX: AtomicU64 = AtomicU64::new(0);
+
+/// Ce que la capture a vu depuis son demarrage.
+#[derive(Clone, serde::Serialize)]
+pub struct DiagnosticSon {
+    /// Paquets rendus par WASAPI.
+    pub paquets: u64,
+    /// Trames au total. Zero avec des paquets non nuls serait une anomalie.
+    pub trames: u64,
+    /// Le plus grand echantillon vu, en millieme de la pleine echelle.
+    pub sommet: u64,
+    /// Paquets que Windows a marques comme silencieux.
+    pub silencieux: u64,
+}
+
+/// Rend ce que la capture a vu. Sans effet de bord.
+///
+/// L'interface l'appelle quelques secondes apres le debut d'un partage et le
+/// journalise. C'est ce qui permet de dire « Windows ne donne rien » plutot que
+/// « on n'entend rien », et ces deux phrases n'appellent pas la meme correction.
+#[cfg(windows)]
+#[tauri::command]
+pub fn diagnostic_son() -> DiagnosticSon {
+    DiagnosticSon {
+        paquets: PAQUETS.load(Ordering::Relaxed),
+        trames: TRAMES.load(Ordering::Relaxed),
+        sommet: SOMMET_MILLIEME.load(Ordering::Relaxed),
+        silencieux: SILENCIEUX.load(Ordering::Relaxed),
+    }
+}
+
 /// Generation de capture en cours.
 ///
 /// Un simple booleen ne suffisait pas. Arreter puis relancer aussitot — ce que
@@ -231,6 +279,13 @@ pub fn demarrer_son_systeme(
 
     // Ouvrir une generation coupe la precedente, s'il en restait une.
     let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+
+    // Les compteurs valent pour LA capture en cours : les laisser courir
+    // ferait lire le diagnostic du partage precedent.
+    PAQUETS.store(0, Ordering::Relaxed);
+    TRAMES.store(0, Ordering::Relaxed);
+    SOMMET_MILLIEME.store(0, Ordering::Relaxed);
+    SILENCIEUX.store(0, Ordering::Relaxed);
 
     std::thread::spawn(move || {
         if let Err(erreur) = unsafe { capturer(&canal, generation, peripherique.as_deref()) } {
@@ -474,6 +529,9 @@ unsafe fn capturer_interne(
         if trames > 0 {
             let octets = trames as usize * octets_par_trame;
 
+            PAQUETS.fetch_add(1, Ordering::Relaxed);
+            TRAMES.fetch_add(trames as u64, Ordering::Relaxed);
+
             /*
              * Le silence est ajoute comme du silence, pas comme le tampon.
              *
@@ -483,9 +541,36 @@ unsafe fn capturer_interne(
              * des qu'on met en pause.
              */
             if drapeaux & AUDCLNT_BUFFERFLAGS_SILENT.0 as u32 != 0 {
+                SILENCIEUX.fetch_add(1, Ordering::Relaxed);
                 groupe.resize(groupe.len() + octets, 0);
             } else {
-                groupe.extend_from_slice(std::slice::from_raw_parts(donnees, octets));
+                let tranche = std::slice::from_raw_parts(donnees, octets);
+
+                /*
+                 * Le sommet est releve ici, sur les octets bruts.
+                 *
+                 * Un echantillon sur seize suffit : on cherche a savoir s'il y
+                 * a du son, pas a mesurer un niveau au decibel pres, et lire
+                 * quarante-quatre mille flottants par seconde pour cela serait
+                 * payer cher une reponse binaire.
+                 */
+                let flottants = std::slice::from_raw_parts(
+                    donnees as *const f32,
+                    octets / std::mem::size_of::<f32>(),
+                );
+
+                let mut sommet = 0.0f32;
+                for valeur in flottants.iter().step_by(16) {
+                    let amplitude = valeur.abs();
+                    if amplitude > sommet && amplitude.is_finite() {
+                        sommet = amplitude;
+                    }
+                }
+
+                let millieme = (sommet * 1000.0) as u64;
+                SOMMET_MILLIEME.fetch_max(millieme, Ordering::Relaxed);
+
+                groupe.extend_from_slice(tranche);
             }
         }
 
@@ -524,6 +609,17 @@ pub fn demarrer_son_systeme(
 #[tauri::command]
 pub fn lister_sorties_audio() -> Result<Vec<SortieAudio>, String> {
     Ok(Vec::new())
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+pub fn diagnostic_son() -> DiagnosticSon {
+    DiagnosticSon {
+        paquets: 0,
+        trames: 0,
+        sommet: 0,
+        silencieux: 0,
+    }
 }
 
 #[cfg(not(windows))]

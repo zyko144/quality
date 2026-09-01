@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.9
+
+### Ameliore
+
+- **Le trajet du son d'un partage est mesure de bout en bout.** Trois maillons peuvent rompre entre Windows et les oreilles d'en face : le systeme peut ne rien donner, le canal interne peut ne rien livrer, le fil audio peut ne rien jouer. Chacun est desormais compte, et les trois tiennent sur une seule ligne — lus separement ils demandaient de recouper trois horodatages, lus ensemble ils designent le maillon rompu sans qu'on ait a reflechir.
+
 ## 0.4.8
 
 ### Corrige
