@@ -274,6 +274,20 @@ function couperSonNatif() {
   sonNatif?.arreter();
   sonNatif = null;
 }
+
+/**
+ * Capture d'image en cours, ou `null`.
+ *
+ * Rangee hors de l'etat React, comme celle du son : sa piste vit deja dans le
+ * flux du partage, et ce qu'on garde ici n'est que de quoi l'arreter.
+ */
+let captureNative: import('./imageSysteme').ImageSysteme | null = null;
+
+/** Arrete la capture d'image s'il y en a une, et oublie la. */
+function couperCaptureNative() {
+  captureNative?.arreter();
+  captureNative = null;
+}
 let porteEnCours: Porte | null = null;
 
 /**
@@ -1732,6 +1746,7 @@ let qualiteJournalisee = false;
 
       relacherMicro();
       couperSonNatif();
+      couperCaptureNative();
       for (const track of localStream?.getTracks() ?? []) track.stop();
       for (const track of localScreen?.getTracks() ?? []) track.stop();
       for (const track of localCamera?.getTracks() ?? []) track.stop();
@@ -1851,6 +1866,7 @@ let qualiteJournalisee = false;
           arreterDecoupe = null;
 
           couperSonNatif();
+          couperCaptureNative();
 
           set({
             sharing: false,
@@ -1896,38 +1912,71 @@ let qualiteJournalisee = false;
           return;
         }
 
-        /*
-         * Decoupe, quand une fenetre precise a ete choisie.
-         *
-         * Sur le bureau, la selection du moteur web est court-circuitee : il
-         * prend toujours l'ecran entier. Choisir une fenetre dans notre
-         * selecteur revient donc a n'emettre que la portion correspondante —
-         * sans quoi on diffuserait tout l'ecran en croyant l'inverse.
-         */
         let videoTrack = display.getVideoTracks()[0];
 
         if (sourceId) {
-          try {
-            const { decouperSource } = await import('./decoupe');
-            const decoupe = await decouperSource(
-              display,
-              sourceId,
-              useDevices.getState().media.screenFrameRate,
-              useDevices.getState().media.screenQuality,
-            );
+          /*
+           * La source est capturee par le systeme, pas decoupee dans l'ecran.
+           *
+           * Le moteur web ne sait capturer qu'apres avoir ouvert sa propre
+           * fenetre de selection — celle que nous supprimons pour afficher la
+           * notre. On lui demandait donc l'ecran entier, toujours le premier,
+           * et l'on decoupait. Trois defauts en decoulaient : ce qui recouvrait
+           * la fenetre partait avec elle, le second ecran etait hors
+           * d'atteinte, et une fenetre reduite n'avait plus rien a decouper.
+           *
+           * Windows sait capturer la source elle-meme. La decoupe reste en
+           * repli — un vieux Windows, un moteur sans `MediaStreamTrackGenerator`
+           * — parce qu'un partage imparfait vaut mieux qu'un partage absent.
+           */
+          const { captureNativeDisponible, capturerSource } = await import('./imageSysteme');
 
-            arreterDecoupe = decoupe.arreter;
-            if (decoupe.piste) videoTrack = decoupe.piste;
+          if (captureNativeDisponible()) {
+            const capture = await capturerSource(sourceId);
 
-            if (decoupe.horsEcranPrincipal) {
-              set({
-                error:
-                  "Cette fenetre est sur un second ecran : c'est l'ecran entier qui est partage.",
+            if (capture.ok) {
+              captureNative = capture.image;
+              const pisteNative = capture.image.flux.getVideoTracks()[0];
+
+              if (pisteNative) {
+                // L'image du moteur ne sert plus a rien : la garder ouverte
+                // laisserait une capture d'ecran tourner pour personne.
+                for (const piste of display.getVideoTracks()) piste.stop();
+                display.removeTrack(videoTrack!);
+                display.addTrack(pisteNative);
+                videoTrack = pisteNative;
+              }
+            } else {
+              journal.alerte('partage', 'Capture native refusee', {
+                source: sourceId,
+                raison: capture.raison,
               });
             }
-          } catch {
-            // Decoupe impossible : on partage l'ecran plutot que rien, et
-            // l'utilisateur le voit dans sa propre vignette.
+          }
+
+          if (!captureNative) {
+            try {
+              const { decouperSource } = await import('./decoupe');
+              const decoupe = await decouperSource(
+                display,
+                sourceId,
+                useDevices.getState().media.screenFrameRate,
+                useDevices.getState().media.screenQuality,
+              );
+
+              arreterDecoupe = decoupe.arreter;
+              if (decoupe.piste) videoTrack = decoupe.piste;
+
+              if (decoupe.horsEcranPrincipal) {
+                set({
+                  error:
+                    "Cette fenetre est sur un second ecran : c'est l'ecran entier qui est partage.",
+                });
+              }
+            } catch {
+              // Decoupe impossible : on partage l'ecran plutot que rien, et
+              // l'utilisateur le voit dans sa propre vignette.
+            }
           }
         }
 
@@ -1971,6 +2020,7 @@ let qualiteJournalisee = false;
             }
           }
           couperSonNatif();
+          couperCaptureNative();
           set({
             sharing: false,
             localScreen: null,
@@ -2032,7 +2082,8 @@ let qualiteJournalisee = false;
               raisonNatif = null;
             } else {
               // Un flux sans piste ne devrait pas arriver ; s'il arrive, on le
-              // dit plutot que de laisser croire a un jeu silencieux.
+              // dit plutot que de laisser croire a un jeu silencieux. L'image,
+              // elle, n'a rien a voir avec cet echec et continue.
               couperSonNatif();
               raisonNatif = 'La capture s’est ouverte mais n’a rendu aucune piste.';
             }

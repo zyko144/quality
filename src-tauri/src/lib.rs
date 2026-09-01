@@ -72,6 +72,7 @@ mod capture;
 mod capture;
 
 /// Capture du son du systeme, par le bouclage de Windows. Voir `son.rs`.
+mod flux;
 mod image;
 mod son;
 
@@ -150,7 +151,9 @@ pub fn run() {
             son::demarrer_son_systeme,
             son::arreter_son_systeme,
             son::lister_sorties_audio,
-            son::diagnostic_son
+            son::diagnostic_son,
+            image::demarrer_image,
+            image::arreter_image
         ])
         // Une seconde instance ne cree pas de fenetre : elle reveille celle qui
         // existe deja. Sans cela, cliquer deux fois sur l'icone ouvrirait deux

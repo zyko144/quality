@@ -12,6 +12,18 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.0
+
+### Corrige
+
+- **Choisir une fenetre partage enfin cette fenetre, et elle seule.** L'application demandait au moteur web l'ecran entier — toujours le premier — puis decoupait l'image. Ce qui recouvrait la fenetre partait donc avec elle. Windows sait capturer la source elle-meme : une fenetre rend son contenu meme recouverte.
+- **Le deuxieme ecran se partage.** Il n'etait pas dans l'image qu'on decoupait, donc hors d'atteinte : l'application le disait, faute de pouvoir le montrer. Chaque ecran est desormais une source a part entiere.
+- **Une fenetre reduite garde un contenu a montrer.** Elle disparaissait de la liste, n'ayant plus rien a decouper.
+
+### Ameliore
+
+- **Le partage ne repasse plus par une capture d'ecran.** Les images viennent du processeur graphique, sans recopie inutile, et sans le contour jaune que Windows ajoute par defaut a ce qu'il capture.
+
 ## 0.5.2
 
 ### Corrige

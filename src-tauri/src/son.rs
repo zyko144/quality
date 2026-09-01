@@ -49,12 +49,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[cfg(windows)]
-use std::collections::hash_map::RandomState;
-use std::hash::{BuildHasher, Hasher};
-use std::io::Write;
-use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
-use std::time::Duration;
+use std::sync::mpsc::{sync_channel, SyncSender};
 
 use windows::core::{implement, Interface, HRESULT, IUnknown, PCWSTR};
 use windows::Win32::Media::Audio::{
@@ -329,15 +324,11 @@ pub fn demarrer_son_systeme(peripherique: Option<String>) -> Result<FormatSon, S
      * l'application ne pourraient pas partager en meme temps. Zero demande au
      * systeme de trouver quelque chose de libre, et il le dit.
      */
-    let ecouteur = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0))
-        .map_err(|_| echec("Impossible d'ouvrir le passage du son."))?;
+    let passage =
+        crate::flux::ouvrir().map_err(|_| echec("Impossible d'ouvrir le passage du son."))?;
 
-    let port = ecouteur
-        .local_addr()
-        .map_err(|_| echec("Impossible de lire le port du son."))?
-        .port();
-
-    let jeton = jeton_aleatoire();
+    let port = passage.port;
+    let jeton = passage.jeton.clone();
 
     // Ouvrir une generation coupe la precedente, s'il en restait une.
     let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
@@ -370,142 +361,17 @@ pub fn demarrer_son_systeme(peripherique: Option<String>) -> Result<FormatSon, S
         }
     });
 
-    let jeton_du_fil = jeton.clone();
-    std::thread::spawn(move || servir(ecouteur, receveur, generation, jeton_du_fil));
+    std::thread::spawn(move || {
+        crate::flux::servir(passage, receveur, || {
+            GENERATION.load(Ordering::SeqCst) == generation
+        })
+    });
 
     format.port = port;
     format.jeton = jeton;
     Ok(format)
 }
 
-/// Un jeton imprevisible, tire a chaque partage.
-///
-/// `RandomState` est ensemence par le systeme a chaque construction : c'est ce
-/// qui protege les tables de hachage de Rust contre les collisions provoquees.
-/// Deux ensemencements independants donnent trente-deux caracteres, ce qui est
-/// largement assez pour un jeton qui ne vit que le temps d'un partage, sur une
-/// connexion qui n'ecoute que la boucle locale.
-#[cfg(windows)]
-fn jeton_aleatoire() -> String {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos() as u64)
-        .unwrap_or(0);
-
-    let mut premier = RandomState::new().build_hasher();
-    premier.write_u64(nanos);
-
-    let mut second = RandomState::new().build_hasher();
-    second.write_u64(nanos.rotate_left(32));
-
-    format!("{:016x}{:016x}", premier.finish(), second.finish())
-}
-
-/// Sert le son sur la connexion locale, tant que la generation est la bonne.
-///
-/// Une seule connexion est acceptee. Les suivantes sont refermees sans un mot :
-/// il n'y a qu'un partage a la fois, et laisser plusieurs lecteurs se brancher
-/// n'ouvrirait que des questions sans reponse — lequel recoit quoi.
-#[cfg(windows)]
-fn servir(ecouteur: TcpListener, receveur: Receiver<Vec<u8>>, generation: u64, jeton: String) {
-    // Sans delai, `accept` bloque pour toujours et le fil survit au partage.
-    let _ = ecouteur.set_nonblocking(true);
-
-    let mut flux: Option<TcpStream> = None;
-
-    while GENERATION.load(Ordering::SeqCst) == generation {
-        if flux.is_none() {
-            match ecouteur.accept() {
-                Ok((mut candidat, _)) => {
-                    /*
-                     * La socket acceptee repasse en mode bloquant, explicitement.
-                     *
-                     * L'ecouteur est en mode non bloquant pour que `accept` rende
-                     * la main ; ce que les sockets acceptees en heritent depend du
-                     * systeme. Lire l'en-tete sur une socket non bloquante
-                     * rendrait `WouldBlock` avant meme que la requete arrive, et
-                     * l'on refuserait un client parfaitement valable — avec, pour
-                     * seul symptome, un partage muet de plus.
-                     */
-                    let _ = candidat.set_nonblocking(false);
-
-                    if entete_valide(&mut candidat, &jeton) {
-                        let _ = candidat.set_nodelay(true);
-                        flux = Some(candidat);
-                    }
-                }
-                Err(ref erreur) if erreur.kind() == std::io::ErrorKind::WouldBlock => {
-                    /*
-                     * Personne n'ecoute encore : on vide ce qui s'accumule.
-                     *
-                     * Sans cela, la file se remplit pendant que l'interface
-                     * ouvre sa connexion, et le premier son qu'elle recoit est
-                     * une seconde de passe — jouee d'un coup, en decalage avec
-                     * l'image, et jamais rattrapee.
-                     */
-                    while receveur.try_recv().is_ok() {}
-
-                    std::thread::sleep(Duration::from_millis(10));
-                    continue;
-                }
-                Err(_) => break,
-            }
-        }
-
-        let Ok(paquet) = receveur.recv_timeout(Duration::from_millis(200)) else {
-            continue;
-        };
-
-        if let Some(sortie) = flux.as_mut() {
-            if sortie.write_all(&paquet).is_err() {
-                break;
-            }
-        }
-    }
-}
-
-/// Lit la requete, verifie le jeton, et repond.
-///
-/// Le protocole est le minimum utile : une ligne de requete dont le chemin doit
-/// contenir le jeton, et une reponse sans longueur annoncee — le son n'a pas de
-/// fin connue d'avance. `fetch` cote web lit le corps a mesure qu'il arrive.
-#[cfg(windows)]
-fn entete_valide(flux: &mut TcpStream, jeton: &str) -> bool {
-    use std::io::Read;
-
-    let _ = flux.set_read_timeout(Some(Duration::from_millis(500)));
-
-    let mut tampon = [0u8; 1024];
-    let Ok(lus) = flux.read(&mut tampon) else {
-        return false;
-    };
-
-    let requete = String::from_utf8_lossy(&tampon[..lus]);
-
-    // Le jeton est cherche dans la requete entiere plutot que dans un chemin
-    // decoupe : un jeton hexadecimal de trente-deux caracteres n'apparait pas
-    // par hasard dans un en-tete HTTP.
-    if jeton.is_empty() || !requete.contains(jeton) {
-        let _ = flux.write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n");
-        return false;
-    }
-
-    let entete = concat!(
-        "HTTP/1.1 200 OK\r\n",
-        "Content-Type: application/octet-stream\r\n",
-        "Cache-Control: no-store\r\n",
-        // La page vit sur un autre port : sans cet en-tete, le moteur refuse de
-        // lui donner le corps de la reponse.
-        "Access-Control-Allow-Origin: *\r\n",
-        "Connection: close\r\n",
-        "\r\n"
-    );
-
-    // Le delai de lecture ne vaut plus rien une fois l'en-tete passe : la suite
-    // n'est qu'ecriture.
-    let _ = flux.set_read_timeout(None);
-    flux.write_all(entete.as_bytes()).is_ok()
-}
 
 /// Arrete la capture. Sans effet si elle ne tourne pas.
 #[cfg(windows)]
@@ -1009,85 +875,3 @@ pub fn diagnostic_son() -> DiagnosticSon {
 #[cfg(not(windows))]
 #[tauri::command]
 pub fn arreter_son_systeme() {}
-
-/* -------------------------------------------------------------------------- */
-/* Tests                                                                       */
-/* -------------------------------------------------------------------------- */
-
-#[cfg(all(test, windows))]
-mod tests {
-    use super::*;
-    use std::io::Read;
-    use std::net::TcpStream;
-
-    /// Ouvre un ecouteur local et joue le role du serveur pour une requete.
-    fn repondre_a(requete: &str, jeton: &str) -> (bool, String) {
-        let ecouteur = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0)).unwrap();
-        let port = ecouteur.local_addr().unwrap().port();
-
-        let a_ecrire = requete.to_string();
-        let client = std::thread::spawn(move || {
-            let mut flux = TcpStream::connect(("127.0.0.1", port)).unwrap();
-            flux.write_all(a_ecrire.as_bytes()).unwrap();
-
-            let mut reponse = String::new();
-            let _ = flux.set_read_timeout(Some(Duration::from_millis(500)));
-            let _ = flux.read_to_string(&mut reponse);
-            reponse
-        });
-
-        let (mut candidat, _) = ecouteur.accept().unwrap();
-        let accepte = entete_valide(&mut candidat, jeton);
-
-        // La connexion se ferme ici : le client peut finir sa lecture.
-        drop(candidat);
-
-        (accepte, client.join().unwrap())
-    }
-
-    #[test]
-    fn le_bon_jeton_est_accepte() {
-        let (accepte, reponse) = repondre_a(
-            "GET /abcdef0123456789abcdef0123456789 HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
-            "abcdef0123456789abcdef0123456789",
-        );
-
-        assert!(accepte, "un jeton correct doit ouvrir le flux");
-        assert!(reponse.starts_with("HTTP/1.1 200 OK"), "reponse : {reponse}");
-        assert!(
-            reponse.contains("application/octet-stream"),
-            "le corps doit etre annonce binaire : {reponse}"
-        );
-    }
-
-    #[test]
-    fn un_mauvais_jeton_est_refuse() {
-        let (accepte, reponse) = repondre_a(
-            "GET /00000000000000000000000000000000 HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
-            "abcdef0123456789abcdef0123456789",
-        );
-
-        assert!(!accepte, "un jeton faux ne doit rien ouvrir");
-        assert!(reponse.starts_with("HTTP/1.1 403"), "reponse : {reponse}");
-    }
-
-    /// Le cas qui compte le plus : un jeton vide ne doit ouvrir a personne.
-    ///
-    /// Sans ce test, une regression qui laisserait le jeton vide passerait
-    /// inapercue — et ouvrirait le son du bureau a tout ce qui tourne sur la
-    /// machine, puisque la requete « contient » alors toujours le jeton.
-    #[test]
-    fn un_jeton_vide_refuse_tout() {
-        let (accepte, _) = repondre_a("GET / HTTP/1.1\r\n\r\n", "");
-        assert!(!accepte, "un jeton vide ne doit jamais ouvrir le flux");
-    }
-
-    #[test]
-    fn le_jeton_est_imprevisible() {
-        let premier = jeton_aleatoire();
-        let second = jeton_aleatoire();
-
-        assert_eq!(premier.len(), 32);
-        assert_ne!(premier, second, "deux partages ne partagent pas leur jeton");
-    }
-}

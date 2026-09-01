@@ -29,9 +29,14 @@
 // silence sur le code inutilise vaut jusque-la, et pas au-dela.
 #![allow(dead_code)]
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 
-use windows::core::{Interface, Result};
+use windows::core::Interface;
+
+/// Le `Result` de Windows, nomme : sans cela il masque celui de la
+/// bibliotheque standard, et l'on ne sait plus lequel une signature designe.
+use windows::core::Result as ResultatWin;
 use windows::Foundation::TypedEventHandler;
 use windows::Graphics::Capture::{
     Direct3D11CaptureFramePool, GraphicsCaptureItem, GraphicsCaptureSession,
@@ -91,7 +96,7 @@ impl Capture {
 }
 
 /// Ouvre une capture sur une fenetre.
-pub fn capturer_fenetre(fenetre: HWND) -> Result<Capture> {
+pub fn capturer_fenetre(fenetre: HWND) -> ResultatWin<Capture> {
     let interop: IGraphicsCaptureItemInterop =
         windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
 
@@ -100,7 +105,7 @@ pub fn capturer_fenetre(fenetre: HWND) -> Result<Capture> {
 }
 
 /// Ouvre une capture sur un ecran.
-pub fn capturer_ecran(ecran: HMONITOR) -> Result<Capture> {
+pub fn capturer_ecran(ecran: HMONITOR) -> ResultatWin<Capture> {
     let interop: IGraphicsCaptureItemInterop =
         windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
 
@@ -113,7 +118,7 @@ pub fn capturer_ecran(ecran: HMONITOR) -> Result<Capture> {
 /// Les deux representent le meme appareil : `Direct3D11CaptureFramePool` parle
 /// le second, la lecture des textures parle le premier. On garde donc les deux
 /// plutot que de reconstruire l'un a partir de l'autre a chaque image.
-fn appareil() -> Result<(ID3D11Device, ID3D11DeviceContext, IDirect3DDevice)> {
+fn appareil() -> ResultatWin<(ID3D11Device, ID3D11DeviceContext, IDirect3DDevice)> {
     let mut materiel: Option<ID3D11Device> = None;
     let mut contexte: Option<ID3D11DeviceContext> = None;
 
@@ -144,7 +149,7 @@ fn appareil() -> Result<(ID3D11Device, ID3D11DeviceContext, IDirect3DDevice)> {
 }
 
 /// Monte la reserve d'images et branche l'arrivee.
-fn ouvrir(source: GraphicsCaptureItem) -> Result<Capture> {
+fn ouvrir(source: GraphicsCaptureItem) -> ResultatWin<Capture> {
     let (materiel, contexte, winrt) = appareil()?;
     let taille = source.Size()?;
 
@@ -213,7 +218,7 @@ fn lire(
     materiel: &ID3D11Device,
     contexte: &ID3D11DeviceContext,
     image: &windows::Graphics::Capture::Direct3D11CaptureFrame,
-) -> Result<Image> {
+) -> ResultatWin<Image> {
     let surface = image.Surface()?;
     let acces: windows::Win32::System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess =
         surface.cast()?;
@@ -267,7 +272,7 @@ fn lire(
 }
 
 /// La taille annoncee d'une source, sans ouvrir de capture.
-pub fn taille_source(source: &GraphicsCaptureItem) -> Result<SizeInt32> {
+pub fn taille_source(source: &GraphicsCaptureItem) -> ResultatWin<SizeInt32> {
     source.Size()
 }
 
@@ -327,4 +332,128 @@ mod tests {
         let varie = image.pixels.chunks_exact(4).any(|pixel| pixel != premier);
         assert!(varie, "l'image est uniforme : la lecture n'a rien rapporte");
     }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Le flux vers l'interface                                                    */
+/* -------------------------------------------------------------------------- */
+
+/// Generation de capture d'image en cours.
+///
+/// Meme role que pour le son : un booleen ne suffisait pas, car arreter puis
+/// relancer aussitot laissait l'ancien fil croire qu'il devait continuer.
+static GENERATION: AtomicU64 = AtomicU64::new(0);
+
+/// Ce que l'interface doit savoir pour lire le flux.
+#[derive(Clone, serde::Serialize)]
+pub struct FluxImage {
+    pub port: u16,
+    pub jeton: String,
+    pub largeur: u32,
+    pub hauteur: u32,
+}
+
+/// Ouvre la capture d'une source et sert ses images sur la boucle locale.
+///
+/// `source` est l'identifiant rendu par `sources_partageables` : `fenetre:N` ou
+/// `ecran:N`. C'est le meme vocabulaire que le selecteur, pour qu'un choix se
+/// transmette sans traduction.
+#[tauri::command]
+pub fn demarrer_image(source: String) -> Result<FluxImage, String> {
+    let capture = ouvrir_source(&source)?;
+    let (largeur, hauteur) = premiere_taille(&capture)?;
+
+    let passage = crate::flux::ouvrir().map_err(|_| "Impossible d'ouvrir le passage.".to_string())?;
+    let port = passage.port;
+    let jeton = passage.jeton.clone();
+
+    let generation = GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+
+    /*
+     * La file ne garde qu'une image, et ne bloque jamais.
+     *
+     * Une image en retard ne sert a personne : ce qu'on veut montrer, c'est ce
+     * qui est a l'ecran maintenant. En garder plusieurs ferait accumuler du
+     * retard que rien ne rattraperait, et l'image finirait par decrire un passe
+     * que celui qui regarde ne peut pas relier a ce qu'il entend.
+     */
+    let (expediteur, receveur) = std::sync::mpsc::sync_channel::<Vec<u8>>(1);
+
+    std::thread::spawn(move || {
+        while GENERATION.load(Ordering::SeqCst) == generation {
+            let Some(image) = capture.suivante() else {
+                break;
+            };
+
+            /*
+             * Chaque image porte sa taille.
+             *
+             * Une fenetre change de taille pendant qu'on la partage, et la
+             * suivante n'a alors plus les memes dimensions. Sans cet en-tete,
+             * l'interface lirait la nouvelle image avec l'ancienne taille — une
+             * image penchee, puis n'importe quoi.
+             */
+            let mut paquet = Vec::with_capacity(12 + image.pixels.len());
+            paquet.extend_from_slice(&image.largeur.to_le_bytes());
+            paquet.extend_from_slice(&image.hauteur.to_le_bytes());
+            paquet.extend_from_slice(&(image.pixels.len() as u32).to_le_bytes());
+            paquet.extend_from_slice(&image.pixels);
+
+            let _ = expediteur.try_send(paquet);
+        }
+    });
+
+    std::thread::spawn(move || {
+        crate::flux::servir(passage, receveur, || {
+            GENERATION.load(Ordering::SeqCst) == generation
+        })
+    });
+
+    Ok(FluxImage {
+        port,
+        jeton,
+        largeur,
+        hauteur,
+    })
+}
+
+/// Arrete la capture d'image. Sans effet si elle ne tourne pas.
+#[tauri::command]
+pub fn arreter_image() {
+    GENERATION.fetch_add(1, Ordering::SeqCst);
+}
+
+/// Ouvre la capture correspondant a un identifiant du selecteur.
+fn ouvrir_source(source: &str) -> Result<Capture, String> {
+    let (genre, valeur) = source
+        .split_once(':')
+        .ok_or_else(|| "Source illisible.".to_string())?;
+
+    let poignee: isize = valeur
+        .parse()
+        .map_err(|_| "Source illisible.".to_string())?;
+
+    match genre {
+        "fenetre" => capturer_fenetre(HWND(poignee as *mut std::ffi::c_void))
+            .map_err(|_| "Cette fenetre ne peut pas etre capturee.".to_string()),
+        "ecran" => capturer_ecran(HMONITOR(poignee as *mut std::ffi::c_void))
+            .map_err(|_| "Cet ecran ne peut pas etre capture.".to_string()),
+        _ => Err("Source inconnue.".to_string()),
+    }
+}
+
+/// Attend la premiere image pour connaitre la taille reelle de la source.
+///
+/// La taille annoncee par `GraphicsCaptureItem` est celle de la fenetre, bordure
+/// comprise ; celle des images peut differer d'un pixel ou deux selon l'echelle
+/// du systeme. Mieux vaut annoncer ce qui arrivera vraiment que ce qu'on croit.
+fn premiere_taille(capture: &Capture) -> Result<(u32, u32), String> {
+    for _ in 0..60 {
+        if let Some(image) = capture.disponible() {
+            return Ok((image.largeur, image.hauteur));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
+
+    Err("La source n'a rendu aucune image.".to_string())
 }
