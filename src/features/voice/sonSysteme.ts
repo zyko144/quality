@@ -374,6 +374,9 @@ export async function capturerSonSysteme(
         natifTrames: natif?.trames ?? -1,
         natifSommet: natif?.sommet ?? -1,
         natifSilencieux: natif?.silencieux ?? -1,
+        // Vrai quand la capture laisse nos propres voix de cote : les deux
+        // routes se ressemblent du dehors, et seule celle-ci evite l'echo.
+        sansNosVoix: (natif as unknown as { exclusion?: boolean } | null)?.exclusion ?? null,
         fluxBlocs: paquetsRecus,
         fluxOctets: octetsRecus,
         fluxSommet: Math.round(sommetRecu * 1000),

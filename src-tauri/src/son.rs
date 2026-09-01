@@ -56,13 +56,23 @@ use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::time::Duration;
 
-use windows::core::PCWSTR;
+use windows::core::{implement, Interface, HRESULT, IUnknown, PCWSTR};
 use windows::Win32::Media::Audio::{
     eConsole, eRender, IAudioCaptureClient, IAudioClient, IMMDevice, IMMDeviceEnumerator,
     MMDeviceEnumerator, AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_SHAREMODE_SHARED,
     AUDCLNT_STREAMFLAGS_LOOPBACK, DEVICE_STATE_ACTIVE, WAVEFORMATEX, WAVEFORMATEXTENSIBLE,
 };
+use windows::Win32::Media::Audio::{
+    ActivateAudioInterfaceAsync, IActivateAudioInterfaceAsyncOperation,
+    IActivateAudioInterfaceCompletionHandler, IActivateAudioInterfaceCompletionHandler_Impl,
+    AUDIOCLIENT_ACTIVATION_PARAMS, AUDIOCLIENT_ACTIVATION_PARAMS_0,
+    AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK, AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS,
+    PROCESS_LOOPBACK_MODE_EXCLUDE_TARGET_PROCESS_TREE, VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
+};
 use windows::Win32::System::Com::STGM_READ;
+use windows::Win32::System::Threading::{
+    CreateEventW, GetCurrentProcessId, SetEvent, WaitForSingleObject,
+};
 use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
 #[cfg(windows)]
 use windows::Win32::Media::KernelStreaming::WAVE_FORMAT_EXTENSIBLE;
@@ -124,6 +134,14 @@ static SOMMET_MILLIEME: AtomicU64 = AtomicU64::new(0);
 #[cfg(windows)]
 static SILENCIEUX: AtomicU64 = AtomicU64::new(0);
 
+/// Vrai quand la capture exclut notre propre application.
+///
+/// Se lit dans le diagnostic : les deux routes se comportent pareil du dehors,
+/// et seule celle-ci evite l'echo. Sans ce drapeau, « il s'entend lui-meme » ne
+/// se distinguerait pas de « il n'a pas la bonne version de Windows ».
+#[cfg(windows)]
+static EXCLUSION: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// Ce que la capture a vu depuis son demarrage.
 #[derive(Clone, serde::Serialize)]
 pub struct DiagnosticSon {
@@ -135,6 +153,8 @@ pub struct DiagnosticSon {
     pub sommet: u64,
     /// Paquets que Windows a marques comme silencieux.
     pub silencieux: u64,
+    /// Vrai quand la capture laisse nos propres voix de cote.
+    pub exclusion: bool,
 }
 
 /// Rend ce que la capture a vu. Sans effet de bord.
@@ -150,6 +170,7 @@ pub fn diagnostic_son() -> DiagnosticSon {
         trames: TRAMES.load(Ordering::Relaxed),
         sommet: SOMMET_MILLIEME.load(Ordering::Relaxed),
         silencieux: SILENCIEUX.load(Ordering::Relaxed),
+        exclusion: EXCLUSION.load(Ordering::Relaxed),
     }
 }
 
@@ -598,6 +619,144 @@ unsafe fn capturer(
     capturer_interne(file, generation, voulu)
 }
 
+/// Attend que l'activation asynchrone ait repondu.
+///
+/// `ActivateAudioInterfaceAsync` ne rend pas le client : il rappelle plus tard,
+/// sur un fil qu'il choisit. Ce petit objet est ce rappel — il ne fait que
+/// lever un evenement, que le fil appelant attend.
+#[cfg(windows)]
+#[implement(IActivateAudioInterfaceCompletionHandler)]
+struct Acheve(windows::Win32::Foundation::HANDLE);
+
+#[cfg(windows)]
+impl IActivateAudioInterfaceCompletionHandler_Impl for Acheve_Impl {
+    fn ActivateCompleted(
+        &self,
+        _operation: Option<&IActivateAudioInterfaceAsyncOperation>,
+    ) -> windows::core::Result<()> {
+        unsafe { SetEvent(self.0)? };
+        Ok(())
+    }
+}
+
+/// Un `PROPVARIANT` portant un bloc d'octets.
+///
+/// La bibliotheque ne sait pas en construire : sa representation interne n'est
+/// pas publique, et aucun constructeur ne couvre `VT_BLOB`. On pose donc la
+/// structure telle que Windows l'attend — c'est ce que fait n'importe quel
+/// appelant en C — et l'on passe son adresse.
+///
+/// Vingt-quatre octets sur soixante-quatre bits : huit d'en-tete, seize pour
+/// l'union dont le bloc occupe une taille et un pointeur.
+#[cfg(windows)]
+#[repr(C)]
+struct VariantBloc {
+    vt: u16,
+    reserve1: u16,
+    reserve2: u16,
+    reserve3: u16,
+    taille: u32,
+    remplissage: u32,
+    donnees: *mut u8,
+}
+
+/// `VT_BLOB`, tel que le declare `wtypes.h`.
+#[cfg(windows)]
+const VT_BLOB: u16 = 65;
+
+/// Ouvre une capture de tout le son du systeme SAUF le notre.
+///
+/// Pourquoi cette capture-la
+/// -------------------------
+/// Le bouclage ordinaire porte tout ce que joue une sortie, y compris ce que
+/// joue Echow. Celui qui partage renvoyait donc aux autres leurs propres voix,
+/// avec le retard du reseau : l'echo classique, insupportable au bout de trois
+/// phrases, et que personne ne peut corriger de son cote.
+///
+/// Windows sait capturer par PROCESSUS depuis la version 20348. En designant le
+/// notre et en demandant l'exclusion de son arborescence, on obtient exactement
+/// ce qu'il faut : le jeu, la musique, les videos — et rien de ce que nous
+/// jouons nous-memes.
+///
+/// Cette capture n'est liee a aucune sortie, ce qui regle du meme coup le
+/// probleme du peripherique : plus de bouclage ouvert sur une entree virtuelle
+/// ou rien ne joue, plus de choix a faire.
+///
+/// Rend `None` sur les Windows plus anciens, ou l'appelant retombe sur le
+/// bouclage par sortie.
+#[cfg(windows)]
+unsafe fn client_sans_nos_voix(format: *const WAVEFORMATEX) -> Option<IAudioClient> {
+    let evenement = CreateEventW(None, true, false, None).ok()?;
+
+    let mut parametres = AUDIOCLIENT_ACTIVATION_PARAMS {
+        ActivationType: AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,
+        Anonymous: AUDIOCLIENT_ACTIVATION_PARAMS_0 {
+            ProcessLoopbackParams: AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS {
+                TargetProcessId: GetCurrentProcessId(),
+                ProcessLoopbackMode: PROCESS_LOOPBACK_MODE_EXCLUDE_TARGET_PROCESS_TREE,
+            },
+        },
+    };
+
+    let variante = VariantBloc {
+        vt: VT_BLOB,
+        reserve1: 0,
+        reserve2: 0,
+        reserve3: 0,
+        taille: std::mem::size_of::<AUDIOCLIENT_ACTIVATION_PARAMS>() as u32,
+        remplissage: 0,
+        donnees: &mut parametres as *mut _ as *mut u8,
+    };
+
+    let acheve: IActivateAudioInterfaceCompletionHandler = Acheve(evenement).into();
+
+    let operation = ActivateAudioInterfaceAsync(
+        VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
+        &IAudioClient::IID,
+        Some(&variante as *const VariantBloc as *const _),
+        &acheve,
+    )
+    .ok()?;
+
+    // Trois secondes : l'activation est immediate en pratique, et attendre
+    // indefiniment ferait tenir le partage entier sur un appel qui ne repond pas.
+    WaitForSingleObject(evenement, 3000);
+
+    let mut resultat = HRESULT(0);
+    let mut inconnu: Option<IUnknown> = None;
+    operation
+        .GetActivateResult(&mut resultat, &mut inconnu as *mut _ as *mut _)
+        .ok()?;
+
+    if resultat.is_err() {
+        return None;
+    }
+
+    let client: IAudioClient = inconnu?.cast().ok()?;
+
+    /*
+     * Le format est impose, pas negocie.
+     *
+     * Une capture par processus n'a pas de peripherique, donc pas de format de
+     * melange a lire : c'est a nous de dire dans quoi nous voulons les
+     * echantillons. On reprend celui de la sortie par defaut pour que le reste
+     * du chemin — le fil audio, le nombre de canaux — ne change pas selon la
+     * route empruntee.
+     */
+    client
+        .Initialize(
+            AUDCLNT_SHAREMODE_SHARED,
+            AUDCLNT_STREAMFLAGS_LOOPBACK,
+            TAMPON_100NS,
+            0,
+            format,
+            None,
+        )
+        .ok()?;
+
+    Some(client)
+}
+
 /// Vrai si le format decrit des flottants 32 bits.
 ///
 /// Deux facons de le dire coexistent. L'ancienne pose l'etiquette
@@ -661,21 +820,46 @@ unsafe fn capturer_interne(
     let frequence = (*format).nSamplesPerSec as usize;
     let octets_par_trame = (*format).nBlockAlign as usize;
 
-    let ouverture = client.Initialize(
-        AUDCLNT_SHAREMODE_SHARED,
-        // Le bouclage, c'est ce seul drapeau : sans lui on capturerait un
-        // micro, avec lui on capture ce qui sort.
-        AUDCLNT_STREAMFLAGS_LOOPBACK,
-        TAMPON_100NS,
-        0,
-        format,
-        None,
-    );
+    /*
+     * D'abord la capture qui nous exclut, ensuite celle qui prend tout.
+     *
+     * La premiere ecoute les processus et laisse le notre de cote : le
+     * partage emporte alors le jeu et la musique, mais pas les voix d'Echow.
+     * Sans elle, celui qui partage renvoie aux autres leurs propres voix avec
+     * le retard du reseau — l'echo, que personne ne peut corriger de son cote.
+     *
+     * Elle demande Windows 10 version 20348 ou plus recent. En dessous, on
+     * retombe sur le bouclage par sortie : le son passe, avec l'echo. Un echo
+     * vaut mieux qu'un silence, et le journal dit laquelle des deux a servi.
+     */
+    let (client, exclusion) = match client_sans_nos_voix(format) {
+        Some(sans_nous) => (sans_nous, true),
+        None => {
+            let ouverture = client.Initialize(
+                AUDCLNT_SHAREMODE_SHARED,
+                // Le bouclage, c'est ce seul drapeau : sans lui on capturerait
+                // un micro, avec lui on capture ce qui sort.
+                AUDCLNT_STREAMFLAGS_LOOPBACK,
+                TAMPON_100NS,
+                0,
+                format,
+                None,
+            );
 
-    // Le format est rendu des qu'il a servi, quel que soit le sort de l'appel :
-    // les chemins d'erreur qui suivent n'ont plus a y penser.
+            ouverture.map_err(|_| {
+                CoTaskMemFree(Some(format as *const _));
+                echec("Le bouclage audio a ete refuse par Windows.")
+            })?;
+
+            (client, false)
+        }
+    };
+
+    EXCLUSION.store(exclusion, Ordering::Relaxed);
+
+    // Le format est rendu des qu'il a servi : les chemins qui suivent n'ont
+    // plus a y penser.
     CoTaskMemFree(Some(format as *const _));
-    ouverture.map_err(|_| echec("Le bouclage audio a ete refuse par Windows."))?;
 
     let capture: IAudioCaptureClient = client
         .GetService()
@@ -818,6 +1002,7 @@ pub fn diagnostic_son() -> DiagnosticSon {
         trames: 0,
         sommet: 0,
         silencieux: 0,
+        exclusion: false,
     }
 }
 

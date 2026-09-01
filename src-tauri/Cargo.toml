@@ -1,6 +1,6 @@
 [package]
 name = "echow"
-version = "0.5.1"
+version = "0.5.2"
 description = "Echow - discussion d'equipe en temps reel"
 edition = "2021"
 rust-version = "1.77"
@@ -32,6 +32,12 @@ tauri-plugin-opener = "2"
 # de quoi proposer notre propre selecteur de partage plutot que celui du moteur
 # web, qu'aucune page ne peut remplacer.
 [target.'cfg(windows)'.dependencies]
+
+# La macro `implement` engendre du code qui nomme `windows_core` a la racine du
+# crate : sans cette ligne, il ne s'y trouve pas. Meme version que `windows`,
+# donc aucune copie supplementaire dans le binaire.
+windows-core = "0.58"
+
 windows = { version = "0.58", features = [
   "Win32_Foundation",
   "Win32_UI_WindowsAndMessaging",
@@ -48,6 +54,10 @@ windows = { version = "0.58", features = [
   "Win32_Media_Multimedia",
   # Le nom lisible du peripherique capture, pour le diagnostic.
   "Win32_UI_Shell_PropertiesSystem",
+  # Capture par processus : tout le son du systeme sauf le notre.
+  # `Win32_Security` porte SECURITY_ATTRIBUTES, exige par CreateEventW.
+  "Win32_Security",
+  "implement",
 ] }
 
 [profile.release]

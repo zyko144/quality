@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.5.2
+
+### Corrige
+
+- **Le partage ne renvoie plus les voix d'Echow.** Le son capture etait celui d'une sortie, donc tout ce qu'elle jouait — y compris les autres participants. Celui qui partageait leur renvoyait leurs propres voix avec le retard du reseau, et personne ne pouvait le corriger de son cote. Windows sait capturer par application depuis sa version 20348 : on lui demande desormais tout le son du systeme **sauf le notre**. Le jeu, la musique, les videos passent ; les voix restent ou elles sont.
+- Cette capture n'etant liee a aucune sortie, elle regle du meme coup le choix du peripherique : plus de bouclage ouvert sur une entree virtuelle ou rien ne joue. Sur un Windows plus ancien, l'ancien chemin sert de repli — le son passe, avec l'echo.
+
 ## 0.5.1
 
 ### Ameliore
