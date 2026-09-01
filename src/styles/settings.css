@@ -362,6 +362,26 @@
   flex-wrap: wrap;
 }
 
+/*
+ * La ligne qui annonce une mise a jour installee.
+ *
+ * Encadree et teintee : c'est la seule ligne de cette page qui demande une
+ * action plutot qu'elle n'informe, et rien ne la distinguait des autres.
+ */
+.settings__row--maj {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+}
+
+.settings__row--maj .settings__hint {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
 .settings__inline-btn {
   align-self: flex-start;
   margin-top: var(--space-4);

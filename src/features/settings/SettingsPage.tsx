@@ -7,7 +7,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
 import { LIMITS } from '@/constants';
 import { VoiceSettings, SwitchRow } from './VoiceSettings';
-import { useMajEtat } from '@/features/shell/MiseAJour';
+import { useMajEtat, relancerApplication } from '@/features/shell/MiseAJour';
 
 import { RechercheReglages } from './RechercheReglages';
 import { ReglageRaccourcis } from './ReglageRaccourcis';
@@ -1180,6 +1180,7 @@ function AdvancedSection() {
   const majEtat = useMajEtat((state) => state.etat);
   const majDetail = useMajEtat((state) => state.detail);
   const majVerifie = useMajEtat((state) => state.verifie);
+  const majVersion = useMajEtat((state) => state.version);
   const [recherche, setRecherche] = useState(false);
 
   const majHeure = majVerifie
@@ -1207,7 +1208,11 @@ function AdvancedSection() {
     try {
       const { check } = await import('@tauri-apps/plugin-updater');
       const mise = await check();
-      useMajEtat.getState().signaler(null, mise ? 'disponible' : 'a-jour');
+      useMajEtat.getState().signaler(
+        null,
+        mise ? 'disponible' : 'a-jour',
+        mise?.version ?? null,
+      );
     } catch (cause) {
       useMajEtat.getState().signaler(String(cause));
     } finally {
@@ -1254,9 +1259,46 @@ function AdvancedSection() {
 
         <p className="settings__hint">
           Version installee : <strong>{__APP_VERSION__}</strong>. L&rsquo;application
-          cherche une nouvelle version a chaque demarrage, et propose de
-          l&rsquo;installer sans repasser par l&rsquo;installateur.
+          cherche une nouvelle version a chaque demarrage puis toutes les
+          quinze minutes, et propose de l&rsquo;installer sans repasser par
+          l&rsquo;installateur.
         </p>
+
+        {/*
+          Relancer a la main, quand une mise a jour attend.
+
+          L'application ne se relance jamais d'elle-meme : on peut etre en
+          pleine conversation ou en train de partager son ecran, et couper pour
+          installer serait pire que le defaut qu'on corrige. Mais la banniere
+          qui proposait de relancer disparait des qu'on la ferme, et rien ne la
+          rappelait ensuite — on restait alors sur l'ancienne version sans le
+          savoir. Deux personnes se sont ainsi retrouvees a cinq versions
+          d'ecart, et la moitie de ce qu'elles constataient venait de la.
+        */}
+        {majEtat === 'installee' ? (
+          <div className="settings__row settings__row--maj">
+            <span className="settings__hint">
+              La version <strong>{majVersion ?? 'suivante'}</strong> est
+              installee et attend un redemarrage.
+            </span>
+
+            <button
+              type="button"
+              className="btn btn--sm btn--primary"
+              onClick={() => void relancerApplication()}
+            >
+              <Icon name="refresh" size={14} />
+              Relancer maintenant
+            </button>
+          </div>
+        ) : null}
+
+        {majEtat === 'disponible' ? (
+          <p className="settings__hint">
+            La version <strong>{majVersion ?? 'suivante'}</strong> est
+            disponible. Le bandeau en bas a droite propose de l&rsquo;installer.
+          </p>
+        ) : null}
 
         <div className="settings__row">
           <button

@@ -887,14 +887,19 @@ export const useVoice = create<VoiceState>((set, get) => {
    */
   let statsTimer: number | null = null;
 
-/** Vrai une fois le releve de qualite envoye au journal, pour ce partage. */
-let qualiteJournalisee = false;
+/**
+ * Definition et cause de limitation du dernier releve, pour ce partage.
+ *
+ * Sert a n'ecrire que ce qui change : un partage stable ne dit rien, un partage
+ * qui s'effondre le dit au moment ou il s'effondre.
+ */
+let derniereQualite: string | null = null;
   let dernierOctets = 0;
   let dernierInstant = 0;
 
   function startStats(): void {
     if (statsTimer !== null) return;
-    qualiteJournalisee = false;
+    derniereQualite = null;
 
     statsTimer = window.setInterval(() => {
       const emetteur = [...peers.values()].find((pair) => pair.screenSender)?.screenSender;
@@ -931,28 +936,36 @@ let qualiteJournalisee = false;
           });
 
           /*
-           * Un seul releve part au journal, une dizaine de secondes apres le
-           * debut du partage.
+           * Ce sont les CHANGEMENTS qui partent au journal, pas un instantane.
            *
-           * `qualityLimitationReason` est le chiffre qui manquait a toutes les
-           * discussions precedentes sur la qualite : le moteur y dit lui-meme
-           * pourquoi il n'en fait pas plus — `cpu` s'il n'encode pas assez
-           * vite, `bandwidth` si la liaison ne suit pas, `none` s'il ne se
-           * retient pas. Sans lui on discute d'impressions ; avec lui, on sait
-           * s'il faut regarder la machine ou le reseau.
+           * `qualityLimitationReason` dit pourquoi le moteur se retient : `cpu`
+           * s'il n'encode pas assez vite, `bandwidth` si la liaison ne suit
+           * pas, `none` s'il ne se retient pas. Un unique releve pris cinq
+           * secondes apres le debut annoncait toujours `none` — et ne disait
+           * donc rien des creux de dix secondes constates en cours de partage,
+           * qui sont precisement ce qu'on cherche.
            *
-           * Un seul, parce qu'un releve toutes les deux secondes remplirait la
-           * table pour dire trente fois la meme chose.
+           * Un releve a chaque changement, et pas plus : la definition et la
+           * cause de limitation ne bougent que lorsque quelque chose se passe,
+           * si bien qu'un partage calme n'ecrit qu'une ligne.
            */
-          if (!qualiteJournalisee && dernierInstant > 0 && kbps > 0) {
-            qualiteJournalisee = true;
+          const limite =
+            (entree as { qualityLimitationReason?: string }).qualityLimitationReason ?? 'inconnu';
+          const definition = `${entree.frameWidth ?? 0}x${entree.frameHeight ?? 0}`;
+          const signature = `${definition}|${limite}`;
 
-            journal.info('partage', 'Qualite reellement emise', {
-              definition: `${entree.frameWidth ?? 0}x${entree.frameHeight ?? 0}`,
+          if (dernierInstant > 0 && kbps > 0 && signature !== derniereQualite) {
+            const precedente = derniereQualite;
+            derniereQualite = signature;
+
+            journal.info('partage', precedente ? 'Qualite changee' : 'Qualite emise', {
+              definition,
               images: Math.round(entree.framesPerSecond ?? 0),
               kbps,
-              limite: (entree as { qualityLimitationReason?: string }).qualityLimitationReason ?? null,
-              encodeur: (entree as { encoderImplementation?: string }).encoderImplementation ?? null,
+              limite,
+              avant: precedente,
+              encodeur:
+                (entree as { encoderImplementation?: string }).encoderImplementation ?? null,
             });
           }
 

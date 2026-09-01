@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { lireLesNotes } from './notes';
+import { journal } from '@/lib/journal';
 
 /**
  * Mises a jour, sans reinstaller.
@@ -29,27 +30,46 @@ const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in win
  * la meme information que celle du demarrage.
  */
 export const useMajEtat = create<{
-  etat: 'inconnu' | 'a-jour' | 'disponible' | 'echec';
+  etat: 'inconnu' | 'a-jour' | 'disponible' | 'installee' | 'echec';
   detail: string | null;
+  /** Version proposee, quand il y en a une. */
+  version: string | null;
   /** Heure de la derniere reponse, ou `null` si l'on n'a pas encore cherche. */
   verifie: number | null;
-  signaler: (detail: string | null, etat?: 'a-jour' | 'disponible') => void;
+  signaler: (
+    detail: string | null,
+    etat?: 'a-jour' | 'disponible' | 'installee',
+    version?: string | null,
+  ) => void;
   /** Oublie la derniere reponse, le temps d'en chercher une nouvelle. */
   chercher: () => void;
 }>((set) => ({
   etat: 'inconnu',
   detail: null,
+  version: null,
   verifie: null,
-  signaler: (detail, etat) =>
+  signaler: (detail, etat, version) =>
     set({
       etat: etat ?? (detail ? 'echec' : 'inconnu'),
       detail,
+      ...(version === undefined ? {} : { version }),
       // Horodatee, parce que la reponse a souvent l'air identique a la
       // precedente : sans cela, chercher a nouveau ne change rien a l'ecran.
       verifie: Date.now(),
     }),
   chercher: () => set({ etat: 'inconnu', detail: null }),
 }));
+
+/**
+ * Relance l'application.
+ *
+ * Exposee hors du composant : les reglages en ont besoin, et la dupliquer
+ * ferait exister deux facons de redemarrer qui pourraient diverger.
+ */
+export async function relancerApplication(): Promise<void> {
+  const { relaunch } = await import('@tauri-apps/plugin-process');
+  await relaunch();
+}
 
 /**
  * Derniere version dont les nouveautes ont ete montrees.
@@ -138,13 +158,30 @@ export function MiseAJour() {
         if (!mise) {
           // A jour : on le note, pour que le bouton des reglages puisse le dire
           // au lieu de rester muet.
-          useMajEtat.getState().signaler(null, 'a-jour');
+          useMajEtat.getState().signaler(null, 'a-jour', null);
+          journal.info('mise-a-jour', 'Aucune version plus recente', {
+            installee: __APP_VERSION__,
+          });
           return;
         }
 
         if (annule) return;
 
-        useMajEtat.getState().signaler(null, 'disponible');
+        useMajEtat.getState().signaler(null, 'disponible', mise.version);
+
+        /*
+         * La recherche est journalisee, succes comme echec.
+         *
+         * Deux personnes se sont retrouvees a cinq versions d'ecart sans que
+         * rien ne le signale, et la moitie des defauts qu'elles constataient
+         * venaient de la : elles ne faisaient pas tourner le meme code. Sans
+         * cette trace, « la mise a jour ne se propose plus » ne se distingue
+         * pas de « elle se propose et personne ne clique ».
+         */
+        journal.info('mise-a-jour', 'Version disponible', {
+          installee: __APP_VERSION__,
+          proposee: mise.version,
+        });
 
         setDisponible({
           version: mise.version,
@@ -156,6 +193,10 @@ export function MiseAJour() {
             // Rien a ranger : la version installee porte ses propres notes, et
             // les montrera d'elle-meme au prochain lancement.
             setInstallation('prete');
+            useMajEtat.getState().signaler(null, 'installee', mise.version);
+            journal.info('mise-a-jour', 'Installee, en attente de relance', {
+              proposee: mise.version,
+            });
           },
         });
       } catch (cause) {
@@ -170,6 +211,10 @@ export function MiseAJour() {
          */
         console.error('Recherche de mise a jour :', cause);
         useMajEtat.getState().signaler(String(cause));
+        journal.erreur('mise-a-jour', 'Recherche impossible', {
+          installee: __APP_VERSION__,
+          cause: String(cause),
+        });
       }
     };
 
@@ -196,10 +241,7 @@ export function MiseAJour() {
     };
   }, []);
 
-  const relancer = async () => {
-    const { relaunch } = await import('@tauri-apps/plugin-process');
-    await relaunch();
-  };
+  const relancer = () => void relancerApplication();
 
   return (
     <>
@@ -224,7 +266,7 @@ export function MiseAJour() {
 
           {installation === 'prete' ? (
             <>
-              <button type="button" className="btn btn--sm btn--primary" onClick={() => void relancer()}>
+              <button type="button" className="btn btn--sm btn--primary" onClick={relancer}>
                 Relancer
               </button>
               <button

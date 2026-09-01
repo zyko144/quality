@@ -12,6 +12,18 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.1
+
+### Nouveau
+
+- **Un bouton « Relancer maintenant »**, dans Parametres › Avance, quand une mise a jour est installee et attend un redemarrage. Le bandeau qui le proposait disparait des qu'on le ferme, et rien ne le rappelait ensuite : on restait sur l'ancienne version sans le savoir. Deux personnes se sont ainsi retrouvees a cinq versions d'ecart — et la moitie des defauts qu'elles constataient venait de la, puisqu'elles ne faisaient pas tourner le meme code.
+- Les reglages disent aussi quelle version est proposee, et non plus seulement qu'il y en a une.
+
+### Ameliore
+
+- **Les recherches de mise a jour sont tracees** : trouvee, absente, ou impossible avec sa cause. « La mise a jour ne se propose plus » ne se distinguait pas de « elle se propose et personne ne clique ».
+- **Les creux de qualite du partage sont traces.** Un unique releve pris cinq secondes apres le debut annoncait toujours « rien ne me limite » — et ne disait donc rien des chutes de dix secondes qui surviennent en cours de partage. Ce sont desormais les changements qui sont notes, avec ce qui les precede.
+
 ## 0.6.0
 
 ### Corrige
