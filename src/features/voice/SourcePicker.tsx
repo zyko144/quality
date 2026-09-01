@@ -269,24 +269,48 @@ export function SourcePicker({
           </div>
 
           {/*
-            Le son du systeme demande de renoncer a ce selecteur.
+            Le son du systeme, dans notre selecteur.
 
-            Ce n'est pas un caprice de reglage : la case « partager aussi le
-            son » vit dans la fenetre de Windows que nous supprimons justement
-            pour afficher celle-ci. Chromium n'accorde la piste audio que si
-            cette case a ete cochee — donc jamais tant que la fenetre n'existe
-            pas, quelle que soit la source choisie, ecran entier compris.
+            Il a longtemps vecu dans la fenetre de Windows que nous supprimons
+            pour afficher celle-ci — et c'est pour cela que le partage partait
+            muet : Chromium n'accorde la piste audio que si SA case a ete
+            cochee, ce qui n'arrive jamais quand sa fenetre n'existe pas.
 
-            Le dire ici, au moment ou l'on coche, evite de decouvrir un partage
-            muet une fois lance.
+            Ce n'est plus le cas. Le son est capture par le systeme lui-meme,
+            hors du moteur web, et arrive par une connexion locale — voir
+            `sonSysteme.ts`. Cette bascule commande donc reellement quelque
+            chose, ce qui n'etait pas vrai des versions precedentes.
+
+            Elle est posee en bas, seule et en pleine largeur : c'est le
+            reglage qu'on vient chercher, pas un detail parmi d'autres.
           */}
           <label className="picker__son">
+            <span className="picker__son-icone" aria-hidden="true">
+              {/* Le jeu d'icones n'a pas de « volume barre » : le micro coupe
+                  porte deja le meme sens — un son qui ne part pas. */}
+              <Icon name={media.shareSystemAudio ? 'volume' : 'mic-off'} size={17} />
+            </span>
+
+            <span className="picker__son-corps">
+              <span className="picker__son-titre">Partager l&rsquo;audio systeme</span>
+              <span className="picker__son-detail">
+                Le jeu, la musique, les videos — tout ce que joue cet ordinateur.
+              </span>
+            </span>
+
             <input
               type="checkbox"
+              className="visually-hidden"
               checked={media.shareSystemAudio}
               onChange={(event) => setMedia('shareSystemAudio', event.target.checked)}
             />
-            Partager le son de l&rsquo;ordinateur
+
+            <span
+              className={'picker__son-piste' + (media.shareSystemAudio ? ' is-on' : '')}
+              aria-hidden="true"
+            >
+              <span className="picker__son-bouton" />
+            </span>
           </label>
         </div>
       </div>

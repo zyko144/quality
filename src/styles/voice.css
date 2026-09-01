@@ -942,16 +942,104 @@ button.voice-tile__name:hover {
   color: var(--text-on-accent);
 }
 
+/*
+ * La bascule du son, en pleine largeur au bas du selecteur.
+ *
+ * Une case a cocher perdue dans une ligne de texte se lisait comme un detail.
+ * C'est pourtant le reglage qu'on vient chercher — le seul dont on se demande
+ * s'il est actif avant de lancer un partage — d'ou le cadre, l'icone et
+ * l'interrupteur, qui se voient sans etre lus.
+ */
 .picker__son {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-md);
-  color: var(--text-secondary);
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
   cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out);
 }
 
-.picker__son input { accent-color: var(--accent); }
+.picker__son:hover {
+  border-color: var(--border-strong, var(--accent));
+}
+
+.picker__son-icone {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.picker__son:has(input:checked) .picker__son-icone {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  color: var(--accent);
+}
+
+.picker__son-corps {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.picker__son-titre {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.picker__son-detail {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* L'interrupteur est dessine plutot que natif : une case du systeme ne se
+   colore pas de la meme facon d'un poste a l'autre, et se voit mal. */
+.picker__son-piste {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.picker__son-piste.is-on {
+  background: var(--accent);
+}
+
+.picker__son-bouton {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: #fff;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.picker__son-piste.is-on .picker__son-bouton {
+  transform: translateX(18px);
+}
+
+.picker__son input:focus-visible + .picker__son-piste {
+  outline: 2px solid var(--focus-ring, var(--text-primary));
+  outline-offset: 2px;
+}
+
+[data-motion='reduced'] .picker__son-bouton {
+  transition: none;
+}
 
 [data-motion='reduced'] .picker__source {
   transition: none;

@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.5.1
+
+### Ameliore
+
+- **« Partager l'audio systeme » est desormais un vrai interrupteur**, en bas de notre selecteur de partage, avec son icone et sa description. C'etait une case a cocher perdue en fin de ligne, presentee comme un detail — alors que c'est le reglage qu'on vient chercher, et le seul dont on se demande s'il est actif avant de lancer un partage.
+- Le texte qui l'accompagnait affirmait que le son ne pouvait pas fonctionner sans la fenetre de Windows. C'etait vrai jusqu'a la version precedente ; ca ne l'est plus, et le laisser aurait fait douter d'un reglage qui marche.
+
 ## 0.5.0
 
 ### Corrige
