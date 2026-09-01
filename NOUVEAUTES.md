@@ -12,6 +12,32 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.1
+
+### Nouveau
+
+- **Les touches vocales repondent meme quand Echow n'est pas devant.** C'etait le defaut de fond du push-to-talk : une page web ne recoit plus rien du clavier des que la fenetre passe derriere, c'est-a-dire exactement au moment ou l'on veut parler en jouant. Le systeme les observe desormais lui-meme. La touche n'est pas confisquee pour autant — le jeu la recoit aussi — et les modificateurs en trop sont toleres, sans quoi une touche posee a cote de `Maj` ne repondrait jamais pendant qu'on court. Seule exception, imposee par Windows : un jeu lance en administrateur ne transmet ses frappes qu'a des programmes qui le sont aussi, et les reglages disent si la surveillance a bien pris.
+- **Les applications reduites figurent enfin dans le selecteur de partage.** « Toutes mes applications ouvertes » comprend celles qu'on vient de ranger dans la barre des taches : Steam, un lanceur de jeu, l'explorateur de fichiers. Elles n'ont pas d'apercu — une fenetre reduite ne dessine rien — et les choisir les rouvre, sans voler le focus.
+- **Un avertissement quand on enchaine les commandes trop vite.** Il explique ce qui se passe au lieu de laisser croire a une panne, une fois par demi-minute, et ne bloque rien.
+
+### Corrige
+
+- **L'apercu d'une fenetre montrait ce qui etait DEVANT elle.** La vignette recopiait l'ecran a l'endroit de la fenetre : deux applications en plein ecran donnaient donc exactement la meme image, et choisir Steam affichait le navigateur pose dessus — d'ou l'impression, tres juste, de partager l'ecran entier. Chaque fenetre se dessine desormais elle-meme, couverte ou non.
+- **Une annonce de presence perdue n'etait jamais rejouee.** Une seule suffisait a disparaitre de la liste de son propre salon — et personne n'ouvre de connexion vers quelqu'un qu'il ne voit pas, donc plus personne ne vous entendait. Rien ne l'indiquait, et relancer l'application etait la seule issue. L'envoi perdu retourne dans la file, et l'on se re-annonce toutes les trois secondes.
+- **L'echo, pour de bon.** Partager une fenetre capture maintenant le son de cette application seule. Exclure notre propre processus ne suffisait pas : un routeur audio virtuel — Voicemeeter, VB-Cable — rejoue notre son depuis un processus qui n'est pas le notre, que Windows capte alors a bon droit. La contrepartie est assumee : partager une fenetre ne diffuse plus la musique qui joue a cote.
+- **Une meme pression ne compte plus deux fois.** Les bascules du vocal et les touches maintenues lisaient le clavier chacune de leur cote ; depuis que le systeme s'en mele, la bascule s'appliquait deux fois — donc pas du tout.
+
+## 0.7.0
+
+### Nouveau
+
+- **Les touches vocales repondent meme quand Echow n'est pas devant**, et un avertissement previent quand on enchaine les commandes plus vite que le salon ne peut les annoncer.
+
+### Corrige
+
+- **Une annonce de presence perdue n'etait jamais rejouee** : on disparaissait de la liste de son propre salon, et plus personne ne vous entendait.
+- **L'echo** : partager une fenetre capture desormais le son de cette application seule.
+
 ## 0.6.9
 
 ### Corrige

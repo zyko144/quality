@@ -496,11 +496,40 @@ fn ouvrir_source(source: &str, images: u32) -> Result<Capture, String> {
         .map_err(|_| "Source illisible.".to_string())?;
 
     match genre {
-        "fenetre" => capturer_fenetre(HWND(poignee as *mut std::ffi::c_void), images)
-            .map_err(|_| "Cette fenetre ne peut pas etre capturee.".to_string()),
+        "fenetre" => {
+            let fenetre = HWND(poignee as *mut std::ffi::c_void);
+            rouvrir(fenetre);
+
+            capturer_fenetre(fenetre, images)
+                .map_err(|_| "Cette fenetre ne peut pas etre capturee.".to_string())
+        }
         "ecran" => capturer_ecran(HMONITOR(poignee as *mut std::ffi::c_void), images)
             .map_err(|_| "Cet ecran ne peut pas etre capture.".to_string()),
         _ => Err("Source inconnue.".to_string()),
+    }
+}
+
+/// Rouvre une fenetre reduite, sans la mettre au premier plan.
+///
+/// Le selecteur propose desormais les fenetres reduites — « mes applications
+/// ouvertes » comprend celles qu'on vient de ranger, et les taire donnait le
+/// sentiment qu'il en oubliait la moitie. Mais une fenetre reduite ne dessine
+/// rien : la capture rendrait un rectangle noir, indefiniment et sans rien dire.
+///
+/// `SW_SHOWNOACTIVATE` la rouvre sans voler le focus. Celui qui partage reste
+/// donc ou il est, au lieu d'etre arrache a ce qu'il faisait par sa propre
+/// commande de partage.
+#[cfg(windows)]
+fn rouvrir(fenetre: HWND) {
+    use windows::Win32::UI::WindowsAndMessaging::{IsIconic, ShowWindow, SW_SHOWNOACTIVATE};
+
+    if unsafe { IsIconic(fenetre) }.as_bool() {
+        let _ = unsafe { ShowWindow(fenetre, SW_SHOWNOACTIVATE) };
+
+        // Le temps que le gestionnaire de bureau lui rende une surface : sans
+        // cette pause, la capture s'ouvre sur une fenetre qui n'a pas encore
+        // dessine et rend une premiere image vide.
+        std::thread::sleep(std::time::Duration::from_millis(120));
     }
 }
 

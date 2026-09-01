@@ -14,15 +14,20 @@ use serde::Serialize;
 
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM, RECT, TRUE};
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED};
+// `PrintWindow` est range du cote de l'impression, ce qui ne va pas de soi :
+// c'est pourtant la seule facon de demander a une fenetre de se dessiner
+// ailleurs qu'a sa place a l'ecran.
+use windows::Win32::Storage::Xps::{PrintWindow, PRINT_WINDOW_FLAGS};
 use windows::Win32::Graphics::Gdi::{
-    CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, EnumDisplayMonitors,
+    BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, EnumDisplayMonitors,
     GetDIBits, GetMonitorInfoW, GetWindowDC, ReleaseDC, SelectObject, SetStretchBltMode, StretchBlt,
     BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HALFTONE, HDC, HMONITOR, MONITORINFOEXW,
     SRCCOPY,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetAncestor, GetWindowLongW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
-    IsIconic, IsWindow, IsWindowVisible, GA_ROOT, GWL_EXSTYLE, WS_EX_TOOLWINDOW,
+    GetWindowPlacement, IsIconic, IsWindow, IsWindowVisible, GA_ROOT, GWL_EXSTYLE,
+    PW_RENDERFULLCONTENT, WINDOWPLACEMENT, WS_EX_TOOLWINDOW,
 };
 
 /// Une source qu'on peut proposer au partage.
@@ -42,6 +47,14 @@ pub struct Source {
     pub y: i32,
     /// Vignette PNG en `data:` — vide si la capture a echoue.
     pub vignette: String,
+    /// La fenetre est reduite dans la barre des taches.
+    ///
+    /// Elle figure quand meme dans la liste : « toutes mes applications
+    /// ouvertes » comprend celles qu'on vient de reduire, et ne pas les voir
+    /// donnait le sentiment que le selecteur en oubliait la moitie. Elle n'a
+    /// simplement pas d'apercu — une fenetre reduite ne dessine rien — et
+    /// choisir la restaure avant de capturer.
+    pub reduite: bool,
 }
 
 /// Largeur des vignettes. Assez pour reconnaitre une fenetre, assez peu pour
@@ -88,11 +101,6 @@ fn partageable(fenetre: HWND) -> bool {
         return false;
     }
 
-    // Une fenetre reduite n'a plus de contenu a capturer.
-    if unsafe { IsIconic(fenetre) }.as_bool() {
-        return false;
-    }
-
     // Seules les fenetres racines : les boites de dialogue appartenant a une
     // application apparaitraient sinon a cote d'elle, sans qu'on sache
     // laquelle choisir.
@@ -110,6 +118,12 @@ fn partageable(fenetre: HWND) -> bool {
         return false;
     }
 
+    // Une fenetre reduite a un cadre qui ne veut rien dire — Windows la range
+    // hors de l'ecran — donc la mesure ne s'applique qu'aux autres.
+    if unsafe { IsIconic(fenetre) }.as_bool() {
+        return true;
+    }
+
     let mut cadre = RECT::default();
     if unsafe { GetWindowRect(fenetre, &mut cadre) }.is_err() {
         return false;
@@ -117,6 +131,21 @@ fn partageable(fenetre: HWND) -> bool {
 
     // Sous cette taille, c'est une fenetre technique, pas une application.
     (cadre.right - cadre.left) >= 160 && (cadre.bottom - cadre.top) >= 120
+}
+
+/// La zone que la fenetre occupera une fois restauree.
+///
+/// `GetWindowRect` d'une fenetre reduite rend un rectangle range hors de
+/// l'ecran, souvent `-32000`. S'en servir donnerait des tuiles minuscules et,
+/// pire, ferait croire a l'interface que la fenetre est sur un autre moniteur.
+fn cadre_restaure(fenetre: HWND) -> Option<RECT> {
+    let mut place = WINDOWPLACEMENT {
+        length: std::mem::size_of::<WINDOWPLACEMENT>() as u32,
+        ..Default::default()
+    };
+
+    unsafe { GetWindowPlacement(fenetre, &mut place) }.ok()?;
+    Some(place.rcNormalPosition)
 }
 
 /// Encode des pixels BGRA en PNG, puis en `data:`.
@@ -143,18 +172,8 @@ fn en_png(pixels: &[u8], largeur: u32, hauteur: u32) -> Option<String> {
     ))
 }
 
-/// Capture une zone de l'ecran, reduite a la taille d'une vignette.
-///
-/// La lecture passe par l'ecran plutot que par `PrintWindow` : ce dernier
-/// echoue sur tout ce qui dessine en accelere — un jeu, un lecteur video —
-/// c'est-a-dire precisement ce qu'on partage le plus souvent.
-fn vignette_de(zone: RECT) -> Option<String> {
-    let largeur = zone.right - zone.left;
-    let hauteur = zone.bottom - zone.top;
-    if largeur <= 0 || hauteur <= 0 {
-        return None;
-    }
-
+/// Reduit un bitmap deja pret et l'encode en vignette.
+fn reduire(source: HDC, largeur: i32, hauteur: i32) -> Option<String> {
     let cible_l = VIGNETTE_LARGEUR.min(largeur);
     let cible_h = ((cible_l as f32) * (hauteur as f32) / (largeur as f32)).round() as i32;
     if cible_h <= 0 {
@@ -176,7 +195,7 @@ fn vignette_de(zone: RECT) -> Option<String> {
         SetStretchBltMode(memoire, HALFTONE);
 
         let copie = StretchBlt(
-            memoire, 0, 0, cible_l, cible_h, ecran, zone.left, zone.top, largeur, hauteur, SRCCOPY,
+            memoire, 0, 0, cible_l, cible_h, source, 0, 0, largeur, hauteur, SRCCOPY,
         );
 
         let mut resultat = None;
@@ -207,10 +226,116 @@ fn vignette_de(zone: RECT) -> Option<String> {
                 DIB_RGB_COLORS,
             );
 
-            if lues != 0 {
+            if lues != 0 && !uniforme(&pixels) {
                 resultat = en_png(&pixels, cible_l as u32, cible_h as u32);
             }
         }
+
+        SelectObject(memoire, ancien);
+        let _ = DeleteObject(bitmap);
+        let _ = DeleteDC(memoire);
+        ReleaseDC(HWND(std::ptr::null_mut()), ecran);
+
+        resultat
+    }
+}
+
+/// Vrai si tous les pixels se valent — une vignette entierement noire.
+///
+/// C'est ainsi qu'echoue `PrintWindow` sur ce qu'il ne sait pas rendre : il
+/// annonce une reussite et rend un rectangle vide. Sans ce test, la moitie des
+/// tuiles seraient noires et l'on croirait le selecteur casse.
+fn uniforme(pixels: &[u8]) -> bool {
+    let Some(premier) = pixels.get(..4) else {
+        return true;
+    };
+
+    !pixels.chunks_exact(4).any(|pixel| pixel[..3] != premier[..3])
+}
+
+/// Demande a la fenetre de se dessiner, occultee ou non.
+///
+/// C'est ce qui repare l'apercu le plus deroutant du selecteur : la vignette
+/// venait d'une copie de l'ECRAN a l'endroit de la fenetre, si bien qu'une
+/// fenetre derriere une autre montrait celle de devant. On choisissait Steam et
+/// l'on voyait le navigateur pose dessus — d'ou l'impression de partager
+/// l'ecran entier.
+///
+/// `PW_RENDERFULLCONTENT` est ce qui le rend utilisable : sans lui, tout ce qui
+/// dessine en accelere — un navigateur, une application du Store — rend noir.
+/// Il reste des cas ou la fenetre ne sait pas se dessiner a la demande, et l'on
+/// repasse alors par l'ecran, ou l'on ne perd rien : ces fenetres-la sont
+/// justement celles qui sont au premier plan.
+fn vignette_fenetre(fenetre: HWND, zone: RECT) -> Option<String> {
+    let largeur = zone.right - zone.left;
+    let hauteur = zone.bottom - zone.top;
+    if largeur <= 0 || hauteur <= 0 {
+        return None;
+    }
+
+    unsafe {
+        let ecran = GetWindowDC(HWND(std::ptr::null_mut()));
+        if ecran.is_invalid() {
+            return None;
+        }
+
+        let memoire = CreateCompatibleDC(ecran);
+        let bitmap = CreateCompatibleBitmap(ecran, largeur, hauteur);
+        let ancien = SelectObject(memoire, bitmap);
+
+        let rendu = PrintWindow(fenetre, memoire, PRINT_WINDOW_FLAGS(PW_RENDERFULLCONTENT));
+        let resultat = if rendu.as_bool() {
+            reduire(memoire, largeur, hauteur)
+        } else {
+            None
+        };
+
+        SelectObject(memoire, ancien);
+        let _ = DeleteObject(bitmap);
+        let _ = DeleteDC(memoire);
+        ReleaseDC(HWND(std::ptr::null_mut()), ecran);
+
+        resultat
+    }
+}
+
+/// Capture une zone de l'ecran, reduite a la taille d'une vignette.
+///
+/// Le recours, quand la fenetre ne sait pas se dessiner a la demande. Ce qu'on
+/// obtient est ce qui se trouve la — donc la bonne image pour une fenetre au
+/// premier plan, et celle de dessus pour une fenetre couverte.
+fn vignette_de(zone: RECT) -> Option<String> {
+    let largeur = zone.right - zone.left;
+    let hauteur = zone.bottom - zone.top;
+    if largeur <= 0 || hauteur <= 0 {
+        return None;
+    }
+
+    let largeur = zone.right - zone.left;
+    let hauteur = zone.bottom - zone.top;
+    if largeur <= 0 || hauteur <= 0 {
+        return None;
+    }
+
+    unsafe {
+        let ecran = GetWindowDC(HWND(std::ptr::null_mut()));
+        if ecran.is_invalid() {
+            return None;
+        }
+
+        let memoire = CreateCompatibleDC(ecran);
+        let bitmap = CreateCompatibleBitmap(ecran, largeur, hauteur);
+        let ancien = SelectObject(memoire, bitmap);
+
+        let copie = BitBlt(
+            memoire, 0, 0, largeur, hauteur, ecran, zone.left, zone.top, SRCCOPY,
+        );
+
+        let resultat = if copie.is_ok() {
+            reduire(memoire, largeur, hauteur)
+        } else {
+            None
+        };
 
         SelectObject(memoire, ancien);
         let _ = DeleteObject(bitmap);
@@ -239,10 +364,37 @@ unsafe extern "system" fn collecter(fenetre: HWND, contexte: LPARAM) -> BOOL {
         return TRUE;
     }
 
-    let mut cadre = RECT::default();
-    if GetWindowRect(fenetre, &mut cadre).is_err() {
-        return TRUE;
-    }
+    let reduite = IsIconic(fenetre).as_bool();
+
+    // Reduite, le cadre courant est hors de l'ecran : on prend celui qu'elle
+    // retrouvera en se rouvrant.
+    let cadre = if reduite {
+        match cadre_restaure(fenetre) {
+            Some(place) => place,
+            None => return TRUE,
+        }
+    } else {
+        let mut courant = RECT::default();
+        if GetWindowRect(fenetre, &mut courant).is_err() {
+            return TRUE;
+        }
+        courant
+    };
+
+    /*
+     * L'apercu vient de la fenetre elle-meme, pas de l'ecran.
+     *
+     * Une fenetre reduite ne dessine rien, et rien ne peut le lui faire faire :
+     * elle part sans apercu, et l'interface le dit plutot que de montrer un
+     * rectangle noir.
+     */
+    let vignette = if reduite {
+        String::new()
+    } else {
+        vignette_fenetre(fenetre, cadre)
+            .or_else(|| vignette_de(cadre))
+            .unwrap_or_default()
+    };
 
     liste.push(Source {
         id: format!("fenetre:{}", fenetre.0 as isize),
@@ -252,7 +404,8 @@ unsafe extern "system" fn collecter(fenetre: HWND, contexte: LPARAM) -> BOOL {
         hauteur: cadre.bottom - cadre.top,
         x: cadre.left,
         y: cadre.top,
-        vignette: vignette_de(cadre).unwrap_or_default(),
+        vignette,
+        reduite,
     });
 
     TRUE
@@ -290,6 +443,8 @@ unsafe extern "system" fn collecter_ecran(
         x: cadre.left,
         y: cadre.top,
         vignette: vignette_de(cadre).unwrap_or_default(),
+        // Un ecran n'est jamais reduit.
+        reduite: false,
     });
 
     TRUE
@@ -450,4 +605,85 @@ pub fn masquer_barre_partage() {
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{sources_partageables, uniforme};
+
+    #[test]
+    fn une_vignette_noire_est_reconnue() {
+        /*
+         * C'est ainsi qu'echoue `PrintWindow` : il annonce une reussite et rend
+         * un rectangle vide. Sans ce test, la moitie des tuiles seraient noires
+         * et l'on croirait le selecteur casse plutot que la fenetre muette.
+         */
+        let noir = vec![0u8; 64 * 4];
+        assert!(uniforme(&noir));
+
+        let mut presque = vec![7u8; 64 * 4];
+        assert!(uniforme(&presque));
+
+        // Un seul pixel qui differe suffit : l'image porte quelque chose.
+        presque[40] = 200;
+        assert!(!uniforme(&presque));
+    }
+
+    #[test]
+    fn le_canal_alpha_ne_compte_pas() {
+        /*
+         * GDI laisse l'alpha a zero sur ce qu'il rend, et de facon inegale.
+         * Le prendre en compte ferait passer une image parfaitement noire pour
+         * une image qui porte quelque chose — et l'on afficherait le rectangle
+         * vide qu'on voulait ecarter.
+         */
+        let mut noir = vec![0u8; 8 * 4];
+        noir[3] = 255;
+        noir[7] = 0;
+
+        assert!(uniforme(&noir));
+    }
+
+    #[test]
+    fn la_liste_tient_ses_promesses() {
+        let sources = sources_partageables();
+
+        // Une machine a toujours au moins un ecran ; en trouver zero voudrait
+        // dire que l'enumeration elle-meme a echoue.
+        assert!(
+            sources.iter().any(|source| source.genre == "ecran"),
+            "aucun ecran enumere",
+        );
+
+        for source in &sources {
+            assert!(!source.titre.trim().is_empty(), "source sans titre");
+
+            // Une fenetre reduite est annoncee avec la taille qu'elle
+            // retrouvera, jamais avec le rectangle hors ecran que Windows lui
+            // donne en attendant.
+            assert!(
+                source.largeur > 0 && source.hauteur > 0,
+                "{} annonce {}x{}",
+                source.titre,
+                source.largeur,
+                source.hauteur,
+            );
+
+            // Une vignette est soit absente, soit une image lisible : une
+            // chaine tronquee ferait une tuile cassee dans la grille.
+            if !source.vignette.is_empty() {
+                assert!(
+                    source.vignette.starts_with("data:image/png;base64,"),
+                    "vignette illisible pour {}",
+                    source.titre,
+                );
+            }
+
+            // L'apercu d'une fenetre reduite n'existe pas, et le pretendre
+            // afficherait un rectangle noir a la place du signe qui explique.
+            if source.reduite {
+                assert!(source.vignette.is_empty(), "{} reduite avec apercu", source.titre);
+            }
+        }
+    }
 }

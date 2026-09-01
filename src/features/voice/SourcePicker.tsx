@@ -7,19 +7,25 @@ import { useDevices } from '@/store/devices';
  * Notre propre selecteur de partage.
  *
  * Les sources viennent du systeme, pas du moteur web : une commande Rust
- * enumere les ecrans et les fenetres, vignette comprise. C'est ce que le
+ * enumere les ecrans et les fenetres, apercu compris. C'est ce que le
  * navigateur ne nous laisse pas faire, et ce qu'une application de bureau a le
  * droit de faire.
  *
- * La fenetre du moteur ne s'ouvre plus : il lui est demande au demarrage de
- * prendre l'ecran entier sans rien afficher. Choisir une fenetre ici revient
- * donc a n'emettre que la portion correspondante de cette image — voir
- * `decoupe.ts`.
+ * Ce que l'apercu montre
+ * ----------------------
+ * La fenetre elle-meme, et non le rectangle d'ecran qu'elle occupe. La
+ * difference n'est pas cosmetique : l'ancienne vignette recopiait l'ecran a
+ * l'endroit de la fenetre, si bien qu'une fenetre derriere une autre montrait
+ * celle de devant. On choisissait Steam et l'on voyait le navigateur pose
+ * dessus — d'ou l'impression, tres juste, de partager l'ecran entier.
  *
- * Ce que cela ne sait pas faire : ce qui recouvre la fenetre partagee est
- * diffuse avec elle, puisque le systeme ne nous donne que l'image finale de
- * l'ecran. Isoler une fenetre demanderait une capture native, qui reste a
- * ecrire.
+ * Les fenetres reduites
+ * ---------------------
+ * Elles figurent dans la liste. « Toutes mes applications ouvertes » comprend
+ * celles qu'on vient de ranger dans la barre des taches, et les taire donnait
+ * le sentiment que le selecteur en oubliait la moitie. Elles n'ont pas
+ * d'apercu — une fenetre reduite ne dessine rien, et rien ne peut le lui faire
+ * faire — et les choisir les rouvre, sans voler le focus.
  */
 
 interface Source {
@@ -31,17 +37,23 @@ interface Source {
   x: number;
   y: number;
   vignette: string;
+  /** La fenetre est rangee dans la barre des taches. */
+  reduite: boolean;
 }
 
 /*
- * Seul le moniteur principal est capturable sans rouvrir la fenetre du moteur.
+ * Le second ecran ne depend plus que de la capture native.
  *
- * La selection automatique vise toujours la premiere source. Une source posee
- * ailleurs qu'a l'origine du bureau n'est donc pas dans l'image, et la
- * proposer sans le dire reviendrait a promettre ce qu'on ne peut pas tenir.
+ * Sans elle, on demandait au moteur web l'ecran entier — toujours le premier —
+ * et l'on decoupait dedans : tout ce qui vivait ailleurs etait hors d'atteinte,
+ * et le proposer aurait ete promettre ce qu'on ne peut pas tenir.
+ *
+ * Windows sait capturer n'importe quel moniteur. La restriction ne vaut donc
+ * plus que pour le repli, et c'est ce que dit cette fonction — au lieu de
+ * refuser un ecran qui marche tres bien.
  */
-function surEcranPrincipal(source: Source): boolean {
-  return source.x === 0 && source.y === 0;
+function indisponible(source: Source, natif: boolean): boolean {
+  return source.genre === 'ecran' && !natif && !(source.x === 0 && source.y === 0);
 }
 
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -59,6 +71,9 @@ export function SourcePicker({
   const media = useDevices((state) => state.media);
   const setMedia = useDevices((state) => state.setMedia);
 
+  // Lu une fois : ce que le moteur sait faire ne change pas en cours de route.
+  const [natif, setNatif] = useState(false);
+
   const [sources, setSources] = useState<Source[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [onglet, setOnglet] = useState<'ecran' | 'fenetre'>('ecran');
@@ -74,9 +89,16 @@ export function SourcePicker({
 
     void (async () => {
       try {
-        const { invoke } = await import('@tauri-apps/api/core');
+        const [{ invoke }, { captureNativeDisponible }] = await Promise.all([
+          import('@tauri-apps/api/core'),
+          import('./imageSysteme'),
+        ]);
+
         const liste = await invoke<Source[]>('sources_partageables');
-        if (!annule) setSources(liste);
+        if (annule) return;
+
+        setNatif(captureNativeDisponible());
+        setSources(liste);
       } catch (cause) {
         if (!annule) setErreur(String(cause));
       }
@@ -154,7 +176,7 @@ export function SourcePicker({
         ) : visibles.length === 0 ? (
           <p className="picker__note">
             {onglet === 'fenetre'
-              ? 'Aucune fenetre partageable. Les fenetres reduites ne comptent pas : leur contenu n’existe plus a l’ecran.'
+              ? 'Aucune fenetre partageable.'
               : 'Aucun ecran detecte.'}
           </p>
         ) : (
@@ -166,17 +188,17 @@ export function SourcePicker({
                   className={
                     'picker__source' +
                     (choisie === source.id ? ' is-active' : '') +
-                    (source.genre === 'ecran' && !surEcranPrincipal(source)
-                      ? ' is-indisponible'
-                      : '')
+                    (indisponible(source, natif) ? ' is-indisponible' : '')
                   }
-                  disabled={source.genre === 'ecran' && !surEcranPrincipal(source)}
+                  disabled={indisponible(source, natif)}
                   onClick={() => setChoisie(source.id)}
                   aria-pressed={choisie === source.id}
                   title={
-                    source.genre === 'ecran' && !surEcranPrincipal(source)
-                      ? 'Seul l’ecran principal peut etre partage pour l’instant.'
-                      : source.titre
+                    indisponible(source, natif)
+                      ? 'Seul l’ecran principal peut etre partage sur cette machine.'
+                      : source.reduite
+                        ? `${source.titre} — reduite, elle se rouvrira`
+                        : source.titre
                   }
                 >
                   <span className="picker__apercu">
@@ -184,15 +206,19 @@ export function SourcePicker({
                       <img src={source.vignette} alt="" />
                     ) : (
                       <span className="picker__apercu-vide" aria-hidden="true">
-                        <Icon name="monitor" size={22} />
+                        {/* Une fenetre reduite n'est pas une capture ratee :
+                            elle ne dessine rien, et le signe le dit. */}
+                        <Icon name={source.reduite ? 'arrow-down' : 'monitor'} size={22} />
                       </span>
                     )}
                   </span>
                   <span className="picker__titre truncate">{source.titre}</span>
                   <span className="picker__taille">
-                    {source.genre === 'ecran' && !surEcranPrincipal(source)
-                      ? 'Indisponible pour l’instant'
-                      : `${source.largeur} × ${source.hauteur}`}
+                    {indisponible(source, natif)
+                      ? 'Indisponible sur cette machine'
+                      : source.reduite
+                        ? 'Reduite — elle se rouvrira'
+                        : `${source.largeur} × ${source.hauteur}`}
                   </span>
                 </button>
               </li>
