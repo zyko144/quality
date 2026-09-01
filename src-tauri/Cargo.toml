@@ -58,6 +58,19 @@ windows = { version = "0.58", features = [
   # `Win32_Security` porte SECURITY_ATTRIBUTES, exige par CreateEventW.
   "Win32_Security",
   "implement",
+  # Capture d une fenetre ou d un ecran par le processeur graphique.
+  # Voir `image.rs` : c est ce qui remplace le decoupage d une capture
+  # d ecran unique, et ce qui rend le second ecran atteignable.
+  "Graphics_Capture",
+  "Graphics_DirectX_Direct3D11",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Dxgi",
+  # Porte les descriptions de textures, exigees par la lecture des images.
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_System_WinRT_Direct3D11",
+  "Win32_System_WinRT_Graphics_Capture",
+  "Foundation",
 ] }
 
 [profile.release]

@@ -72,6 +72,7 @@ mod capture;
 mod capture;
 
 /// Capture du son du systeme, par le bouclage de Windows. Voir `son.rs`.
+mod image;
 mod son;
 
 /// Retire la fenetre de selection de partage imposee par WebView2.
