@@ -376,10 +376,6 @@ export async function applyAudioEncoding(sender: RTCRtpSender, bitrate: number):
  * fond continu.
  */
 export function ameliorerOpus(sdp: string, media: MediaPreferences): string {
-  const rtpmap = sdp.match(/^a=rtpmap:(\d+) opus\/48000\/2/m);
-  if (!rtpmap) return sdp;
-
-  const pt = rtpmap[1];
   const stereo = media.audioQuality === 'musique' ? 1 : 0;
 
   const reglages = [
@@ -392,23 +388,51 @@ export function ameliorerOpus(sdp: string, media: MediaPreferences): string {
   ];
 
   const connus = /^(stereo|sprop-stereo|maxaveragebitrate|maxplaybackrate|useinbandfec|usedtx)=/;
-  const fmtp = new RegExp(`^a=fmtp:${pt} (.*)$`, 'm');
 
-  if (fmtp.test(sdp)) {
-    // Les autres parametres negocies par le moteur sont conserves : on ne
-    // remplace que ceux dont on a une opinion.
-    return sdp.replace(fmtp, (_ligne, existant: string) => {
-      const garde = existant
-        .split(';')
-        .map((part) => part.trim())
-        .filter((part) => part.length > 0 && !connus.test(part));
-      return `a=fmtp:${pt} ${[...garde, ...reglages].join(';')}`;
-    });
-  }
+  /*
+   * Chaque section media est traitee separement.
+   *
+   * La version precedente cherchait le premier `a=rtpmap: … opus` de la SDP et
+   * s'arretait la. Cela suffisait tant qu'il n'y avait qu'une piste sonore, le
+   * micro. Depuis que le partage emporte le son de l'ordinateur, il y en a
+   * deux — et la seconde, celle qui porte le jeu ou la musique, restait aux
+   * reglages par defaut du moteur : mono, trente-deux kilobits. C'est-a-dire
+   * la qualite d'un telephone pour ce qu'on partage justement pour le faire
+   * entendre.
+   *
+   * Pire, les deux sections declarent en general le MEME type de charge utile
+   * pour Opus. Un `replace` non global posait donc les reglages sur la
+   * premiere et laissait la seconde nue, sans que rien ne le signale.
+   */
+  const sections = sdp.split(/^(?=m=)/m);
 
-  // Le saut de ligne est ecrit en echappement : une vraie coupure dans un
-  // gabarit serait normalisee en simple LF, alors que la SDP se lit en CRLF.
-  return sdp.replace(rtpmap[0], `${rtpmap[0]}\r\na=fmtp:${pt} ${reglages.join(';')}`);
+  return sections
+    .map((section) => {
+      if (!section.startsWith('m=audio')) return section;
+
+      const rtpmap = section.match(/^a=rtpmap:(\d+) opus\/48000\/2/m);
+      if (!rtpmap) return section;
+
+      const pt = rtpmap[1];
+      const fmtp = new RegExp(`^a=fmtp:${pt} (.*)$`, 'm');
+
+      if (fmtp.test(section)) {
+        // Les autres parametres negocies par le moteur sont conserves : on ne
+        // remplace que ceux dont on a une opinion.
+        return section.replace(fmtp, (_ligne, existant: string) => {
+          const garde = existant
+            .split(';')
+            .map((part) => part.trim())
+            .filter((part) => part.length > 0 && !connus.test(part));
+          return `a=fmtp:${pt} ${[...garde, ...reglages].join(';')}`;
+        });
+      }
+
+      // Le saut de ligne est ecrit en echappement : une vraie coupure dans un
+      // gabarit serait normalisee en simple LF, alors que la SDP se lit en CRLF.
+      return section.replace(rtpmap[0], `${rtpmap[0]}\r\na=fmtp:${pt} ${reglages.join(';')}`);
+    })
+    .join('');
 }
 
 export function videoConstraints(media: MediaPreferences): MediaTrackConstraints {

@@ -17,15 +17,23 @@ test.describe('Waves', () => {
     const entree = page.getByRole('button', { name: /Waves/ });
     await expect(entree).toBeVisible({ timeout: 15_000 });
 
-    // La mention « bientot » figure sur l'entree elle-meme : on ne decouvre pas
-    // apres coup qu'il n'y a rien a acheter.
-    await expect(entree).toContainText('Bientot');
+    /*
+     * L'entree dit elle-meme que l'abonnement est arrete.
+     *
+     * On ne decouvre pas apres coup qu'il n'y a rien a acheter — et
+     * « Maintenance » dit un arret la ou « Bientot » disait une attente qui
+     * avance, ce qui n'etait plus vrai.
+     */
+    await expect(entree).toContainText('Maintenance');
 
     await entree.click();
     await expect(page.getByRole('heading', { name: 'Waves', level: 1 })).toBeVisible();
 
+    // La page reprend le mot de l'entree, plutot que d'en donner un deuxieme.
+    await expect(page.locator('.waves__annonce')).toContainText(/maintenance/i);
+
     // Le bouton n'est pas cliquable : aucun paiement n'existe.
-    const bouton = page.getByRole('button', { name: /Bientot disponible/i });
+    const bouton = page.getByRole('button', { name: /Indisponible/i });
     await expect(bouton).toBeVisible();
     await expect(bouton).toBeDisabled();
 

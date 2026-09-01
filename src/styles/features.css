@@ -1481,6 +1481,12 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--accent-text);
 }
 
+/* Un arret n'est pas une attente : il ne peut pas porter la couleur qui sert
+   partout ailleurs a annoncer ce qui arrive. */
+.waves__annonce--arret {
+  color: var(--danger);
+}
+
 .waves__titre {
   margin: 0;
   font-size: var(--text-3xl, 2rem);
@@ -1581,12 +1587,28 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 }
 
 /* L'entree dans la liste des conversations. */
-.dm-waves__bientot {
+/*
+ * Le nom est barre, la mention est rouge.
+ *
+ * La barre porte l'information a elle seule : on la lit sans lire le mot qui
+ * l'accompagne, ce qui est exactement ce qu'on fait d'une barre laterale. La
+ * mention n'est la que pour dire de quoi il retourne a qui s'arrete.
+ *
+ * `text-decoration-color` est pose separement : sans lui, la barre prend la
+ * couleur du texte et se confond avec lui au lieu de le contredire.
+ */
+.dm-waves__nom {
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+  text-decoration-thickness: 2px;
+}
+
+.dm-waves__etat {
   margin-left: auto;
   padding: 1px var(--space-2);
   border-radius: var(--radius-full);
-  background: var(--accent-soft);
-  color: var(--accent-text);
+  background: var(--danger-soft);
+  color: var(--danger);
   font-size: var(--text-2xs);
   font-weight: var(--weight-semibold);
 }

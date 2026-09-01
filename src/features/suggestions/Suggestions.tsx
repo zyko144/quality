@@ -118,7 +118,7 @@ export function Suggestions() {
   return (
     <div className="suggestions">
       <div className="suggestions__fil scroll">
-      <header className="suggestions__entete">
+      <header className="suggestions__entete" data-tauri-drag-region>
         <h1 className="suggestions__titre">
           <span className="suggestions__marque" aria-hidden="true">
             <Icon name="sparkles" size={18} />

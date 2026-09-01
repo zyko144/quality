@@ -66,17 +66,18 @@ const AVANTAGES: Avantage[] = [
 export function Waves() {
   return (
     <div className="waves">
-      <section className="waves__entete">
+      <section className="waves__entete" data-tauri-drag-region>
         <span className="waves__logo" aria-hidden="true">
           <QualityLogo size={64} />
         </span>
 
-        <p className="waves__annonce">Prochainement</p>
+        <p className="waves__annonce waves__annonce--arret">En maintenance</p>
         <h1 className="waves__titre">Waves</h1>
 
         <p className="waves__accroche">
-          Cinq euros par mois pour soutenir Echow et essayer ce qui arrive
-          avant les autres.
+          L&rsquo;abonnement est suspendu le temps qu&rsquo;on le remette
+          d&rsquo;aplomb. Rien n&rsquo;est encaisse, rien n&rsquo;est perdu, et
+          ce qui suit reste ce qui est prevu.
         </p>
 
         {/*
@@ -85,7 +86,7 @@ export function Waves() {
           l'on ne l'apprendrait qu'apres avoir clique.
         */}
         <button type="button" className="btn btn--primary waves__bouton" disabled>
-          Bientot disponible
+          Indisponible
         </button>
 
         <p className="waves__note">

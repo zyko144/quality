@@ -1193,6 +1193,7 @@ export const useVoice = create<VoiceState>((set, get) => {
       const screenAudio = screen.getAudioTracks()[0];
       if (screenAudio) {
         peer.screenAudioSender = connection.addTrack(screenAudio, screen);
+        void applyAudioEncoding(peer.screenAudioSender, audioBitrate(useDevices.getState().media));
       }
 
       announceStream(peerId, screen.id, 'screen');
@@ -1992,6 +1993,19 @@ export const useVoice = create<VoiceState>((set, get) => {
 
           if (audioTrack) {
             peer.screenAudioSender = peer.connection.addTrack(audioTrack, display);
+
+            /*
+             * Le son du partage a droit au meme debit que la voix.
+             *
+             * Il ne l'avait pas : seul `micSender` etait regle, et le son du
+             * jeu partait au debit par defaut de WebRTC. On l'entendait, mais
+             * comprime comme une conversation telephonique — ce qui est le
+             * pire traitement possible pour de la musique.
+             */
+            void applyAudioEncoding(
+              peer.screenAudioSender,
+              audioBitrate(useDevices.getState().media),
+            );
           }
 
           announceStream(peerId, display.id, 'screen');

@@ -74,7 +74,18 @@ export function FriendsPage() {
 
   return (
     <div className="friends">
-      <header className="friends__bar">
+      {/*
+        La fenetre se deplace en glissant cet en-tete.
+
+        La barre de titre du systeme est desactivee : deplacer la fenetre nous
+        revient, et cela ne marche que sur les elements qui portent cet
+        attribut. Seul l'en-tete d'un salon l'avait — d'ou une fenetre qu'on ne
+        pouvait plus bouger des qu'on ouvrait une page qui n'en est pas un.
+
+        L'attribut ne declenche rien quand on vise un bouton : Tauri ne demarre
+        le glissement que si la cible est l'element lui-meme.
+      */}
+      <header className="friends__bar" data-tauri-drag-region>
         <span className="friends__brand">
           <Icon name="users" size={20} />
           Amis

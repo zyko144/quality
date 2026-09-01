@@ -1595,42 +1595,80 @@
   right: 0;
   z-index: 900;
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
   height: 34px;
+  padding: 0 var(--space-4);
   -webkit-app-region: no-drag;
 }
 
+/*
+ * Une pastille par action, la couleur pour seule indication.
+ *
+ * La zone cliquable est plus grande que le disque : le disque fait dix pixels,
+ * le bouton vingt-deux. Viser un cercle de dix pixels au coin d'un ecran est
+ * penible, et le geste est frequent — on paie donc douze pixels de vide autour
+ * plutot qu'une cible qu'on rate.
+ */
 .window-control {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 100%;
+  width: 22px;
+  height: 22px;
+  padding: 0;
   border: 0;
+  border-radius: var(--radius-full);
   background: transparent;
-  color: var(--text-muted);
   cursor: pointer;
+}
+
+.window-control::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  border-radius: var(--radius-full);
+  background: var(--pastille);
+  /*
+   * Les pastilles sont legerement eteintes au repos et s'allument au survol.
+   * A pleine intensite en permanence, trois disques vifs dans un coin sombre
+   * tirent l'oeil en continu vers ce qu'on utilise le moins.
+   */
+  opacity: 0.72;
   transition:
-    background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 }
 
-.window-control svg {
-  width: 10px;
-  height: 10px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.1;
+.window-control:hover::before {
+  opacity: 1;
+  transform: scale(1.12);
 }
 
-.window-control:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.window-control:active::before {
+  transform: scale(0.94);
 }
 
-/* La fermeture vire au rouge, comme partout sous Windows : c'est le repere
-   qui evite de la confondre avec « reduire » en visant vite. */
-.window-control--close:hover {
-  background: var(--danger);
-  color: #fff;
+/*
+ * Le focus clavier ne peut pas reposer sur la couleur.
+ *
+ * Il n'y a plus de contour de bouton a epaissir : sans cet anneau, se deplacer
+ * au clavier jusqu'a « Fermer » ne se verrait nulle part.
+ */
+.window-control:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--text-primary));
+  outline-offset: 1px;
+}
+
+.window-control--reduire {
+  --pastille: var(--success, #23a559);
+}
+
+.window-control--agrandir {
+  --pastille: var(--warning, #f0b232);
+}
+
+.window-control--fermer {
+  --pastille: var(--danger);
 }
 
 /*
@@ -1639,8 +1677,23 @@
  * composant ne rend rien — et elle change de cote selon le systeme : nos trois
  * boutons a droite sous Windows, les pastilles d'Apple a gauche sous macOS.
  */
-:root[data-chrome='windows'] .channel-header {
-  padding-right: calc(var(--space-4) + 138px);
+/*
+ * La place des pastilles est reservee dans tous les en-tetes de page.
+ *
+ * Elles sont en position fixe, au-dessus de tout : sans cette reserve, le
+ * dernier bouton d'un en-tete passe dessous et devient incliquable. Seul
+ * l'en-tete d'un salon l'avait — les pages Amis, Support et Suggestions ont
+ * depuis gagne des boutons a droite, et « Support » finissait sous la pastille
+ * de fermeture des que la fenetre etait etroite.
+ *
+ * Cent deux pixels, mesures : trois cibles de vingt-deux, deux ecarts de huit,
+ * deux marges de seize.
+ */
+:root[data-chrome='windows'] .channel-header,
+:root[data-chrome='windows'] .friends__bar,
+:root[data-chrome='windows'] .support__entete,
+:root[data-chrome='windows'] .suggestions__entete {
+  padding-right: calc(var(--space-4) + 102px);
 }
 
 /*

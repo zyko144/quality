@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Icon } from './Icon';
 
 /**
  * Commandes de fenetre integrees a l'application.
@@ -90,48 +89,45 @@ export function WindowControls() {
     })();
   };
 
+  /*
+   * Trois pastilles de couleur, sans dessin a l'interieur.
+   *
+   * Le trait, le carre et la croix disaient la meme chose que la position :
+   * a droite d'une fenetre, on sait depuis trente ans ce que font ces trois
+   * boutons dans cet ordre. La couleur suffit donc, et elle se lit de plus
+   * loin qu'un trait d'un pixel — vert pour reduire, orange pour agrandir,
+   * rouge pour fermer.
+   *
+   * Ce qui n'est PAS retire, c'est le nom : `aria-label` et `title` restent.
+   * Une couleur ne se lit ni au clavier, ni par un lecteur d'ecran, ni par qui
+   * ne distingue pas le vert du rouge — et ils sont nombreux. Sans ces deux
+   * attributs, ce changement aurait rendu la fenetre impilotable pour eux.
+   */
   return (
     <div className="window-controls">
       <button
         type="button"
-        className="window-control"
+        className="window-control window-control--reduire"
         onClick={() => agir('reduire')}
         aria-label="Reduire la fenetre"
         title="Reduire"
-      >
-        <svg viewBox="0 0 10 10" aria-hidden="true">
-          <path d="M0 5h10" />
-        </svg>
-      </button>
+      />
 
       <button
         type="button"
-        className="window-control"
+        className="window-control window-control--agrandir"
         onClick={() => agir('basculer')}
         aria-label={agrandie ? 'Restaurer la fenetre' : 'Agrandir la fenetre'}
         title={agrandie ? 'Restaurer' : 'Agrandir'}
-      >
-        {agrandie ? (
-          <svg viewBox="0 0 10 10" aria-hidden="true">
-            <path d="M2.5 2.5V0.5h7v7h-2" />
-            <path d="M0.5 2.5h7v7h-7Z" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 10 10" aria-hidden="true">
-            <path d="M0.5 0.5h9v9h-9Z" />
-          </svg>
-        )}
-      </button>
+      />
 
       <button
         type="button"
-        className="window-control window-control--close"
+        className="window-control window-control--fermer"
         onClick={() => agir('fermer')}
         aria-label="Fermer la fenetre"
         title="Fermer"
-      >
-        <Icon name="x" size={14} />
-      </button>
+      />
     </div>
   );
 }

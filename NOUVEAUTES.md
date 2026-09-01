@@ -12,6 +12,18 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.3
+
+### Corrige
+
+- **La fenetre ne se deplacait plus.** La barre de titre du systeme est desactivee : deplacer la fenetre nous revient, et cela ne fonctionne que sur les elements qui portent la marque prevue. Seul l'en-tete d'un salon l'avait. Des qu'on ouvrait Amis, Waves, Suggestions ou Support, la fenetre devenait immobile — et cela s'est vu d'un coup, puisque ces pages ne s'ouvraient pas du tout avant la version precedente.
+- **Le son du partage partait a la qualite d'un telephone.** La retouche appliquee au flux sonore s'arretait a la premiere piste, ce qui suffisait tant qu'il n'y avait que le micro. Depuis que le partage emporte le son de l'ordinateur, il y en a deux — et la seconde, celle qui porte le jeu ou la musique, restait en mono a trente-deux kilobits. Elle ne recevait pas non plus de plafond de debit, la ou la voix en avait un.
+
+### Ameliore
+
+- **Les commandes de fenetre sont trois pastilles de couleur** : vert pour reduire, orange pour agrandir, rouge pour fermer. Le trait, le carre et la croix disaient ce que la position dit deja. Les noms restent pour le clavier et les lecteurs d'ecran — une couleur ne se lit pas, et beaucoup ne distinguent pas le vert du rouge.
+- **Waves passe en maintenance**, barre en rouge dans la liste. « Bientot » annoncait une attente qui avance ; ce n'etait plus vrai.
+
 ## 0.4.2
 
 ### Corrige

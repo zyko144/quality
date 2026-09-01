@@ -61,8 +61,13 @@ function FriendsEntry() {
 /**
  * L'entree de l'abonnement, juste sous « Amis ».
  *
- * Elle porte sa mention « bientot » plutot que de laisser decouvrir apres coup
- * qu'il n'y a rien a acheter : c'est ce qui la distingue d'un appel a payer.
+ * Le nom est barre et la mention passe au rouge : l'abonnement est en
+ * maintenance. « Bientot » disait une attente qui avance ; « Maintenance » dit
+ * un arret, et c'est ce qu'il faut dire quand la page ne mene a rien.
+ *
+ * L'entree reste cliquable a dessein. La griser aurait cache la raison :
+ * on aurait vu un mot barre sans savoir de quoi il s'agit, ni pour combien de
+ * temps. La page, elle, peut l'expliquer.
  */
 function WavesEntry() {
   const wavesOpen = useUI((state) => state.wavesOpen);
@@ -76,8 +81,8 @@ function WavesEntry() {
       aria-current={wavesOpen ? 'page' : undefined}
     >
       <Icon name="sparkles" size={19} />
-      Waves
-      <span className="dm-waves__bientot">Bientot</span>
+      <span className="dm-waves__nom">Waves</span>
+      <span className="dm-waves__etat">Maintenance</span>
     </button>
   );
 }

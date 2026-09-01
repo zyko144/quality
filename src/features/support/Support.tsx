@@ -97,7 +97,7 @@ export function Support() {
 
   return (
     <div className="support">
-      <header className="support__entete">
+      <header className="support__entete" data-tauri-drag-region>
         <h1 className="support__titre">
           <span className="support__marque" aria-hidden="true">
             <Icon name="mail" size={18} />
