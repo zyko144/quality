@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.3
+
+### Corrige
+
+- **« Des fois il ne m'entend pas. »** Voici pourquoi, et c'etait le defaut le plus couteux du vocal. La presence n'est pas un etat mais une suite d'instantanes, et l'un d'eux peut omettre quelqu'un qui n'est parti nulle part — un battement manque, une reconnexion. On detruisait alors toute la connexion, avec ses pistes. Le pire venait ensuite : un seul des deux cotes rebatit, celui dont l'identifiant est le plus petit. Quand c'est l'autre qui avait coupe, il attendait une offre que personne n'avait de raison d'envoyer — et la voix disparaissait **dans un seul sens, definitivement**, jusqu'a ce que quelqu'un quitte le salon.
+- Une absence doit desormais se confirmer avant qu'une connexion tombe. Et lorsqu'un participant est la depuis six secondes sans qu'une connexion s'etablisse, on l'amorce soi-meme sans attendre l'offre d'en face.
+
 ## 0.6.2
 
 ### Corrige

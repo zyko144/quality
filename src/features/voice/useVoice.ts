@@ -20,6 +20,7 @@ import { useSpacePrefs } from '@/store/spacePrefs';
 import { ouvrirPorte, type Porte } from './porte';
 import { capturerSonSysteme, type SonSysteme } from './sonSysteme';
 import { journal } from '@/lib/journal';
+import { decider, etatPairsVide } from './pairs';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -400,6 +401,9 @@ const peers = new Map<UUID, Peer>();
  * a voir n'ait pas le temps de paraitre casse.
  */
 const REPLI_CLASSEMENT = 1500;
+
+/** Ce que la decision sur les pairs retient d'une synchronisation a l'autre. */
+const etatPairs = etatPairsVide();
 
 const streamPurposes = new Map<string, StreamPurpose>();
 /** Pistes recues avant leur annonce, a reclasser une fois celle-ci arrivee. */
@@ -886,6 +890,17 @@ export const useVoice = create<VoiceState>((set, get) => {
    * qu'a l'oeil on hesite entre « le reseau » et « le code ».
    */
   let statsTimer: number | null = null;
+
+/**
+ * Battement qui repasse sur l'etat des connexions.
+ *
+ * La synchronisation des pairs ne se declenche qu'a un changement de presence.
+ * Or le rattrapage — rebatir une connexion dont l'offre n'est jamais venue — a
+ * besoin de repasser APRES un delai, et rien ne garantit qu'un changement
+ * survienne entre-temps. Dans un salon calme, la voix serait restee coupee
+ * jusqu'a ce que quelqu'un entre ou sorte.
+ */
+let battementPairs: number | null = null;
 
 /**
  * Definition et cause de limitation du dernier releve, pour ce partage.
@@ -1487,28 +1502,38 @@ let derniereQualite: string | null = null;
     const localStream = get().localStream;
     if (!me || !localStream) return;
 
-    const others = participants.filter((participant) => participant.user_id !== me);
-    const present = new Set(others.map((participant) => participant.user_id));
+    /*
+     * La decision vit dans `pairs.ts`, seule et sans effet.
+     *
+     * Elle portait le defaut le plus couteux du vocal — une absence passagere
+     * dans la presence detruisait une connexion, et un seul des deux cotes la
+     * rebatissait — et un defaut de ce genre ne se corrige pas de facon
+     * credible sans qu'on puisse l'eprouver. Huit cas le couvrent desormais.
+     */
+    const decision = decider(
+      me,
+      participants.map((participant) => participant.user_id),
+      [...peers.keys()],
+      etatPairs,
+      Date.now(),
+    );
 
-    for (const peerId of [...peers.keys()]) {
-      if (!present.has(peerId)) {
-        dropPeer(peerId);
-        playCue('peer-leave');
-      }
+    for (const pair of decision.retirer) {
+      journal.info('vocal', 'Pair retire apres absence confirmee', { pair });
+      dropPeer(pair);
+      playCue('peer-leave');
     }
 
-    for (const participant of others) {
-      const peerId = participant.user_id;
-      if (peers.has(peerId)) continue;
-
+    for (const pair of decision.ouvrir) {
       // Le signal d'arrivee se coupe par serveur : precieux a trois, penible
       // a deux cents.
       if (sonVocalActif(get().channelId)) playCue('peer-join');
+      createPeer(pair, localStream);
+    }
 
-      // Un seul cote amorce, sinon les deux negocient en meme temps. La
-      // comparaison des identifiants donne un arbitre stable ; l'autre attend
-      // l'offre. `onnegotiationneeded` se declenche a l'ajout des pistes.
-      if (me < peerId) createPeer(peerId, localStream);
+    for (const pair of decision.rebatir) {
+      journal.alerte('vocal', 'Connexion rebatie faute d’offre', { pair });
+      createPeer(pair, localStream);
     }
   }
 
@@ -1678,6 +1703,19 @@ let derniereQualite: string | null = null;
 
       playCue('join');
 
+      /*
+       * On repasse sur les connexions toutes les trois secondes.
+       *
+       * C'est court devant les six secondes d'attente avant de rebatir, et
+       * assez peu frequent pour ne rien couter : la fonction ne fait rien
+       * quand tout est en place.
+       */
+      battementPairs = window.setInterval(() => {
+        const salon = get().channelId;
+        if (!salon) return;
+        syncPeers(get().participantsByChannel[salon] ?? []);
+      }, 3000);
+
       room = supabase.channel(`orbit:voice:${channelId}`, {
         config: { presence: { key: userId }, broadcast: { self: false } },
       });
@@ -1748,6 +1786,11 @@ let derniereQualite: string | null = null;
 
       stopSpeechDetection();
       stopStats();
+
+      if (battementPairs !== null) {
+        window.clearInterval(battementPairs);
+        battementPairs = null;
+      }
       arretSuiviMicro?.();
       arretSuiviMicro = null;
       teardownPeers();
@@ -1756,6 +1799,8 @@ let derniereQualite: string | null = null;
       window.setTimeout(reconcilierObservateurs, 800);
       streamPurposes.clear();
       pendingStreams.clear();
+      etatPairs.absences.clear();
+      etatPairs.attentes.clear();
 
       relacherMicro();
       couperSonNatif();
