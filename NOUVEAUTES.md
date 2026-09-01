@@ -12,6 +12,16 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.2
+
+### Ameliore
+
+- **Partager coute nettement moins cher a celui qui partage.** Rapatrier une image depuis la carte graphique coute environ deux millisecondes en 1080p, auxquelles le moteur ajoute la conversion vers ce que l'encodeur sait lire. Capturer soixante images par seconde quand l'encodeur n'en sort que vingt-cinq revenait a payer ce prix trente-cinq fois par seconde pour des images que personne ne verrait jamais. La cadence de capture suit desormais ce que la machine tient reellement, et remonte des qu'elle respire. Rien ne change pour ceux qui regardent : les images qui partent gardent leur definition et leur debit, on cesse seulement de fabriquer celles qui seraient jetees.
+
+### Nouveau
+
+- **Choisir de quelle application vient le son en partageant un ecran.** Partager une fenetre prend deja le son de cette application seule. Un ecran n'a pas d'application derriere : on prenait donc tout, sauf nous — ce qui suffit tant qu'aucun routeur audio virtuel ne tourne. Voicemeeter et consorts rejouent notre voix depuis leur propre processus, que Windows capte a bon droit, et l'on s'entendait en double sans qu'aucun reglage n'y puisse rien. Un choix a cote de la bascule du son y repond.
+
 ## 0.7.1
 
 ### Nouveau

@@ -159,6 +159,7 @@ pub fn run() {
             son::diagnostic_son,
             image::demarrer_image,
             image::arreter_image,
+            image::cadence_image,
             clavier::definir_touches_globales
         ])
         // Une seconde instance ne cree pas de fenetre : elle reveille celle qui

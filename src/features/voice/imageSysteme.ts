@@ -243,3 +243,34 @@ async function ouvrirFlux(
 
   return null;
 }
+
+/**
+ * Change la cadence de capture sans rouvrir la source.
+ *
+ * Ce qui se joue ici est une depense inutile, pas une question d'image.
+ * Rapatrier une image depuis la carte graphique coute environ deux
+ * millisecondes en 1080p — mesure sur cette machine : 1,1 ms pour la copie et
+ * l'attente de la carte, 0,8 ms pour la recopie en memoire — et le moteur y
+ * ajoute ensuite la conversion vers ce que l'encodeur sait lire.
+ *
+ * Capturer soixante images par seconde quand l'encodeur n'en sort que
+ * vingt-cinq revient a payer ce prix trente-cinq fois par seconde pour des
+ * images que personne ne verra. C'est cela qui rend un partage couteux pour
+ * celui qui partage — pas la definition, qui, elle, ne change rien au nombre
+ * d'images.
+ *
+ * L'appel est sans effet hors de l'application de bureau, et sans effet aussi
+ * quand aucune capture ne tourne : la valeur sera simplement celle de la
+ * prochaine.
+ */
+export async function reglerCadence(images: number): Promise<void> {
+  if (!DANS_TAURI) return;
+
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('cadence_image', { images });
+  } catch {
+    // Une version de l'application sans cette commande : la cadence reste
+    // celle du depart, ce qui marche, simplement sans l'economie.
+  }
+}

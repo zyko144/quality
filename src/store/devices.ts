@@ -78,6 +78,21 @@ export interface MediaPreferences {
   /** Definition demandee a la camera. */
   videoQuality: '480p' | '720p' | '1080p';
   /** Definition demandee au partage d'ecran. */
+  /**
+   * De quelle application prendre le son en partageant un ECRAN.
+   *
+   * `null` veut dire tout l'ordinateur. Un identifiant de fenetre — `fenetre:N`
+   * — veut dire cette application seule, et c'est la seule facon d'echapper a
+   * l'echo quand un routeur audio virtuel tourne : Voicemeeter, VB-Cable et
+   * consorts rejouent notre son depuis leur propre processus, que Windows capte
+   * alors a bon droit. Exclure le notre n'y peut rien, puisque ce n'est pas le
+   * notre qui rejoue.
+   *
+   * Partager une FENETRE n'a pas ce reglage : le son suit l'application
+   * partagee, ce qui est la seule reponse qui ait du sens.
+   */
+  loopbackSource: string | null;
+
   screenQuality: '720p' | '1080p' | 'source';
   /** Images par seconde du partage d'ecran. */
   screenFrameRate: 15 | 30 | 60;
@@ -134,6 +149,10 @@ const DEFAULTS: MediaPreferences = {
   outputVolume: 1,
   speakingThreshold: -50,
   videoQuality: '720p',
+  // Tout l'ordinateur : c'est ce qu'on attend d'un partage d'ecran, et cela
+  // n'ennuie que ceux qui ont un routeur audio virtuel.
+  loopbackSource: null,
+
   screenQuality: '1080p',
   screenFrameRate: 60,
   /*

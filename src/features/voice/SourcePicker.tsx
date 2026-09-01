@@ -338,6 +338,48 @@ export function SourcePicker({
               <span className="picker__son-bouton" />
             </span>
           </label>
+
+          {/*
+            D'ou vient le son, quand on partage un ecran.
+
+            Ce reglage n'existe que la. Partager une FENETRE prend le son de
+            cette application, sans rien demander : c'est la seule reponse qui
+            ait du sens, et elle supprime l'echo au passage.
+
+            Un ecran, lui, n'a pas d'application derriere : on prend alors tout
+            ce que joue l'ordinateur — sauf nous. Cela suffit tant qu'aucun
+            routeur audio virtuel ne tourne. Voicemeeter, VB-Cable et consorts
+            rejouent notre son depuis LEUR processus, que Windows capte a bon
+            droit : on s'entend en double, et rien de notre cote ne peut
+            l'empecher. Designer une application est la seule issue.
+          */}
+          {media.shareSystemAudio && onglet === 'ecran' ? (
+            <div className="picker__son-source">
+              <label className="picker__reglage">
+                <span className="picker__etiquette">Son a prendre</span>
+                <select
+                  className="picker__liste"
+                  value={media.loopbackSource ?? ''}
+                  onChange={(event) => setMedia('loopbackSource', event.target.value || null)}
+                >
+                  <option value="">Tout l&rsquo;ordinateur</option>
+                  {(sources ?? [])
+                    .filter((source) => source.genre === 'fenetre' && !source.reduite)
+                    .map((source) => (
+                      <option key={source.id} value={source.id}>
+                        {source.titre}
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              <p className="picker__note">
+                Choisissez l&rsquo;application si vous vous entendez en double :
+                un routeur audio comme Voicemeeter rejoue votre voix, et prendre
+                tout l&rsquo;ordinateur la reprend avec le reste.
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
     </Modal>

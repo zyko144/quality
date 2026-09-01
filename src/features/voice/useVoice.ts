@@ -22,6 +22,7 @@ import { capturerSonSysteme, type SonSysteme } from './sonSysteme';
 import { journal } from '@/lib/journal';
 import { decider, etatPairsVide } from './pairs';
 import { noter, etatMartelementVide } from './martelement';
+import { ajuster } from './cadence';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -557,6 +558,24 @@ async function capturer(contraintes: MediaStreamConstraints): Promise<MediaStrea
 }
 
 /**
+ * De quelle application prendre le son.
+ *
+ * Partager une fenetre ne laisse pas le choix, et c'est voulu : le son suit
+ * l'application partagee. Prendre tout l'ordinateur emporterait la musique et
+ * les notifications d'a cote, et surtout : cela rouvrirait la porte a l'echo,
+ * qu'un routeur audio virtuel provoque en rejouant notre son depuis son propre
+ * processus.
+ *
+ * Partager un ecran n'a pas d'application derriere. On prend alors ce que la
+ * personne a choisi — tout l'ordinateur par defaut, une application si elle
+ * s'entend en double.
+ */
+function sourceDuSon(partage: string | undefined, choisie: string | null): string | null {
+  if (partage?.startsWith('fenetre:')) return partage;
+  return choisie;
+}
+
+/**
  * Une tuile par personne, portant son etat le plus recent.
  *
  * La presence de Realtime associe a chaque cle une *liste* d'entrees, une par
@@ -1012,12 +1031,26 @@ let battementPairs: number | null = null;
  * qui s'effondre le dit au moment ou il s'effondre.
  */
 let derniereQualite: string | null = null;
+
+/**
+ * Cadence de capture en cours, qui n'est pas forcement celle demandee.
+ *
+ * Elle suit ce que l'encodeur arrive reellement a sortir. Voir `cadence.ts` :
+ * fabriquer des images qu'il jettera coute deux millisecondes chacune a celui
+ * qui partage, et n'apporte rien a personne.
+ */
+let cadenceCapture = 0;
   let dernierOctets = 0;
   let dernierInstant = 0;
 
   function startStats(): void {
     if (statsTimer !== null) return;
     derniereQualite = null;
+
+    // Chaque partage repart de la cadence demandee : ce que la machine ne
+    // tenait pas la derniere fois ne dit rien de ce qu'elle tiendra cette
+    // fois-ci — on partage un jeu, puis une page de texte.
+    cadenceCapture = 0;
 
     statsTimer = window.setInterval(() => {
       const emetteur = [...peers.values()].find((pair) => pair.screenSender)?.screenSender;
@@ -1071,6 +1104,37 @@ let derniereQualite: string | null = null;
             (entree as { qualityLimitationReason?: string }).qualityLimitationReason ?? 'inconnu';
           const definition = `${entree.frameWidth ?? 0}x${entree.frameHeight ?? 0}`;
           const signature = `${definition}|${limite}`;
+
+          /*
+           * On cesse de fabriquer les images que l'encodeur jette.
+           *
+           * Uniquement quand la capture vient du systeme : le moteur web, lui,
+           * ne nous laisse pas regler la cadence en cours de route.
+           */
+          if (captureNative) {
+            const voulu = useDevices.getState().media.screenFrameRate;
+            if (cadenceCapture === 0) cadenceCapture = voulu;
+
+            const suite = ajuster(cadenceCapture, voulu, {
+              images: Math.round(entree.framesPerSecond ?? 0),
+              limite,
+            });
+
+            if (suite !== null) {
+              journal.info('partage', 'Cadence de capture ajustee', {
+                avant: cadenceCapture,
+                apres: suite,
+                demande: voulu,
+                emises: Math.round(entree.framesPerSecond ?? 0),
+                limite,
+              });
+
+              cadenceCapture = suite;
+              void import('./imageSysteme').then(({ reglerCadence }) =>
+                reglerCadence(suite),
+              );
+            }
+          }
 
           if (dernierInstant > 0 && kbps > 0 && signature !== derniereQualite) {
             const precedente = derniereQualite;
@@ -2317,7 +2381,7 @@ let derniereQualite: string | null = null;
                   : 'Le peripherique capture ne joue rien.') +
                 ' Choisissez la bonne sortie dans Parametres › Voix et video, ou changez la sortie par defaut de Windows.',
             });
-          }, sourceId ?? null);
+          }, sourceDuSon(sourceId, media.loopbackSource));
 
           if (resultat.ok) {
             sonNatif = resultat.son;

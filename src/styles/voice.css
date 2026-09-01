@@ -969,6 +969,33 @@ button.voice-tile__name:hover {
 }
 
 /*
+ * D'ou vient le son, quand on partage un ecran.
+ *
+ * Pose sous la bascule du son et en pleine largeur : il ne se lit qu'apres
+ * elle, et n'a aucun sens sans elle.
+ */
+.picker__son-source {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.picker__liste {
+  flex: 1;
+  min-width: 0;
+  max-width: 380px;
+  padding: 5px var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+/*
  * La bascule du son, en pleine largeur au bas du selecteur.
  *
  * Une case a cocher perdue dans une ligne de texte se lisait comme un detail.

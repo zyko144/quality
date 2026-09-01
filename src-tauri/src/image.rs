@@ -63,6 +63,40 @@ use windows::Win32::System::WinRT::Graphics::Capture::IGraphicsCaptureItemIntero
 /// image qui attend son tour, et une image en retard ne sert a personne.
 const IMAGES_EN_RESERVE: i32 = 2;
 
+/// Intervalle minimal entre deux images rapatriees, en nanosecondes.
+///
+/// Regle en cours de partage, et c'est tout l'interet : rapatrier une image
+/// coute deux millisecondes a 1080p — une copie depuis la carte, puis une
+/// recopie en memoire centrale — et il faut y ajouter la conversion que le
+/// moteur fait ensuite pour l'encodeur. Capturer soixante images quand
+/// l'encodeur n'en sort que vingt-cinq, c'est payer ce prix trente-cinq fois
+/// par seconde pour des images que personne ne verra jamais.
+///
+/// Un entier partage plutot qu'un message : la valeur est lue dans le rappel
+/// d'arrivee, qui appartient a Windows et ne doit rien attendre.
+static INTERVALLE_NS: AtomicU64 = AtomicU64::new(0);
+
+/// Regle la cadence de capture sans rouvrir la source.
+///
+/// Rouvrir couperait l'image une demi-seconde, ce qui se verrait bien plus que
+/// le gain — et se produirait a chaque fois que la machine souffle un peu.
+#[tauri::command]
+#[cfg(windows)]
+pub fn cadence_image(images: u32) {
+    INTERVALLE_NS.store(intervalle_pour(images), Ordering::Relaxed);
+}
+
+#[tauri::command]
+#[cfg(not(windows))]
+pub fn cadence_image(_images: u32) {}
+
+/// L'intervalle correspondant a une cadence, borne par prudence.
+fn intervalle_pour(images: u32) -> u64 {
+    // Cinq images par seconde au plancher : en dessous, ce n'est plus un
+    // partage mais une suite de photographies.
+    1_000_000_000 / images.clamp(5, 240) as u64
+}
+
 /// Une image capturee, ramenee en memoire centrale.
 pub struct Image {
     pub largeur: u32,
@@ -187,8 +221,8 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
      * Une image ecartee ici ne coute rien : elle est rendue a la reserve sans
      * avoir traverse le bus.
      */
-    let intervalle = std::time::Duration::from_secs_f64(1.0 / images.clamp(5, 240) as f64);
-    let mut precedente = std::time::Instant::now() - intervalle;
+    INTERVALLE_NS.store(intervalle_pour(images), Ordering::Relaxed);
+    let mut precedente = std::time::Instant::now() - std::time::Duration::from_secs(1);
 
     /*
      * La texture d'attente est gardee d'une image a l'autre.
@@ -208,6 +242,9 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
             };
 
             let maintenant = std::time::Instant::now();
+            let intervalle =
+                std::time::Duration::from_nanos(INTERVALLE_NS.load(Ordering::Relaxed));
+
             if maintenant.duration_since(precedente) < intervalle {
                 return Ok(());
             }
