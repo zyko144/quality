@@ -36,10 +36,12 @@ use tauri::ipc::{Channel, InvokeResponseBody};
 
 #[cfg(windows)]
 use windows::Win32::Media::Audio::{
-    eConsole, eRender, IAudioCaptureClient, IAudioClient, IMMDeviceEnumerator, MMDeviceEnumerator,
-    AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK,
-    WAVEFORMATEX, WAVEFORMATEXTENSIBLE,
+    eConsole, eRender, IAudioCaptureClient, IAudioClient, IMMDevice, IMMDeviceEnumerator,
+    MMDeviceEnumerator, AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_SHAREMODE_SHARED,
+    AUDCLNT_STREAMFLAGS_LOOPBACK, WAVEFORMATEX, WAVEFORMATEXTENSIBLE,
 };
+use windows::Win32::System::Com::STGM_READ;
+use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
 #[cfg(windows)]
 use windows::Win32::Media::KernelStreaming::WAVE_FORMAT_EXTENSIBLE;
 // `WAVE_FORMAT_IEEE_FLOAT` vit dans Multimedia, pas dans Audio : les deux
@@ -98,6 +100,16 @@ pub struct FormatSon {
     pub frequence: u32,
     /// Nombre de canaux. Deux le plus souvent, mais rien ne le garantit.
     pub canaux: u16,
+
+    /// Nom lisible du peripherique dont on capture la sortie.
+    ///
+    /// Il ne sert a rien au fonctionnement, et beaucoup au diagnostic. Le
+    /// bouclage porte ce que joue le peripherique de sortie PAR DEFAUT ; si le
+    /// jeu, lui, joue sur un autre — un casque choisi dans ses options quand le
+    /// defaut reste les haut-parleurs — la capture reussit et ne porte que du
+    /// silence. Rien ne distingue ce cas d'un partage muet, sauf de pouvoir
+    /// lire quel peripherique a ete pris.
+    pub peripherique: Option<String>,
 }
 
 /// Erreur rendue a l'interface, en francais et sans code Windows.
@@ -195,6 +207,7 @@ unsafe fn lire_format() -> Result<FormatSon, String> {
         let lu = FormatSon {
             frequence: (*format).nSamplesPerSec,
             canaux: (*format).nChannels,
+            peripherique: nom_du_peripherique(&peripherique),
         };
 
         CoTaskMemFree(Some(format as *const _));
@@ -202,6 +215,32 @@ unsafe fn lire_format() -> Result<FormatSon, String> {
     })();
 
     resultat
+}
+
+/// Le nom lisible d'un peripherique, ou `None`.
+///
+/// Il se lit dans le magasin de proprietes, sous une cle dont le nom
+/// (`PKEY_Device_FriendlyName`) n'est pas expose par le binding : on la
+/// reconstruit. Un echec n'a aucune consequence — on perd une ligne de
+/// diagnostic, pas du son — d'ou les `ok()?` en cascade plutot qu'une erreur
+/// remontee jusqu'a l'interface.
+#[cfg(windows)]
+unsafe fn nom_du_peripherique(peripherique: &IMMDevice) -> Option<String> {
+    let proprietes = peripherique.OpenPropertyStore(STGM_READ).ok()?;
+
+    let cle = PROPERTYKEY {
+        fmtid: windows::core::GUID::from_u128(0xa45c254e_df1c_4efd_8020_67d146a850e0),
+        pid: 14,
+    };
+
+    let valeur = proprietes.GetValue(&cle).ok()?;
+    let nom = valeur.to_string();
+
+    if nom.is_empty() {
+        None
+    } else {
+        Some(nom)
+    }
 }
 
 /// Le fil de capture : ouvre, boucle, ferme.

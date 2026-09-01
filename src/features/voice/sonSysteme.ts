@@ -22,6 +22,7 @@
  */
 
 import sonWorkletUrl from './son-worklet.js?url';
+import { journal } from '@/lib/journal';
 
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
@@ -46,6 +47,52 @@ export type ResultatSon = { ok: true; son: SonSysteme } | { ok: false; raison: s
 interface FormatSon {
   frequence: number;
   canaux: number;
+  /** Nom du peripherique dont on capture la sortie. */
+  peripherique?: string;
+}
+
+/** Duree d'ecoute avant de dire si le bouclage porte quelque chose. */
+const ECOUTE_MS = 4000;
+
+/**
+ * Ecoute la capture quelques secondes et journalise son niveau.
+ *
+ * Le maximum plutot que la moyenne : un jeu a des passages calmes, et une
+ * moyenne sur quatre secondes de menu silencieux dirait « rien » alors que
+ * tout fonctionne. Ce qu'on cherche a distinguer, c'est « jamais rien » de
+ * « quelque chose, parfois ».
+ */
+function mesurerNiveau(ctx: AudioContext, flux: MediaStream) {
+  try {
+    const source = ctx.createMediaStreamSource(flux);
+    const analyseur = ctx.createAnalyser();
+    analyseur.fftSize = 2048;
+    source.connect(analyseur);
+
+    const echantillons = new Float32Array(analyseur.fftSize);
+    let sommet = 0;
+
+    const battement = window.setInterval(() => {
+      analyseur.getFloatTimeDomainData(echantillons);
+      for (const valeur of echantillons) sommet = Math.max(sommet, Math.abs(valeur));
+    }, 200);
+
+    window.setTimeout(() => {
+      window.clearInterval(battement);
+      source.disconnect();
+
+      // En decibels par rapport a la pleine echelle : -60 dB est deja tres bas,
+      // le silence numerique exact donnerait -Infinity.
+      const dbfs = sommet > 0 ? Math.round(20 * Math.log10(sommet)) : -120;
+
+      journal.info('partage', 'Niveau du son capture', {
+        dbfs,
+        muet: dbfs <= -60,
+      });
+    }, ECOUTE_MS);
+  } catch {
+    // La mesure est un confort de diagnostic : son echec ne doit rien couper.
+  }
 }
 
 /**
@@ -96,6 +143,12 @@ export async function capturerSonSysteme(): Promise<ResultatSon> {
   let format: FormatSon;
   try {
     format = await invoke<FormatSon>('demarrer_son_systeme', { canal });
+
+    journal.info('partage', 'Bouclage ouvert', {
+      peripherique: format.peripherique ?? null,
+      frequence: format.frequence,
+      canaux: format.canaux,
+    });
   } catch (cause) {
     /*
      * La raison vient de la partie native, en francais et deja formulee.
@@ -174,6 +227,21 @@ export async function capturerSonSysteme(): Promise<ResultatSon> {
   canal.onmessage = (paquet) => {
     lecture.port.postMessage(paquet, [paquet]);
   };
+
+  /*
+   * On mesure ce que le bouclage porte vraiment.
+   *
+   * « La capture s'est ouverte » ne veut pas dire « il y a du son dedans ».
+   * WASAPI ouvre volontiers un bouclage sur le peripherique de sortie par
+   * defaut ; si le jeu, lui, joue sur un AUTRE peripherique — un casque choisi
+   * dans ses options quand le defaut reste les haut-parleurs — la capture
+   * fonctionne parfaitement et ne porte que du silence.
+   *
+   * Rien ne distingue ce cas d'un partage muet vu de l'exterieur, et il ne se
+   * corrige pas dans le code : il se corrige en changeant le peripherique par
+   * defaut de Windows. Encore faut-il savoir que c'est ca. D'ou cette mesure.
+   */
+  mesurerNiveau(ctx, sortie.stream);
 
   return {
     ok: true,

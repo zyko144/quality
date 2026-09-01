@@ -1,6 +1,6 @@
 [package]
 name = "echow"
-version = "0.4.5"
+version = "0.4.6"
 description = "Echow - discussion d'equipe en temps reel"
 edition = "2021"
 rust-version = "1.77"
@@ -46,6 +46,8 @@ windows = { version = "0.58", features = [
   "Win32_System_Variant",
   "Win32_Media_KernelStreaming",
   "Win32_Media_Multimedia",
+  # Le nom lisible du peripherique capture, pour le diagnostic.
+  "Win32_UI_Shell_PropertiesSystem",
 ] }
 
 [profile.release]

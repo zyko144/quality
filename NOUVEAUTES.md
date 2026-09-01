@@ -12,6 +12,18 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.6
+
+### Corrige
+
+- **Le partage tombait a 540p et n'en revenait pas.** La taille du canevas de decoupe suivait celle de la capture — et le moteur reduit lui-meme sa capture quand la machine chauffe. La definition descendait donc avec elle, et rien ne la faisait remonter. Elle est desormais decidee par la fenetre partagee et par la qualite choisie, une fois, et ne bouge plus. Une definition stable vaut d'ailleurs mieux en soi : chaque changement force une image-cle qu'on voit passer.
+
+### Ameliore
+
+- **Plus de marge pour les jeux.** A soixante images en priorite fluidite, le plafond de debit serrait la qualite dans chaque image des que toute la scene bougeait — ce qui est la definition d'un jeu. Ce n'etait pas une definition plus basse mais une image plus sale, ce qui se decrit pareil et se corrige autrement.
+- **Le partage dit maintenant pourquoi il se retient** : le moteur nomme lui-meme ce qui le limite — la machine, la liaison, ou rien. C'est le chiffre qui manquait a toutes les discussions precedentes sur la qualite.
+- **Le niveau du son capture est mesure.** « La capture s'est ouverte » ne veut pas dire « il y a du son dedans » : Windows ouvre volontiers un bouclage sur le peripherique de sortie par defaut, et si le jeu joue sur un autre, la capture reussit et ne porte que du silence. Le nom du peripherique ecoute est desormais releve avec le niveau.
+
 ## 0.4.5
 
 ### Corrige

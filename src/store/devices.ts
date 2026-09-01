@@ -496,7 +496,22 @@ export function screenBitrate(media: MediaPreferences): number {
    * d'elle-meme si la liaison ne suit pas. Le risque d'etre trop genereux est
    * donc faible ; celui d'etre trop avare se voit a l'oeil nu.
    */
-  const jeu = media.screenFrameRate >= 60 && media.screenPriority === 'motion' ? 1.4 : 1;
+  /*
+   * La majoration passe de 1,4 a 1,9.
+   *
+   * A soixante images en priorite fluidite, un plafond de 16,8 Mb/s laissait
+   * l'encodeur serrer la qualite dans chaque image des que la scene bougeait
+   * partout a la fois — ce qui est la definition d'un jeu. Le resultat n'est
+   * pas une definition plus basse mais une image plus sale, ce qui se decrit
+   * de la meme facon et se corrige autrement.
+   *
+   * C'est un plafond, pas une reservation : sur une liaison qui ne suit pas, la
+   * couche de congestion descend d'elle-meme en quelques secondes, et le
+   * journal dit alors `limite: bandwidth`. Le risque d'etre trop genereux est
+   * donc borne ; celui d'etre trop avare se voit a l'oeil nu et ne se corrige
+   * jamais tout seul.
+   */
+  const jeu = media.screenFrameRate >= 60 && media.screenPriority === 'motion' ? 1.9 : 1;
 
   return Math.round(base * facteur * jeu);
 }

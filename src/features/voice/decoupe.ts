@@ -49,10 +49,18 @@ export interface Decoupe {
  * un canevas — un aller-retour par le processeur pour recopier l'image entiere
  * couterait cher et n'apporterait rien.
  */
+/** Hauteurs correspondant aux qualites proposees. `source` ne borne rien. */
+const HAUTEURS: Record<string, number | undefined> = {
+  '720p': 720,
+  '1080p': 1080,
+  source: undefined,
+};
+
 export async function decouperSource(
   ecran: MediaStream,
   sourceId: string,
   images: number,
+  qualite: string,
 ): Promise<Decoupe> {
   const [pisteEcran] = ecran.getVideoTracks();
   if (!pisteEcran) return { piste: undefined, arreter: () => {} };
@@ -138,31 +146,42 @@ export async function decouperSource(
   let vivant = true;
 
   /*
-   * Le canevas travaille dans le repere de l'IMAGE CAPTUREE, pas dans celui de
-   * l'ecran.
+   * La taille du canevas suit la FENETRE, jamais la capture.
    *
-   * Un ecran 1440p partage en 1080p arrive deja reduit. Dessiner la decoupe a
-   * la taille qu'a la fenetre a l'ecran reviendrait a agrandir cette image
-   * reduite, puis a encoder le resultat : on paierait deux fois, avec une image
-   * plus floue que la source et un encodage a une definition qu'aucun pixel ne
-   * justifie. Ce surcout ne se voit pas sur un texte fixe ; il se voit dans un
-   * jeu, sous forme de saccades, parce que l'encodeur n'a plus le temps.
+   * Une version precedente la calculait a partir de `video.videoWidth`, pour ne
+   * pas encoder plus de pixels que la source n'en fournit. L'intention etait
+   * bonne et le resultat desastreux : le moteur reduit lui-meme la definition
+   * de sa capture quand la machine chauffe, `videoWidth` tombait a 960, le
+   * canevas suivait — et le partage passait de 1080p a 540p sans le dire.
+   * Pire, il n'y revenait jamais, parce que rien ne redemandait a grandir.
+   *
+   * La definition est donc decidee une fois par la fenetre partagee, bornee par
+   * la qualite choisie, et ne bouge plus. Quand la capture est momentanement
+   * plus petite, `drawImage` agrandit : cela coute un peu de nettete pendant
+   * quelques images, la ou l'autre facon coutait la moitie de la definition
+   * pour tout le reste de la seance.
+   *
+   * Une definition qui ne varie pas vaut d'ailleurs mieux en soi : chaque
+   * changement force une image-cle et une renegociation, que l'on voit passer.
    */
+  const hauteurMax = HAUTEURS[qualite] ?? zone.hauteur;
+
   const ajuster = () => {
-    const facteur = video.videoWidth > 0 ? video.videoWidth / window.screen.width : 1;
+    // Bornee par la qualite demandee : partager un ecran 1440p en 1080p doit
+    // encoder 1080 lignes, pas 1440.
+    const reduction = zone.hauteur > hauteurMax ? hauteurMax / zone.hauteur : 1;
 
     // Un canevas de taille nulle ne rend aucune image : le minimum evite qu'une
     // fenetre reduite fige le partage jusqu'a sa reouverture.
-    const largeur = Math.max(2, Math.round(zone.largeur * facteur));
-    const hauteur = Math.max(2, Math.round(zone.hauteur * facteur));
+    const largeur = Math.max(2, Math.round(zone.largeur * reduction));
+    const hauteur = Math.max(2, Math.round(zone.hauteur * reduction));
 
-    // Redimensionner remet le contenu a zero : on ne le fait qu'au changement.
+    // Redimensionner remet le contenu a zero : on ne le fait qu'au changement,
+    // c'est-a-dire quand la fenetre partagee change de taille.
     if (canevas.width !== largeur || canevas.height !== hauteur) {
       canevas.width = largeur;
       canevas.height = hauteur;
     }
-
-    return facteur;
   };
 
   ajuster();
@@ -225,10 +244,17 @@ export async function decouperSource(
   const dessiner = () => {
     if (!vivant) return;
 
-    // L'image capturee peut etre plus petite que l'ecran si le systeme applique
-    // une mise a l'echelle : on ramene les coordonnees dans le repere de la
-    // video plutot que de supposer qu'ils coincident.
-    const facteur = ajuster();
+    ajuster();
+
+    /*
+     * Le facteur ne sert plus qu'a decouper au bon endroit.
+     *
+     * L'image capturee peut etre plus petite que l'ecran — mise a l'echelle du
+     * systeme, ou reduction decidee par le moteur : on ramene les coordonnees
+     * dans le repere de la video plutot que de supposer qu'ils coincident. La
+     * TAILLE du canevas, elle, n'en depend plus : voir `ajuster`.
+     */
+    const facteur = video.videoWidth > 0 ? video.videoWidth / window.screen.width : 1;
 
     pinceau.drawImage(
       video,

@@ -872,11 +872,15 @@ export const useVoice = create<VoiceState>((set, get) => {
    * qu'a l'oeil on hesite entre « le reseau » et « le code ».
    */
   let statsTimer: number | null = null;
+
+/** Vrai une fois le releve de qualite envoye au journal, pour ce partage. */
+let qualiteJournalisee = false;
   let dernierOctets = 0;
   let dernierInstant = 0;
 
   function startStats(): void {
     if (statsTimer !== null) return;
+    qualiteJournalisee = false;
 
     statsTimer = window.setInterval(() => {
       const emetteur = [...peers.values()].find((pair) => pair.screenSender)?.screenSender;
@@ -911,6 +915,33 @@ export const useVoice = create<VoiceState>((set, get) => {
               kbps,
             },
           });
+
+          /*
+           * Un seul releve part au journal, une dizaine de secondes apres le
+           * debut du partage.
+           *
+           * `qualityLimitationReason` est le chiffre qui manquait a toutes les
+           * discussions precedentes sur la qualite : le moteur y dit lui-meme
+           * pourquoi il n'en fait pas plus — `cpu` s'il n'encode pas assez
+           * vite, `bandwidth` si la liaison ne suit pas, `none` s'il ne se
+           * retient pas. Sans lui on discute d'impressions ; avec lui, on sait
+           * s'il faut regarder la machine ou le reseau.
+           *
+           * Un seul, parce qu'un releve toutes les deux secondes remplirait la
+           * table pour dire trente fois la meme chose.
+           */
+          if (!qualiteJournalisee && dernierInstant > 0 && kbps > 0) {
+            qualiteJournalisee = true;
+
+            journal.info('partage', 'Qualite reellement emise', {
+              definition: `${entree.frameWidth ?? 0}x${entree.frameHeight ?? 0}`,
+              images: Math.round(entree.framesPerSecond ?? 0),
+              kbps,
+              limite: (entree as { qualityLimitationReason?: string }).qualityLimitationReason ?? null,
+              encodeur: (entree as { encoderImplementation?: string }).encoderImplementation ?? null,
+            });
+          }
+
           return;
         }
       });
@@ -1882,6 +1913,7 @@ export const useVoice = create<VoiceState>((set, get) => {
               display,
               sourceId,
               useDevices.getState().media.screenFrameRate,
+              useDevices.getState().media.screenQuality,
             );
 
             arreterDecoupe = decoupe.arreter;
