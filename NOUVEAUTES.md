@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.4
+
+### Ameliore
+
+- **L'abonnement s'appelle « Echow + ».** Troisieme nom apres « Vague » et « Waves » — celui-ci dit ce qu'il est sans qu'on ait a l'expliquer.
+
 ## 0.4.3
 
 ### Corrige
@@ -22,7 +28,7 @@ correspondant a leur numero de version.
 ### Ameliore
 
 - **Les commandes de fenetre sont trois pastilles de couleur** : vert pour reduire, orange pour agrandir, rouge pour fermer. Le trait, le carre et la croix disaient ce que la position dit deja. Les noms restent pour le clavier et les lecteurs d'ecran — une couleur ne se lit pas, et beaucoup ne distinguent pas le vert du rouge.
-- **L'abonnement s'appelle desormais « Echow + »**, et passe en maintenance : barre en rouge dans la liste. « Bientot » annoncait une attente qui avance, ce qui n'etait plus vrai.
+- **L'abonnement passe en maintenance**, barre en rouge dans la liste. « Bientot » annoncait une attente qui avance, ce qui n'etait plus vrai.
 
 ## 0.4.2
 
