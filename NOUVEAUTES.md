@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.5
+
+### Corrige
+
+- **La definition du partage s'effondrait.** Une version precedente laissait le moteur reduire l'image en mode fluidite, pour repondre a des saccades dans les jeux rapides. C'etait une supposition, et elle etait fausse : les saccades venaient du canevas de decoupe, corrige depuis. L'autorisation, elle, etait restee — et un partage annonce en 1080p sortait a 540p au premier a-coup, sans le dire et sans jamais y revenir. La definition demandee est de nouveau tenue.
+- **La pastille de parole s'eteignait pour de bon chez qui partageait son ecran avec le son.** L'analyseur d'une personne etait detache des qu'un second flux sonore arrivait d'elle — et le second, c'etait le partage. On ne voyait donc plus jamais parler celui qui partage, c'est-a-dire celui qu'on ecoute.
+
+### Ameliore
+
+- **Le chemin du son d'un partage est desormais trace**, des deux cotes : ce qui est envoye a chaque pair, et ce que la reception en fait. Une piste rangee du mauvais cote ne leve aucune erreur — on entend le mauvais son, ou rien — et la seule facon de le savoir etait de le demander a quelqu'un qui ne pouvait pas repondre.
+
 ## 0.4.4
 
 ### Ameliore

@@ -394,6 +394,9 @@ let audioContext: AudioContext | null = null;
 let speechTimer: number | null = null;
 const analysers = new Map<UUID, AnalyserNode>();
 
+/** Quel flux chaque analyseur ecoute. Voir `detacherAnalyseurDe`. */
+const fluxAnalyses = new Map<UUID, MediaStream>();
+
 /**
  * Cadence maximale des annonces d'etat vocal.
  *
@@ -452,6 +455,7 @@ function teardownPeers(): void {
   }
   peers.clear();
   analysers.clear();
+  fluxAnalyses.clear();
 }
 
 /**
@@ -826,6 +830,7 @@ export const useVoice = create<VoiceState>((set, get) => {
       analyser.maxDecibels = ANALYSER_CEILING;
       source.connect(analyser);
       analysers.set(peerId, analyser);
+      fluxAnalyses.set(peerId, stream);
     } catch {
       // L'analyse du son est un confort : son echec ne doit pas couper l'appel.
     }
@@ -952,6 +957,22 @@ export const useVoice = create<VoiceState>((set, get) => {
     const partage =
       stream.getVideoTracks().length > 0 || streamPurposes.get(stream.id) === 'screen';
 
+    /*
+     * Ce classement est trace, parce qu'il se trompe sans bruit.
+     *
+     * Une piste rangee du mauvais cote ne leve aucune erreur : on entend
+     * simplement le mauvais son, ou rien. Sans cette ligne, la seule facon de
+     * savoir ce qui s'est passe chez quelqu'un d'autre est de le lui demander,
+     * et il ne peut pas repondre — rien ne le lui montre.
+     */
+    journal.info('vocal', 'Piste sonore rangee', {
+      pair: peerId,
+      cote: partage ? 'partage' : 'voix',
+      videoDansLeFlux: stream.getVideoTracks().length,
+      annonce: streamPurposes.get(stream.id) ?? null,
+      pistesAudio: stream.getAudioTracks().length,
+    });
+
     if (partage) {
       set((state) => ({
         remoteScreenAudio: { ...state.remoteScreenAudio, [peerId]: stream },
@@ -990,9 +1011,22 @@ export const useVoice = create<VoiceState>((set, get) => {
    * sans rien dire.
    */
   function detacherAnalyseurDe(peerId: UUID, stream: MediaStream): void {
-    if (get().remoteAudio[peerId] === stream) return;
+    /*
+     * On ne coupe l'analyseur que s'il ecoutait CE flux.
+     *
+     * La premiere version comparait au flux range dans `remoteAudio`, ce qui
+     * paraissait revenir au meme et n'y revenait pas du tout : quand le son
+     * d'un partage arrivait, il differait forcement du micro range la, et l'on
+     * supprimait l'analyseur de la VOIX de la personne. Sa pastille de parole
+     * s'eteignait definitivement des qu'elle partageait son ecran avec le son.
+     *
+     * On retient donc le flux que chaque analyseur ecoute, et on ne defait que
+     * ce qui correspond.
+     */
+    if (fluxAnalyses.get(peerId) !== stream) return;
 
     analysers.delete(peerId);
+    fluxAnalyses.delete(peerId);
     set((state) => (state.speaking[peerId] ? { speaking: retirer(state.speaking, peerId) } : {}));
   }
 
@@ -1031,6 +1065,7 @@ export const useVoice = create<VoiceState>((set, get) => {
       peers.delete(peerId);
     }
     analysers.delete(peerId);
+    fluxAnalyses.delete(peerId);
 
     set((state) => {
       const remoteAudio = { ...state.remoteAudio };
@@ -2006,6 +2041,13 @@ export const useVoice = create<VoiceState>((set, get) => {
               peer.screenAudioSender,
               audioBitrate(useDevices.getState().media),
             );
+
+            journal.info('partage', 'Son envoye a un pair', {
+              pair: peerId,
+              piste: audioTrack.id.slice(0, 8),
+              actif: audioTrack.enabled,
+              etat: audioTrack.readyState,
+            });
           }
 
           announceStream(peerId, display.id, 'screen');

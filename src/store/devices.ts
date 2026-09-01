@@ -532,23 +532,26 @@ export async function applyEncoding(
       encoding.maxFramerate = undefined;
 
       /*
-       * En fluidite, le moteur a le droit d'adoucir l'image.
+       * La definition demandee est tenue. Dans les deux modes.
        *
-       * `scaleResolutionDownBy = 1` le lui interdisait, dans les deux modes.
-       * L'intention etait d'empecher Chrome de diviser la definition par deux
-       * au premier a-coup — mais le priver de ce recours ne supprime pas la
-       * surcharge, il supprime la seule reponse douce qu'il avait. Il ne lui
-       * restait alors qu'a jeter des images.
+       * Une version precedente laissait le moteur reduire l'image en mode
+       * fluidite, pour repondre a des saccades dans les jeux rapides. C'etait
+       * une supposition, et elle etait fausse : les saccades venaient du
+       * canevas de decoupe, qui echantillonnait a une cadence sans rapport
+       * avec celle de la source et agrandissait une image deja reduite avant
+       * de l'encoder. Ces deux causes-la sont corrigees dans `decoupe.ts`.
        *
-       * C'est le pire moment pour cela : la surcharge arrive quand toute
-       * l'image change d'une trame a l'autre, c'est-a-dire dans un jeu rapide,
-       * c'est-a-dire quand on regarde le mouvement. Une image legerement plus
-       * douce se remarque a peine ; des saccades, aussitot.
+       * L'autorisation, elle, etait restee — et Chrome s'en servait. Un
+       * partage annonce en 1080p sortait a 540p au premier a-coup, sans que
+       * rien ne le dise, et sans jamais y revenir tant que la source bougeait.
+       * On corrigeait une saccade en rendant l'image meconnaissable.
        *
-       * En nettete, on garde l'interdiction : c'est le sens meme de ce mode —
-       * tenir la definition d'un texte, quitte a perdre des images.
+       * `1` interdit toute reduction. Sous contrainte, le moteur repond
+       * desormais par ce que `degradationPreference` autorise : des images
+       * perdues en fluidite, une definition tenue en nettete. Les deux se
+       * voient, mais aucune des deux ne transforme un 1080p en bouillie.
        */
-      encoding.scaleResolutionDownBy = priority === 'detail' ? 1 : undefined;
+      encoding.scaleResolutionDownBy = 1;
     }
 
     parameters.degradationPreference =
