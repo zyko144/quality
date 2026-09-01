@@ -53,9 +53,25 @@ const PATHS = {
   send: 'M22 2 11 13 M22 2l-7 20-4-9-9-4Z',
   edit: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z',
   trash: 'M3 6h18 M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2 M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6 M10 11v6M14 11v6',
-  mic: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v3',
+  /*
+   * Micro : une capsule large, un arceau bas, un pied.
+   *
+   * La capsule faisait six pixels de large sur vingt-quatre, et l'arceau la
+   * serrait de pres : a dix-huit pixels — la taille du bouton de la barre
+   * vocale — les trois traits se rejoignaient en une tache. Elle est desormais
+   * plus large et l'arceau descend plus bas, ce qui laisse du blanc entre les
+   * formes. Le pied est raccourci d'autant, sans quoi l'ensemble depasserait.
+   */
+  mic: 'M12 3a3.4 3.4 0 0 0-3.4 3.4v5.2a3.4 3.4 0 0 0 6.8 0V6.4A3.4 3.4 0 0 0 12 3Z M18.4 11.6v.6a6.4 6.4 0 0 1-12.8 0v-.6 M12 18.6V21 M8.6 21h6.8',
+  /*
+   * Le meme, barre.
+   *
+   * La barre traverse en diagonale et les formes s'interrompent la ou elle
+   * passe : un trait pose PAR-DESSUS un micro entier se lit comme une rayure
+   * sur l'icone, pas comme un etat.
+   */
   'mic-off':
-    'M2 2l20 20 M9 9v3a3 3 0 0 0 5.12 2.12 M15 9.34V5a3 3 0 0 0-5.94-.6 M19 10v2a7 7 0 0 1-.9 3.4 M5 10v2a7 7 0 0 0 11 5.7 M12 19v3',
+    'M3 3l18 18 M8.6 8.9v2.9a3.4 3.4 0 0 0 5.6 2.6 M15.4 11V6.4A3.4 3.4 0 0 0 9.2 4.5 M18.4 11.6v.6a6.4 6.4 0 0 1-1 3.4 M5.6 11.6v.6a6.4 6.4 0 0 0 10.2 5.2 M12 18.6V21 M8.6 21h6.8',
   /*
    * Casque : un arceau, et deux coussinets pleins.
    *
@@ -64,11 +80,22 @@ const PATHS = {
    * anneau — le casque paraissait perce de deux trous. Deux traits verticaux
    * epais n'ont pas d'interieur, et tiennent a seize pixels.
    */
-  headphones: 'M3 17v-5a9 9 0 0 1 18 0v5 M4.6 15.4v4 M19.4 15.4v4',
+  /*
+   * Casque : un arceau, et deux coussinets pleins.
+   *
+   * Les coussinets sont des traits epais plutot que des contours fermes : tout
+   * le jeu est trace sans remplissage, si bien qu'un contour ferme se lit comme
+   * un anneau — le casque paraissait perce de deux trous.
+   *
+   * Ils descendent maintenant plus bas et l'arceau est plus haut : a
+   * dix-huit pixels, l'ancien tracé donnait un demi-cercle pose sur deux
+   * virgules, ou l'on ne reconnaissait le casque qu'en le sachant.
+   */
+  headphones: 'M3.4 18v-6a8.6 8.6 0 0 1 17.2 0v6 M4.4 14.6v5.4 M19.6 14.6v5.4',
   /* Le meme, barre. L'arceau s'arrete la ou la barre le coupe : le prolonger
      donnerait deux traits qui se croisent sans raison lisible. */
   'headphones-off':
-    'M2 2l20 20 M3 17v-5a9 9 0 0 1 13.5-7.8 M21 17v-5a8.9 8.9 0 0 0-.6-3.2 M4.6 15.4v4 M19.4 15.4v4',
+    'M3 3l18 18 M3.4 18v-6a8.6 8.6 0 0 1 12.9-7.4 M20.6 18v-6a8.5 8.5 0 0 0-.6-3.1 M4.4 14.6v5.4 M19.6 14.6v5.4',
   screen: 'M2 4h20v12H2Z M8 20h8 M12 16v4',
   // Combine classique : le microtelephone incline. Trace dans le meme style
   // que `phone-off`, dont il est le pendant, pour que les deux etats du bouton

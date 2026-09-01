@@ -12,6 +12,18 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.4
+
+### Corrige
+
+- **Enchainer les bascules micro et sourdine coupait tout le monde.** Chaque bouton posait l'etat de la piste de son cote, a partir d'une copie prise avant sa propre ecriture : en cliquant vite, deux bascules se croisaient et la seconde remettait la piste dans la position que la premiere venait d'annuler. L'interface disait « micro ouvert », la piste etait coupee, et plus personne n'entendait personne. Un seul endroit touche desormais a la piste, et il lit l'etat apres l'avoir ecrit.
+- **La liste laterale restait figee sur un ancien etat.** L'annonce de presence attend la reponse du serveur ; quand elle ne venait pas — socket a demi ferme, reseau qui pend — le verrou qui empeche deux envois simultanes restait leve pour toujours, et plus rien n'etait publie. L'envoi est desormais borne a trois secondes, et le suivant reprend.
+- **Les couleurs du micro coupe et de la sourdine etaient inversees** entre la scene vocale et la liste laterale : la meme personne apparaissait en orange d'un cote et en rouge de l'autre. Orange pour le micro coupe, rouge pour la sourdine — etre sourd coupe tout, micro compris, et merite la couleur la plus forte.
+
+### Ameliore
+
+- **Le micro et le casque sont redessines et agrandis.** A dix-huit pixels, les traits du micro se rejoignaient en une tache et le casque se lisait comme un demi-cercle pose sur deux virgules. Les formes sont plus larges, plus espacees, et les deux boutons passent a vingt-deux pixels — ce sont ceux qu'on vise le plus souvent, et souvent vite.
+
 ## 0.6.3
 
 ### Corrige

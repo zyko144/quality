@@ -357,7 +357,9 @@ export function VoiceStage({ channel }: { channel: Channel }) {
           aria-pressed={muted}
           title={muted ? 'Reactiver le micro' : 'Couper le micro'}
         >
-          <Icon name={muted ? 'mic-off' : 'mic'} size={18} />
+          {/* Vingt-deux plutot que dix-huit : ce sont les deux boutons qu'on
+              vise le plus souvent, et souvent vite. */}
+          <Icon name={muted ? 'mic-off' : 'mic'} size={22} />
         </button>
 
         <button
@@ -367,7 +369,7 @@ export function VoiceStage({ channel }: { channel: Channel }) {
           aria-pressed={deafened}
           title={deafened ? 'Reactiver le son' : 'Couper le son'}
         >
-          <Icon name={deafened ? 'headphones-off' : 'headphones'} size={18} />
+          <Icon name={deafened ? 'headphones-off' : 'headphones'} size={22} />
         </button>
 
         <button

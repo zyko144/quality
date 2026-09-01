@@ -603,7 +603,22 @@ export const useVoice = create<VoiceState>((set, get) => {
     publicationEnVol = true;
 
     try {
-      await room.track({
+      /*
+       * L'envoi est borne dans le temps.
+       *
+       * `track` attend la reponse du serveur. Quand elle ne vient pas — socket
+       * a demi ferme, reseau qui pend — la promesse ne se resout jamais, et le
+       * drapeau qui empeche deux envois simultanes reste leve POUR TOUJOURS.
+       * Plus rien n'est publie ensuite : l'anneau de la personne se fige sur
+       * son avant-dernier etat, et la liste laterale la montre coupee alors
+       * qu'elle parle. C'est exactement ce qui a ete rapporte.
+       *
+       * Trois secondes suffisent largement a un aller-retour ; au-dela, on
+       * considere l'envoi perdu et l'on reessaie au tour suivant, ce que la
+       * fenetre de publication fait deja.
+       */
+      await Promise.race([
+        room.track({
         user_id: courant.userId,
         channel_id: courant.channelId,
         muted: courant.muted,
@@ -617,8 +632,12 @@ export const useVoice = create<VoiceState>((set, get) => {
           : false,
         // L'instant d'arrivee, fige : le reactualiser a chaque envoi ferait
         // paraitre chaque mise a jour comme une nouvelle arrivee.
-        joined_at: instantArrivee,
-      } satisfies VoiceParticipant);
+          joined_at: instantArrivee,
+        } satisfies VoiceParticipant),
+        new Promise((_, rejeter) =>
+          window.setTimeout(() => rejeter(new Error('publication expiree')), 3000),
+        ),
+      ]);
     } catch {
       // Un envoi perdu n'est pas grave en soi : le suivant portera l'etat
       // complet, puisque c'est l'etat courant qui est publie, non un delta.
@@ -674,7 +693,7 @@ export const useVoice = create<VoiceState>((set, get) => {
   }
 
   async function reprendreLeMicro(): Promise<void> {
-    const { channelId, userId, localStream, muted, deafened } = get();
+    const { channelId, userId, localStream } = get();
     if (!channelId || !userId) return;
 
     const media = useDevices.getState().media;
@@ -709,9 +728,6 @@ export const useVoice = create<VoiceState>((set, get) => {
     const piste = remplacant.getAudioTracks()[0];
     if (!piste) return;
 
-    // L'etat du micro se transporte : reprendre la parole parce qu'on a coche
-    // une case serait une mauvaise surprise.
-    piste.enabled = !muted && !deafened;
 
     const debit = audioBitrate(media);
     for (const peer of peers.values()) {
@@ -721,6 +737,12 @@ export const useVoice = create<VoiceState>((set, get) => {
     }
 
     set({ localStream: remplacant });
+
+    // L'etat du micro se transporte : reprendre la parole parce qu'on a coche
+    // une case serait une mauvaise surprise. Il est relu APRES l'ecriture,
+    // pour ne pas se fier a la copie prise au debut de cette fonction.
+    appliquerMicro();
+
     attachAnalyser(userId, remplacant);
 
     ancienneP?.arreter();
@@ -1497,6 +1519,29 @@ let derniereQualite: string | null = null;
   }
 
   /** Ouvre les connexions manquantes et ferme celles des partis. */
+  /**
+   * Rend la piste du micro conforme a l'etat, quel qu'il soit.
+   *
+   * Chaque bascule posait `enabled` de son cote, a partir d'une copie de
+   * l'etat prise avant sa propre ecriture. En cliquant vite sur « couper » et
+   * « sourdine », deux bascules se croisaient : la seconde partait d'un etat
+   * deja perime et remettait la piste dans la position que la premiere venait
+   * d'annuler. L'interface disait « micro ouvert », la piste etait coupee, et
+   * plus personne n'entendait plus personne.
+   *
+   * Il n'y a donc plus qu'un endroit qui touche a `enabled`, et il lit l'etat
+   * apres son ecriture. Le meme raisonnement vaut pour `reprendreLeMicro`,
+   * qui remplace la piste : il appelle ceci plutot que de deviner.
+   */
+  function appliquerMicro(): void {
+    const { localStream, muted, deafened } = get();
+    const actif = !muted && !deafened;
+
+    for (const piste of localStream?.getAudioTracks() ?? []) {
+      piste.enabled = actif;
+    }
+  }
+
   function syncPeers(participants: VoiceParticipant[]): void {
     const me = get().userId;
     const localStream = get().localStream;
@@ -1857,15 +1902,13 @@ let derniereQualite: string | null = null;
     },
 
     toggleMute: () => {
-      const { localStream, muted } = get();
-      const next = !muted;
+      const next = !get().muted;
 
-      for (const track of localStream?.getAudioTracks() ?? []) {
-        track.enabled = !next;
-      }
       // Reactiver le micro alors qu'on est sourd n'aurait pas de sens : on
       // retablit le son en meme temps.
       set({ muted: next, deafened: next ? get().deafened : false });
+
+      appliquerMicro();
       playCue(next ? 'mute' : 'unmute');
       publishState();
     },
@@ -1879,20 +1922,16 @@ let derniereQualite: string | null = null;
      * et se voyait surtout apres plusieurs bascules d'affilee.
      */
     toggleDeafen: () => {
-      const { deafened, muted, localStream } = get();
+      const { deafened, muted } = get();
       const next = !deafened;
 
       // L'etat du micro est retenu au moment ou l'on devient sourd, pas apres :
       // ensuite il vaut forcement « coupe » et l'information est perdue.
       if (next) mutedBeforeDeafen = muted;
 
-      const nextMuted = next ? true : mutedBeforeDeafen;
+      set({ deafened: next, muted: next ? true : mutedBeforeDeafen });
 
-      for (const track of localStream?.getAudioTracks() ?? []) {
-        track.enabled = !nextMuted;
-      }
-
-      set({ deafened: next, muted: nextMuted });
+      appliquerMicro();
       playCue(next ? 'deafen' : 'undeafen');
       publishState();
     },

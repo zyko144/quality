@@ -2273,10 +2273,22 @@ button.userbar__voice-info:hover {
   transition: box-shadow var(--duration-fast) var(--ease-out);
 }
 
+/*
+ * Orange pour le micro coupe, rouge pour la sourdine.
+ *
+ * Les deux etaient inverses ici par rapport a la scene vocale, ou la meme
+ * personne apparaissait donc en orange d'un cote et en rouge de l'autre. Le
+ * sens retenu est celui de la scene, et c'est le bon : etre sourd coupe TOUT,
+ * micro compris, et merite donc la couleur la plus forte. Un micro coupe se
+ * defait d'un clic ; la sourdine, elle, veut dire qu'on n'est plus la.
+ *
+ * L'anneau est epaissi d'un pixel : a deux, il se confondait avec la bordure
+ * de la photo des que celle-ci etait claire.
+ */
 .voice-member__face.is-muted {
-  box-shadow: 0 0 0 2px var(--danger);
+  box-shadow: 0 0 0 3px var(--warning, #f0b232);
 }
 
 .voice-member__face.is-deafened {
-  box-shadow: 0 0 0 2px var(--warning, #f0b232);
+  box-shadow: 0 0 0 3px var(--danger);
 }
