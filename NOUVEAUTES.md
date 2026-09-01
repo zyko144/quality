@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.4.2
+
+### Corrige
+
+- **Le son d'un partage n'arrivait pas, alors qu'il partait bien.** Le micro d'une personne et le son de son partage voyagent dans deux flux distincts, et l'on distingue le second par la piste video qui l'accompagne. Mais les deux pistes n'arrivent pas ensemble, et rien n'impose que l'image precede : quand le son prenait les devants, son flux paraissait ne porter que de l'audio. Il etait alors pris pour une voix — il ecrasait le micro de la personne au passage — et n'atteignait jamais le curseur du partage, qui affichait « ce partage n'envoie pas de son » pendant que le son partait. Le classement se corrige desormais des que l'image ou l'annonce arrive.
+- **Celui qui regarde sait pourquoi il n'entend rien.** L'infobulle affirmait « c'est un reglage de la personne qui partage » — ce qu'on ignorait. Elle distingue maintenant trois cas : le son part et tarde, il ne part pas, ou l'application d'en face ne sait pas encore le capturer. On cesse ainsi de chercher chez soi un defaut qui est ailleurs.
+
 ## 0.4.1
 
 ### Corrige

@@ -261,6 +261,21 @@ export interface VoiceParticipant {
   deafened: boolean;
   sharing: boolean;
   video: boolean;
+
+  /**
+   * Vrai quand le partage emporte le son de l'ordinateur.
+   *
+   * Absent — et non pas faux — chez qui n'a pas encore la version qui sait le
+   * capturer. Les trois cas se distinguent donc : `true` le son part, `false`
+   * il ne part pas et l'emetteur le sait, `undefined` son application ne sait
+   * pas encore repondre a la question.
+   *
+   * Cela sert a celui qui REGARDE. Sans cela, il lit « ce partage n'envoie pas
+   * de son » sans pouvoir distinguer un reglage d'un jeu silencieux, et va
+   * chercher chez lui un defaut qui n'y est pas.
+   */
+  son_partage?: boolean;
+
   joined_at: number;
 }
 

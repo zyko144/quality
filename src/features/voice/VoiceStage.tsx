@@ -635,16 +635,36 @@ function VolumePartage({ auteur }: { auteur: UUID }) {
   const regler = useUserAudio((state) => state.setStreamVolume);
   const aDuSon = useVoice((state) => Boolean(state.remoteScreenAudio[auteur]));
 
+  /*
+   * Ce que la personne qui partage annonce de son cote.
+   *
+   * `undefined` n'est pas `false` : il signifie que son application ne sait pas
+   * encore repondre — une version anterieure a la capture du son. Le dire evite
+   * de chercher chez soi un defaut qui est ailleurs, et de l'autre cote evite
+   * qu'on accuse un reglage qui n'y est pour rien.
+   */
+  const annonce = useVoice((state) => {
+    const salon = state.channelId;
+    if (!salon) return undefined;
+    return (state.participantsByChannel[salon] ?? []).find(
+      (participant) => participant.user_id === auteur,
+    )?.son_partage;
+  });
+
+  const explication = aDuSon
+    ? `Volume du partage : ${volume} %`
+    : annonce === undefined
+      ? 'Ce partage n’envoie pas de son : l’application d’en face ne sait pas encore le capturer.'
+      : annonce
+        ? 'Le son est envoye mais n’arrive pas encore. Il devrait suivre l’image.'
+        : 'Ce partage n’envoie pas de son.';
+
   return (
     <div className={'tuile-volume' + (aDuSon ? '' : ' is-muet')}>
       <button
         type="button"
         className="screen-tile__action"
-        title={
-          aDuSon
-            ? `Volume du partage : ${volume} %`
-            : 'Ce partage n’envoie pas de son'
-        }
+        title={explication}
         aria-label="Volume du partage"
       >
         <Icon name={aDuSon && volume > 0 ? 'volume' : 'mic-off'} size={16} />

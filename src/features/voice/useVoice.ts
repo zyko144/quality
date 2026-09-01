@@ -588,6 +588,11 @@ export const useVoice = create<VoiceState>((set, get) => {
         deafened: courant.deafened,
         sharing: courant.sharing,
         video: courant.cameraOn,
+        // Une piste sonore dans le flux du partage, ou rien. C'est la seule
+        // reponse qui vaille : ce qu'on a demande ne dit pas ce qui part.
+        son_partage: courant.sharing
+          ? (courant.localScreen?.getAudioTracks().length ?? 0) > 0
+          : false,
         // L'instant d'arrivee, fige : le reactualiser a chaque envoi ferait
         // paraitre chaque mise a jour comme une nouvelle arrivee.
         joined_at: instantArrivee,
@@ -926,6 +931,72 @@ export const useVoice = create<VoiceState>((set, get) => {
   }
 
   /**
+   * Range une piste sonore du cote de la voix ou du cote du partage.
+   *
+   * Le micro est emis seul : son flux ne porte que de l'audio. Un partage avec
+   * le son emet ses deux pistes sur le MEME flux. La presence d'une piste video
+   * dans le flux tranche donc — quand elle est deja la.
+   *
+   * Car les deux pistes n'arrivent pas ensemble, et rien n'impose que la video
+   * precede. Quand le son arrivait le premier, le flux paraissait ne porter que
+   * de l'audio : on le prenait pour une voix, il ecrasait le micro de la
+   * personne, et le son du partage n'atteignait jamais son curseur — « Ce
+   * partage n'envoie pas de son », alors qu'il en envoyait.
+   *
+   * D'ou le classement immediat, suivi d'une correction. Immediat parce qu'une
+   * voix mise en attente une seconde et demie est une seconde et demie de
+   * silence a chaque connexion ; corrige parce que l'ordre d'arrivee n'est pas
+   * de notre ressort.
+   */
+  function placeAudioStream(peerId: UUID, stream: MediaStream): void {
+    const partage =
+      stream.getVideoTracks().length > 0 || streamPurposes.get(stream.id) === 'screen';
+
+    if (partage) {
+      set((state) => ({
+        remoteScreenAudio: { ...state.remoteScreenAudio, [peerId]: stream },
+      }));
+
+      // La voix ne doit pas garder ce flux si elle l'avait pris pour elle.
+      set((state) =>
+        state.remoteAudio[peerId] === stream
+          ? { remoteAudio: retirer(state.remoteAudio, peerId) }
+          : {},
+      );
+
+      detacherAnalyseurDe(peerId, stream);
+      return;
+    }
+
+    set((state) => ({ remoteAudio: { ...state.remoteAudio, [peerId]: stream } }));
+
+    // Seule la voix alimente le detecteur de parole : un jeu bruyant allumerait
+    // la pastille de qui ne dit rien.
+    attachAnalyser(peerId, stream);
+  }
+
+  /** Rend une copie de `source` sans la cle demandee. */
+  function retirer<T>(source: Record<UUID, T>, cle: UUID): Record<UUID, T> {
+    const copie = { ...source };
+    delete copie[cle];
+    return copie;
+  }
+
+  /**
+   * Coupe le detecteur de parole pour un flux qui s'avere etre un partage.
+   *
+   * Sans cela, la pastille de parole de la personne s'allumerait au rythme du
+   * jeu qu'elle diffuse, et l'on chercherait longtemps pourquoi elle « parle »
+   * sans rien dire.
+   */
+  function detacherAnalyseurDe(peerId: UUID, stream: MediaStream): void {
+    if (get().remoteAudio[peerId] === stream) return;
+
+    analysers.delete(peerId);
+    set((state) => (state.speaking[peerId] ? { speaking: retirer(state.speaking, peerId) } : {}));
+  }
+
+  /**
    * Devine le role d'un flux a partir de ce que la presence annonce.
    *
    * Rend `null` des que la reponse est ambigue — personne introuvable, ou bien
@@ -1152,6 +1223,15 @@ export const useVoice = create<VoiceState>((set, get) => {
       if (event.track.kind === 'video') {
         placeVideoStream(peerId, stream);
 
+        /*
+         * L'arrivee de l'image reclasse le son du meme flux.
+         *
+         * C'est le cas ou le son avait pris les devants : il avait ete range
+         * du cote de la voix faute de video visible, et il faut le rendre au
+         * partage maintenant qu'on sait.
+         */
+        if (get().remoteAudio[peerId] === stream) placeAudioStream(peerId, stream);
+
         event.track.addEventListener('ended', () => {
           streamPurposes.delete(stream.id);
           pendingStreams.delete(stream.id);
@@ -1187,29 +1267,15 @@ export const useVoice = create<VoiceState>((set, get) => {
          * pas de piste audio, mais une camera avec micro pourrait un jour en
          * avoir une.
          */
-        const porteDeLaVideo = stream.getVideoTracks().length > 0;
+        placeAudioStream(peerId, stream);
 
-        if (porteDeLaVideo || streamPurposes.get(stream.id) === 'screen') {
-          set((state) => ({
-            remoteScreenAudio: { ...state.remoteScreenAudio, [peerId]: stream },
-          }));
-
-          event.track.addEventListener('ended', () => {
-            set((state) => {
-              const remoteScreenAudio = { ...state.remoteScreenAudio };
-              delete remoteScreenAudio[peerId];
-              return { remoteScreenAudio };
-            });
-          });
-
-          return;
-        }
-
-        set((state) => ({ remoteAudio: { ...state.remoteAudio, [peerId]: stream } }));
-
-        // Seule la voix alimente le detecteur de parole : un jeu bruyant
-        // allumerait la pastille de qui ne dit rien.
-        attachAnalyser(peerId, stream);
+        event.track.addEventListener('ended', () => {
+          set((state) =>
+            state.remoteScreenAudio[peerId] === stream
+              ? { remoteScreenAudio: retirer(state.remoteScreenAudio, peerId) }
+              : {},
+          );
+        });
       }
     };
 
@@ -1258,8 +1324,22 @@ export const useVoice = create<VoiceState>((set, get) => {
     // si elle etait deja arrivee.
     if (signal.kind === 'stream-info') {
       streamPurposes.set(signal.streamId, signal.purpose);
+
       const waiting = pendingStreams.get(signal.streamId);
       if (waiting) placeVideoStream(waiting.peerId, waiting.stream);
+
+      /*
+       * L'annonce vaut aussi pour le son deja range du cote de la voix.
+       *
+       * Elle arrive parfois apres la piste. Sans ce rattrapage, un partage dont
+       * le son precede l'image ET l'annonce resterait classe comme une voix
+       * pour toute la seance.
+       */
+      if (signal.purpose === 'screen') {
+        const voix = get().remoteAudio[signal.from];
+        if (voix && voix.id === signal.streamId) placeAudioStream(signal.from, voix);
+      }
+
       return;
     }
 

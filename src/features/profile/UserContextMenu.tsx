@@ -42,7 +42,11 @@ function VolumeSlider({
       className={'ctx-volume' + (muet ? ' is-muet' : '')}
       title={
         muet
-          ? 'Ce partage n’envoie pas de son. C’est un reglage de la personne qui partage.'
+          // On affirmait un reglage. On n'en sait rien : ce peut etre un jeu
+          // silencieux, un refus de Windows, ou une version qui ne sait pas
+          // encore capturer le son. La vignette du partage, elle, distingue les
+          // trois — ici on se contente de ne pas se tromper.
+          ? 'Ce partage n’envoie pas de son.'
           : undefined
       }
     >
