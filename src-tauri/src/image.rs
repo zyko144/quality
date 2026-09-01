@@ -96,21 +96,21 @@ impl Capture {
 }
 
 /// Ouvre une capture sur une fenetre.
-pub fn capturer_fenetre(fenetre: HWND) -> ResultatWin<Capture> {
+pub fn capturer_fenetre(fenetre: HWND, images: u32) -> ResultatWin<Capture> {
     let interop: IGraphicsCaptureItemInterop =
         windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
 
     let source: GraphicsCaptureItem = unsafe { interop.CreateForWindow(fenetre)? };
-    ouvrir(source)
+    ouvrir(source, images)
 }
 
 /// Ouvre une capture sur un ecran.
-pub fn capturer_ecran(ecran: HMONITOR) -> ResultatWin<Capture> {
+pub fn capturer_ecran(ecran: HMONITOR, images: u32) -> ResultatWin<Capture> {
     let interop: IGraphicsCaptureItemInterop =
         windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
 
     let source: GraphicsCaptureItem = unsafe { interop.CreateForMonitor(ecran)? };
-    ouvrir(source)
+    ouvrir(source, images)
 }
 
 /// Le materiel graphique, et son pendant cote WinRT.
@@ -149,7 +149,7 @@ fn appareil() -> ResultatWin<(ID3D11Device, ID3D11DeviceContext, IDirect3DDevice
 }
 
 /// Monte la reserve d'images et branche l'arrivee.
-fn ouvrir(source: GraphicsCaptureItem) -> ResultatWin<Capture> {
+fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
     let (materiel, contexte, winrt) = appareil()?;
     let taille = source.Size()?;
 
@@ -170,7 +170,35 @@ fn ouvrir(source: GraphicsCaptureItem) -> ResultatWin<Capture> {
      * elle-meme, que rien ne rattraperait. Une image abandonnee coute une image ;
      * une capture en retard coute tout le reste.
      */
-    let (expediteur, images): (SyncSender<Image>, Receiver<Image>) = sync_channel(2);
+    // Nomme `recues` et non `images` : ce dernier porte deja la cadence voulue,
+    // et l'ombrer faisait lire la cadence sur le recepteur du canal.
+    let (expediteur, recues): (SyncSender<Image>, Receiver<Image>) = sync_channel(2);
+
+    /*
+     * La cadence est filtree ICI, avant de rapatrier quoi que ce soit.
+     *
+     * La capture de Windows suit le rafraichissement de l'ecran : cent
+     * quarante-quatre images par seconde sur un moniteur de joueur. Le filtre
+     * vivait en aval, si bien qu'on payait le rapatriement complet — recopie
+     * vers une texture d'attente, puis vers la memoire centrale, soit huit
+     * megaoctets — pour quatre-vingt-quatre images sur cent quarante-quatre
+     * qu'on jetait ensuite.
+     *
+     * Une image ecartee ici ne coute rien : elle est rendue a la reserve sans
+     * avoir traverse le bus.
+     */
+    let intervalle = std::time::Duration::from_secs_f64(1.0 / images.clamp(5, 240) as f64);
+    let mut precedente = std::time::Instant::now() - intervalle;
+
+    /*
+     * La texture d'attente est gardee d'une image a l'autre.
+     *
+     * En creer une par image demandait au pilote une allocation soixante fois
+     * par seconde, ce qui coute plus cher que la copie elle-meme. Les
+     * dimensions ne changent que si la source change de taille, et on la
+     * refait alors — c'est le seul cas ou elle ne convient plus.
+     */
+    let mut attente: Option<(ID3D11Texture2D, u32, u32)> = None;
 
     let pour_evenement = reserve.clone();
     reserve.FrameArrived(&TypedEventHandler::new(
@@ -179,7 +207,13 @@ fn ouvrir(source: GraphicsCaptureItem) -> ResultatWin<Capture> {
                 return Ok(());
             };
 
-            if let Ok(lue) = lire(&materiel, &contexte, &image) {
+            let maintenant = std::time::Instant::now();
+            if maintenant.duration_since(precedente) < intervalle {
+                return Ok(());
+            }
+            precedente = maintenant;
+
+            if let Ok(lue) = lire(&materiel, &contexte, &image, &mut attente) {
                 let _ = expediteur.try_send(lue);
             }
 
@@ -204,7 +238,7 @@ fn ouvrir(source: GraphicsCaptureItem) -> ResultatWin<Capture> {
     Ok(Capture {
         _session: session,
         _reserve: reserve,
-        images,
+        images: recues,
     })
 }
 
@@ -218,6 +252,7 @@ fn lire(
     materiel: &ID3D11Device,
     contexte: &ID3D11DeviceContext,
     image: &windows::Graphics::Capture::Direct3D11CaptureFrame,
+    attente: &mut Option<(ID3D11Texture2D, u32, u32)>,
 ) -> ResultatWin<Image> {
     let surface = image.Surface()?;
     let acces: windows::Win32::System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess =
@@ -227,25 +262,38 @@ fn lire(
     let mut description = D3D11_TEXTURE2D_DESC::default();
     unsafe { texture.GetDesc(&mut description) };
 
-    let attente = D3D11_TEXTURE2D_DESC {
-        Usage: D3D11_USAGE_STAGING,
-        BindFlags: 0,
-        CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
-        MiscFlags: 0,
-        ..description
-    };
-
-    let mut copie: Option<ID3D11Texture2D> = None;
-    unsafe { materiel.CreateTexture2D(&attente, None, Some(&mut copie))? };
-    let copie = copie.ok_or_else(windows::core::Error::from_win32)?;
-
-    unsafe { contexte.CopyResource(&copie, &texture) };
-
-    let mut vue = D3D11_MAPPED_SUBRESOURCE::default();
-    unsafe { contexte.Map(&copie, 0, D3D11_MAP_READ, 0, Some(&mut vue))? };
-
     let largeur = description.Width;
     let hauteur = description.Height;
+
+    // On refait la texture d'attente seulement si la taille a change : une
+    // fenetre redimensionnee pendant qu'on la partage, et rien d'autre.
+    let convient = matches!(attente, Some((_, l, h)) if *l == largeur && *h == hauteur);
+
+    if !convient {
+        let forme = D3D11_TEXTURE2D_DESC {
+            Usage: D3D11_USAGE_STAGING,
+            BindFlags: 0,
+            CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
+            MiscFlags: 0,
+            ..description
+        };
+
+        let mut neuve: Option<ID3D11Texture2D> = None;
+        unsafe { materiel.CreateTexture2D(&forme, None, Some(&mut neuve))? };
+        *attente = Some((
+            neuve.ok_or_else(windows::core::Error::from_win32)?,
+            largeur,
+            hauteur,
+        ));
+    }
+
+    let copie = &attente.as_ref().expect("la texture vient d'etre posee").0;
+
+    unsafe { contexte.CopyResource(copie, &texture) };
+
+    let mut vue = D3D11_MAPPED_SUBRESOURCE::default();
+    unsafe { contexte.Map(copie, 0, D3D11_MAP_READ, 0, Some(&mut vue))? };
+
     let mut pixels = Vec::with_capacity((largeur * hauteur * 4) as usize);
 
     /*
@@ -257,12 +305,26 @@ fn lire(
      * ligne : l'image penchee, defaut classique et immediatement reconnaissable.
      */
     let utile = (largeur * 4) as usize;
-    for ligne in 0..hauteur {
-        let depart = unsafe { (vue.pData as *const u8).add((ligne as usize) * vue.RowPitch as usize) };
-        pixels.extend_from_slice(unsafe { std::slice::from_raw_parts(depart, utile) });
+
+    if vue.RowPitch as usize == utile {
+        /*
+         * Aucun remplissage : une seule copie plutot que mille.
+         *
+         * La carte aligne souvent ses lignes sur la largeur utile quand
+         * celle-ci tombe juste — ce qui est le cas des definitions usuelles.
+         * On evite alors mille quatre-vingts appels par image.
+         */
+        let tout = unsafe { std::slice::from_raw_parts(vue.pData as *const u8, utile * hauteur as usize) };
+        pixels.extend_from_slice(tout);
+    } else {
+        for ligne in 0..hauteur {
+            let depart =
+                unsafe { (vue.pData as *const u8).add((ligne as usize) * vue.RowPitch as usize) };
+            pixels.extend_from_slice(unsafe { std::slice::from_raw_parts(depart, utile) });
+        }
     }
 
-    unsafe { contexte.Unmap(&copie, 0) };
+    unsafe { contexte.Unmap(copie, 0) };
 
     Ok(Image {
         largeur,
@@ -305,7 +367,7 @@ mod tests {
         }
 
         let principal = unsafe { MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY) };
-        let capture = capturer_ecran(principal).expect("la capture doit s'ouvrir");
+        let capture = capturer_ecran(principal, 60).expect("la capture doit s'ouvrir");
 
         // La premiere image peut tarder : la session demarre, et l'ecran doit
         // changer pour qu'une image soit produite.
@@ -360,7 +422,7 @@ pub struct FluxImage {
 /// transmette sans traduction.
 #[tauri::command]
 pub fn demarrer_image(source: String, images: u32) -> Result<FluxImage, String> {
-    let capture = ouvrir_source(&source)?;
+    let capture = ouvrir_source(&source, images)?;
     let (largeur, hauteur) = premiere_taille(&capture)?;
 
     let passage = crate::flux::ouvrir().map_err(|_| "Impossible d'ouvrir le passage.".to_string())?;
@@ -379,35 +441,11 @@ pub fn demarrer_image(source: String, images: u32) -> Result<FluxImage, String> 
      */
     let (expediteur, receveur) = std::sync::mpsc::sync_channel::<Vec<u8>>(1);
 
-    /*
-     * La cadence est bornee a ce qui a ete demande.
-     *
-     * La capture de Windows suit le rafraichissement de l'ecran : cent
-     * quarante-quatre images par seconde sur un moniteur de joueur. Elles
-     * partaient toutes, et l'encodeur devait les caser dans un budget calcule
-     * pour soixante — chacune recevait donc deux fois et demie moins de
-     * donnees. Le resultat n'est pas un partage plus fluide mais un partage
-     * plus sale, ce qui se decrit de la meme facon et se corrige autrement.
-     *
-     * Une image trop precoce est abandonnee plutot que retardee : la garder
-     * pour l'envoyer au bon moment ferait du retard, et l'on a deja l'image
-     * suivante quand ce moment arrive.
-     */
-    let intervalle = std::time::Duration::from_secs_f64(1.0 / images.clamp(5, 240) as f64);
-
     std::thread::spawn(move || {
-        let mut precedente = std::time::Instant::now() - intervalle;
-
         while GENERATION.load(Ordering::SeqCst) == generation {
             let Some(image) = capture.suivante() else {
                 break;
             };
-
-            let maintenant = std::time::Instant::now();
-            if maintenant.duration_since(precedente) < intervalle {
-                continue;
-            }
-            precedente = maintenant;
 
             /*
              * Chaque image porte sa taille.
@@ -448,7 +486,7 @@ pub fn arreter_image() {
 }
 
 /// Ouvre la capture correspondant a un identifiant du selecteur.
-fn ouvrir_source(source: &str) -> Result<Capture, String> {
+fn ouvrir_source(source: &str, images: u32) -> Result<Capture, String> {
     let (genre, valeur) = source
         .split_once(':')
         .ok_or_else(|| "Source illisible.".to_string())?;
@@ -458,9 +496,9 @@ fn ouvrir_source(source: &str) -> Result<Capture, String> {
         .map_err(|_| "Source illisible.".to_string())?;
 
     match genre {
-        "fenetre" => capturer_fenetre(HWND(poignee as *mut std::ffi::c_void))
+        "fenetre" => capturer_fenetre(HWND(poignee as *mut std::ffi::c_void), images)
             .map_err(|_| "Cette fenetre ne peut pas etre capturee.".to_string()),
-        "ecran" => capturer_ecran(HMONITOR(poignee as *mut std::ffi::c_void))
+        "ecran" => capturer_ecran(HMONITOR(poignee as *mut std::ffi::c_void), images)
             .map_err(|_| "Cet ecran ne peut pas etre capture.".to_string()),
         _ => Err("Source inconnue.".to_string()),
     }

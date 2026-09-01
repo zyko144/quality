@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.8
+
+### Ameliore
+
+- **Partager coute beaucoup moins cher a celui qui partage.** Deux gaspillages, et le premier etait de mon fait. Le plafond de cadence ajoute a la version precedente jetait les images APRES les avoir ramenees de la carte graphique : sur un ecran a cent quarante-quatre hertz, on payait cent quarante-quatre rapatriements par seconde — huit megaoctets chacun — pour en garder soixante. Le tri se fait desormais avant, et une image ecartee ne traverse plus rien.
+- La texture d'attente est gardee d'une image a l'autre, au lieu d'en demander une au pilote soixante fois par seconde : cette allocation coutait plus cher que la copie elle-meme. Et quand la carte n'ajoute pas de remplissage entre les lignes — le cas des definitions usuelles — l'image est recopiee d'un seul tenant plutot qu'en mille quatre-vingts morceaux.
+- La qualite ne change pas : c'est le meme nombre d'images, a la meme definition, pour une fraction du travail.
+
 ## 0.6.7
 
 ### Corrige
