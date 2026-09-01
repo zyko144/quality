@@ -2,7 +2,8 @@
 //
 // L'interface reste celle du web : Tauri se contente de l'afficher dans le
 // WebView du systeme. Ce fichier n'ajoute donc que ce qu'un navigateur ne sait
-// pas faire — icone de barre des taches, raccourci global, fenetre unique.
+// pas faire — icone de barre des taches, fenetre unique, et surtout un clavier
+// qui repond meme quand la fenetre n'est pas devant.
 //
 // Contrairement a Electron, aucun moteur de rendu n'est embarque : le binaire
 // fait 3,4 Mo et l'installateur 1,3 Mo, la ou Electron embarquerait sa propre
@@ -70,6 +71,10 @@ mod capture;
 #[cfg(not(windows))]
 #[path = "capture_autre.rs"]
 mod capture;
+
+/// Les touches vocales, observees meme quand la fenetre n'a pas le focus.
+/// Voir `clavier.rs` : c'est ce qui rend le push-to-talk utilisable en jeu.
+mod clavier;
 
 /// Capture du son du systeme, par le bouclage de Windows. Voir `son.rs`.
 mod flux;
@@ -153,7 +158,8 @@ pub fn run() {
             son::lister_sorties_audio,
             son::diagnostic_son,
             image::demarrer_image,
-            image::arreter_image
+            image::arreter_image,
+            clavier::definir_touches_globales
         ])
         // Une seconde instance ne cree pas de fenetre : elle reveille celle qui
         // existe deja. Sans cela, cliquer deux fois sur l'icone ouvrirait deux
@@ -172,7 +178,6 @@ pub fn run() {
         // lien ouvert dans la fenetre de l'application afficherait un site
         // tiers sans barre d'adresse — on ne saurait plus ou l'on est.
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             // Le greffon a deja cree sa fenetre a ce stade : la masquer plus
             // tot ne trouverait rien.

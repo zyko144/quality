@@ -150,6 +150,10 @@ const PATHS = {
   filter: 'M22 3H2l8 9.46V19l4 2v-8.54Z',
   refresh: 'M21 2v6h-6 M3 12a9 9 0 0 1 15-6.7L21 8 M3 22v-6h6 M21 12a9 9 0 0 1-15 6.7L3 16',
   loader: 'M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9',
+  // Un avertissement, distinct de la croix d'erreur : le triangle se lit de
+  // loin comme « attention », la croix comme « rate ».
+  'alert-triangle':
+    'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z M12 9v4 M12 17h.01',
 } as const;
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'name'> {

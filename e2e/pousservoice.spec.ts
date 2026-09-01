@@ -1,6 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { openApp } from './session';
 import { tenir, etatTenueVide, type Evenement } from '../src/features/voice/tenue';
+import { codeWindows } from '../src/features/voice/clavierGlobal';
+import {
+  noter,
+  etatMartelementVide,
+  SEUIL,
+  FENETRE,
+  REPOS,
+} from '../src/features/voice/martelement';
 
 /**
  * Les touches qu'on maintient : parler, et se taire.
@@ -148,5 +156,128 @@ test.describe('Touches maintenues', () => {
     // On rend ce qu'on a trouve : ouvert. C'est le defaut qu'on ne relie
     // jamais a un raccourci — la touche coupait pour de bon.
     expect(tenir(etat, 'haut', false, false)).toEqual({ micro: false, tenue: false });
+  });
+});
+
+/**
+ * Les touches vues par le systeme.
+ *
+ * La traduction est une table, donc elle se trompe en silence : une entree
+ * fausse ne plante rien, elle branche simplement une autre touche que celle
+ * qu'on a choisie — et l'on cherche la panne du cote du vocal.
+ */
+test.describe('Traduction des touches pour le systeme', () => {
+  test('les familles regulieres tombent juste', () => {
+    // Les codes virtuels de Windows, tels que la documentation les donne.
+    expect(codeWindows('KeyA')).toBe(0x41);
+    expect(codeWindows('KeyZ')).toBe(0x5a);
+    expect(codeWindows('Digit0')).toBe(0x30);
+    expect(codeWindows('Digit9')).toBe(0x39);
+    expect(codeWindows('F1')).toBe(0x70);
+    expect(codeWindows('F12')).toBe(0x7b);
+    expect(codeWindows('F24')).toBe(0x87);
+    expect(codeWindows('Numpad0')).toBe(0x60);
+    expect(codeWindows('Numpad9')).toBe(0x69);
+  });
+
+  test('les touches laterales gardent leur cote', () => {
+    /*
+     * Gauche et droite sont deux touches distinctes pour le systeme, et c'est
+     * ce qui rend `Ctrl` droit choisissable pour parler : aucun jeu ne s'en
+     * sert, contrairement au gauche.
+     */
+    expect(codeWindows('ControlLeft')).toBe(0xa2);
+    expect(codeWindows('ControlRight')).toBe(0xa3);
+    expect(codeWindows('ShiftLeft')).toBe(0xa0);
+    expect(codeWindows('ShiftRight')).toBe(0xa1);
+    expect(codeWindows('AltLeft')).toBe(0xa4);
+    expect(codeWindows('AltRight')).toBe(0xa5);
+  });
+
+  test('ce qui n est pas connu n est pas devine', () => {
+    /*
+     * Rendre zero, ou un code approchant, brancherait une touche etrangere sur
+     * le micro. Mieux vaut une touche qui ne repond qu'au premier plan qu'une
+     * touche qui en declenche une autre.
+     */
+    expect(codeWindows('F25')).toBeNull();
+    expect(codeWindows('Numpad10')).toBeNull();
+    expect(codeWindows('MediaPlayPause')).toBeNull();
+    expect(codeWindows('')).toBeNull();
+  });
+});
+
+/**
+ * Le martelement.
+ *
+ * Demande explicitement : prevenir quand on enchaine les commandes plus vite
+ * que le salon ne peut les annoncer. Ce sont des seuils, et des seuils qu'on ne
+ * peut pas eprouver sont des seuils qu'on regle au hasard.
+ */
+test.describe('Detection du martelement', () => {
+  test('un usage normal ne declenche rien', () => {
+    const etat = etatMartelementVide();
+
+    // Une bascule toutes les deux secondes, pendant une minute.
+    for (let i = 0; i < 30; i += 1) {
+      expect(noter(etat, i * 2000)).toBe(false);
+    }
+  });
+
+  test('un enchainement rapide previent, une seule fois', () => {
+    const etat = etatMartelementVide();
+    let avis = 0;
+
+    // Le seuil est atteint a la derniere pression, pas avant.
+    for (let i = 0; i < SEUIL; i += 1) {
+      if (noter(etat, i * 100)) avis += 1;
+    }
+    expect(avis).toBe(1);
+
+    // On continue de marteler : rien de plus, tant que le repos n'est pas
+    // ecoule. Un avertissement qui se repete est lui-meme du martelement.
+    for (let i = 0; i < 40; i += 1) {
+      if (noter(etat, SEUIL * 100 + i * 100)) avis += 1;
+    }
+    expect(avis).toBe(1);
+  });
+
+  test('le repos ecoule, on peut prevenir a nouveau', () => {
+    const etat = etatMartelementVide();
+
+    for (let i = 0; i < SEUIL - 1; i += 1) expect(noter(etat, i * 100)).toBe(false);
+    expect(noter(etat, SEUIL * 100)).toBe(true);
+
+    // Bien plus tard, un nouvel enchainement merite un nouvel avertissement :
+    // il porte sur autre chose que le precedent.
+    const plusTard = SEUIL * 100 + REPOS + 1000;
+    for (let i = 0; i < SEUIL - 1; i += 1) expect(noter(etat, plusTard + i * 100)).toBe(false);
+    expect(noter(etat, plusTard + SEUIL * 100)).toBe(true);
+  });
+
+  test('des pressions etalees ne s additionnent pas', () => {
+    const etat = etatMartelementVide();
+
+    // Une pression juste au-dela de la fenetre a chaque fois : le compte ne
+    // monte jamais, quel que soit le nombre total.
+    for (let i = 0; i < SEUIL * 5; i += 1) {
+      expect(noter(etat, i * (FENETRE + 10))).toBe(false);
+    }
+  });
+
+  test('le compte reste borne', () => {
+    const etat = etatMartelementVide();
+
+    /*
+     * Deux mille pressions d'affilee : ce qui est sorti de la fenetre est
+     * oublie, donc rien ne s'accumule sur la duree d'un appel.
+     *
+     * La borne est ce qui tient dans la fenetre, non le seuil : passe
+     * l'avertissement, le compte repart mais continue de monter tant qu'on
+     * martelle — il ne peut simplement jamais depasser le nombre de pressions
+     * que la fenetre peut contenir.
+     */
+    for (let i = 0; i < 2000; i += 1) noter(etat, i * 50);
+    expect(etat.instants.length).toBeLessThanOrEqual(FENETRE / 50 + 1);
   });
 });

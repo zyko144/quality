@@ -62,7 +62,8 @@ use windows::Win32::Media::Audio::{
     IActivateAudioInterfaceCompletionHandler, IActivateAudioInterfaceCompletionHandler_Impl,
     AUDIOCLIENT_ACTIVATION_PARAMS, AUDIOCLIENT_ACTIVATION_PARAMS_0,
     AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK, AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS,
-    PROCESS_LOOPBACK_MODE_EXCLUDE_TARGET_PROCESS_TREE, VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
+    PROCESS_LOOPBACK_MODE_EXCLUDE_TARGET_PROCESS_TREE,
+    PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE, VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
 };
 use windows::Win32::System::Com::STGM_READ;
 use windows::Win32::System::Threading::{
@@ -137,6 +138,15 @@ static SILENCIEUX: AtomicU64 = AtomicU64::new(0);
 #[cfg(windows)]
 static EXCLUSION: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Comment le son est designe : 0 tout, 1 sauf nous, 2 une seule application.
+///
+/// Le drapeau au-dessus ne distingue plus que deux cas sur trois. Suivre une
+/// application est la seule route qui tienne face a un routeur audio virtuel —
+/// Voicemeeter et consorts rejouent notre son depuis leur propre processus, que
+/// l'exclusion de notre arborescence laisse passer a bon droit.
+#[cfg(windows)]
+static MODE: AtomicU64 = AtomicU64::new(0);
+
 /// Ce que la capture a vu depuis son demarrage.
 #[derive(Clone, serde::Serialize)]
 pub struct DiagnosticSon {
@@ -150,6 +160,12 @@ pub struct DiagnosticSon {
     pub silencieux: u64,
     /// Vrai quand la capture laisse nos propres voix de cote.
     pub exclusion: bool,
+    /// Comment le son est designe : `application`, `sauf-nous` ou `tout`.
+    ///
+    /// Le booleen ci-dessus ne suffit plus depuis qu'il existe deux facons
+    /// d'eviter l'echo, et c'est precisement la distinction qu'on veut lire
+    /// dans le journal quand quelqu'un dit s'entendre encore.
+    pub mode: String,
 }
 
 /// Rend ce que la capture a vu. Sans effet de bord.
@@ -166,6 +182,11 @@ pub fn diagnostic_son() -> DiagnosticSon {
         sommet: SOMMET_MILLIEME.load(Ordering::Relaxed),
         silencieux: SILENCIEUX.load(Ordering::Relaxed),
         exclusion: EXCLUSION.load(Ordering::Relaxed),
+        mode: match MODE.load(Ordering::Relaxed) {
+            2 => "application".into(),
+            1 => "sauf-nous".into(),
+            _ => "tout".into(),
+        },
     }
 }
 
@@ -310,7 +331,10 @@ fn echec(quoi: &str) -> String {
 /// transpose, ce qui s'entend immediatement et ne se diagnostique pas.
 #[cfg(windows)]
 #[tauri::command]
-pub fn demarrer_son_systeme(peripherique: Option<String>) -> Result<FormatSon, String> {
+pub fn demarrer_son_systeme(
+    peripherique: Option<String>,
+    fenetre: Option<String>,
+) -> Result<FormatSon, String> {
     // Le format est lu ici, sur le fil de la commande, pour pouvoir le rendre
     // tout de suite. Le fil de capture rouvre son propre client : les objets
     // COM ne traversent pas les fils sans precautions qui n'en valent pas la
@@ -354,9 +378,20 @@ pub fn demarrer_son_systeme(peripherique: Option<String>) -> Result<FormatSon, S
      */
     let (expediteur, receveur) = sync_channel::<Vec<u8>>(50);
 
+    /*
+     * La fenetre partagee donne l'application dont on veut le son.
+     *
+     * `fenetre` est l'identifiant du selecteur — `fenetre:N`. Un partage
+     * d'ecran n'en a pas, et l'on retombe alors sur l'exclusion de notre
+     * propre processus.
+     */
+    let application = fenetre.as_deref().and_then(processus_de_la_fenetre);
+
     let voulu = peripherique.clone();
     std::thread::spawn(move || {
-        if let Err(erreur) = unsafe { capturer(&expediteur, generation, voulu.as_deref()) } {
+        if let Err(erreur) =
+            unsafe { capturer(&expediteur, generation, voulu.as_deref(), application) }
+        {
             eprintln!("Capture du son du systeme : {erreur}");
         }
     });
@@ -372,6 +407,27 @@ pub fn demarrer_son_systeme(peripherique: Option<String>) -> Result<FormatSon, S
     Ok(format)
 }
 
+
+/// Le processus auquel appartient une fenetre du selecteur, s'il y en a un.
+///
+/// Rend `None` pour un ecran : il n'y a pas d'application derriere un ecran, et
+/// c'est precisement ce qui fait retomber la capture sur l'autre mode.
+#[cfg(windows)]
+fn processus_de_la_fenetre(source: &str) -> Option<u32> {
+    let poignee: isize = source.strip_prefix("fenetre:")?.parse().ok()?;
+
+    let mut pid: u32 = 0;
+    unsafe {
+        windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(
+            windows::Win32::Foundation::HWND(poignee as *mut std::ffi::c_void),
+            Some(&mut pid),
+        )
+    };
+
+    // Zero signifie que la fenetre n'existe plus : mieux vaut l'autre mode
+    // qu'une capture attachee a un processus qui n'est pas la.
+    (pid != 0).then_some(pid)
+}
 
 /// Arrete la capture. Sans effet si elle ne tourne pas.
 #[cfg(windows)]
@@ -479,10 +535,11 @@ unsafe fn capturer(
     file: &SyncSender<Vec<u8>>,
     generation: u64,
     voulu: Option<&str>,
+    application: Option<u32>,
 ) -> Result<(), String> {
     let _com = GardeCom::prendre();
 
-    capturer_interne(file, generation, voulu)
+    capturer_interne(file, generation, voulu, application)
 }
 
 /// Attend que l'activation asynchrone ait repondu.
@@ -551,15 +608,42 @@ const VT_BLOB: u16 = 65;
 /// Rend `None` sur les Windows plus anciens, ou l'appelant retombe sur le
 /// bouclage par sortie.
 #[cfg(windows)]
-unsafe fn client_sans_nos_voix(format: *const WAVEFORMATEX) -> Option<IAudioClient> {
+unsafe fn client_sans_nos_voix(
+    format: *const WAVEFORMATEX,
+    application: Option<u32>,
+) -> Option<IAudioClient> {
     let evenement = CreateEventW(None, true, false, None).ok()?;
+
+    /*
+     * Deux facons de designer ce qu'on capture, et elles n'ont pas le meme prix.
+     *
+     * **Suivre une application** quand on partage une fenetre : on capture le
+     * son de CETTE application, et de rien d'autre. C'est la seule facon
+     * d'eliminer l'echo pour de bon. Exclure notre propre processus ne
+     * suffisait pas : un routeur audio virtuel — Voicemeeter, VB-Cable —
+     * rejoue notre son, et ce routeur est un autre processus, que Windows
+     * capte alors legitimement. On s'entendait en double sans que rien dans
+     * notre code puisse l'empecher.
+     *
+     * La contrepartie est reelle et assumee : partager une fenetre ne diffuse
+     * plus la musique qui joue a cote. C'est d'ailleurs plus juste — partager
+     * un jeu ne devrait pas emporter les notifications ni la conversation
+     * qu'on a dans un autre onglet.
+     *
+     * **Exclure la notre** quand on partage un ecran entier : il n'y a alors
+     * pas d'application a suivre, et l'on reprend le comportement precedent.
+     */
+    let (cible, mode) = match application {
+        Some(pid) => (pid, PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE),
+        None => (GetCurrentProcessId(), PROCESS_LOOPBACK_MODE_EXCLUDE_TARGET_PROCESS_TREE),
+    };
 
     let mut parametres = AUDIOCLIENT_ACTIVATION_PARAMS {
         ActivationType: AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,
         Anonymous: AUDIOCLIENT_ACTIVATION_PARAMS_0 {
             ProcessLoopbackParams: AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS {
-                TargetProcessId: GetCurrentProcessId(),
-                ProcessLoopbackMode: PROCESS_LOOPBACK_MODE_EXCLUDE_TARGET_PROCESS_TREE,
+                TargetProcessId: cible,
+                ProcessLoopbackMode: mode,
             },
         },
     };
@@ -664,6 +748,7 @@ unsafe fn capturer_interne(
     file: &SyncSender<Vec<u8>>,
     generation: u64,
     voulu: Option<&str>,
+    application: Option<u32>,
 ) -> Result<(), String> {
     let enumerateur: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
         .map_err(|_| echec("Impossible d'interroger les peripheriques audio."))?;
@@ -698,7 +783,7 @@ unsafe fn capturer_interne(
      * retombe sur le bouclage par sortie : le son passe, avec l'echo. Un echo
      * vaut mieux qu'un silence, et le journal dit laquelle des deux a servi.
      */
-    let (client, exclusion) = match client_sans_nos_voix(format) {
+    let (client, exclusion) = match client_sans_nos_voix(format, application) {
         Some(sans_nous) => (sans_nous, true),
         None => {
             let ouverture = client.Initialize(
@@ -722,6 +807,14 @@ unsafe fn capturer_interne(
     };
 
     EXCLUSION.store(exclusion, Ordering::Relaxed);
+    MODE.store(
+        match (exclusion, application.is_some()) {
+            (true, true) => 2,
+            (true, false) => 1,
+            _ => 0,
+        },
+        Ordering::Relaxed,
+    );
 
     // Le format est rendu des qu'il a servi : les chemins qui suivent n'ont
     // plus a y penser.
@@ -850,7 +943,10 @@ unsafe fn capturer_interne(
 
 #[cfg(not(windows))]
 #[tauri::command]
-pub fn demarrer_son_systeme(_peripherique: Option<String>) -> Result<FormatSon, String> {
+pub fn demarrer_son_systeme(
+    _peripherique: Option<String>,
+    _fenetre: Option<String>,
+) -> Result<FormatSon, String> {
     Err("La capture du son du systeme n'existe que sous Windows.".into())
 }
 
@@ -869,6 +965,7 @@ pub fn diagnostic_son() -> DiagnosticSon {
         sommet: 0,
         silencieux: 0,
         exclusion: false,
+        mode: "tout".into(),
     }
 }
 

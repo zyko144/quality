@@ -23,8 +23,7 @@ import { SettingsPage } from '@/features/settings/SettingsPage';
 import { FriendsPage } from '@/features/friends/FriendsPage';
 import { Waves } from '@/features/abonnement/Waves';
 import { Suggestions } from '@/features/suggestions/Suggestions';
-import { useRaccourcis, correspond } from '@/store/raccourcis';
-import { PousserPour } from '@/features/voice/PousserPour';
+import { RaccourcisVocaux } from '@/features/voice/RaccourcisVocaux';
 import { Support } from '@/features/support/Support';
 import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
@@ -40,6 +39,7 @@ export function Workspace() {
 
   const ready = useChat((state) => state.ready);
   const error = useChat((state) => state.error);
+  const avertissement = useVoice((state) => state.avertissement);
   const spaces = useChat((state) => state.spaces);
   const channels = useChat((state) => state.channels);
   const bootstrapChat = useChat((state) => state.bootstrap);
@@ -288,45 +288,14 @@ export function Workspace() {
       }
 
       /*
-       * Raccourcis du vocal.
+       * Les raccourcis du vocal ne sont plus lus ici.
        *
-       * Ils n'ont de sens qu'une fois connecte, et ne doivent jamais partir
-       * pendant qu'on ecrit — le test de saisie plus haut s'en charge.
-       * Maj+Ctrl pour couper le micro et le son : ce sont les combinaisons
-       * qu'on trouve ailleurs, et les reapprendre serait une perte seche.
+       * Ils vivent dans `RaccourcisVocaux`, avec les touches maintenues, et
+       * pour une raison de fond : depuis que le systeme peut les surveiller
+       * meme quand la fenetre n'a pas le focus, deux lecteurs du clavier
+       * verraient la meme pression — la bascule s'appliquerait deux fois, donc
+       * pas du tout. Un seul endroit lit le clavier pour le vocal.
        */
-      const enVocal = useVoice.getState().channelId !== null;
-
-      /*
-       * Les raccourcis vocaux viennent des reglages, plus du code.
-       *
-       * Ils etaient fixes ici. Cela tenait tant qu'ils ne genaient personne,
-       * mais `Ctrl+Maj+M` est deja pris par plusieurs jeux — et qui parle en
-       * jouant n'avait aucun moyen de contourner le conflit.
-       *
-       * Voir `raccourcis.ts` : la comparaison porte sur `code`, la touche
-       * physique, et non sur le caractere produit. Une touche choisie en AZERTY
-       * reste la meme touche.
-       */
-      if (enVocal) {
-        const { pour } = useRaccourcis.getState();
-        const voix = useVoice.getState();
-
-        const actions: [Parameters<typeof pour>[0], () => void][] = [
-          ['micro', () => voix.toggleMute()],
-          ['sourdine', () => voix.toggleDeafen()],
-          ['camera', () => void voix.toggleCamera()],
-          ['partage', () => void voix.toggleScreenShare()],
-          ['quitter', () => void voix.leave()],
-        ];
-
-        for (const [action, faire] of actions) {
-          if (!correspond(event, pour(action))) continue;
-          event.preventDefault();
-          faire();
-          return;
-        }
-      }
 
       // Navigation entre salons, sans quitter le clavier.
       if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
@@ -442,7 +411,7 @@ export function Workspace() {
       <SortieAudio />
       <Sonnerie />
       <EcouteVocale />
-      <PousserPour />
+      <RaccourcisVocaux />
 
       {/* Sur petit ecran, la navigation recouvre la conversation : il faut un
           voile pour la refermer, et l'ecarter des lecteurs d'ecran quand elle
@@ -550,6 +519,21 @@ export function Workspace() {
       <CommandPalette />
       <Modals />
       {settings ? <SettingsPage /> : null}
+
+      {avertissement ? (
+        <div className="toast is-avertissement" role="status">
+          <Icon name="alert-triangle" size={14} />
+          <span>{avertissement}</span>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => useVoice.setState({ avertissement: null })}
+            aria-label="Fermer"
+          >
+            <Icon name="x" size={13} />
+          </button>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="toast" role="alert">

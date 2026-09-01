@@ -21,9 +21,6 @@
     "core:window:allow-set-fullscreen",
     "core:window:allow-is-fullscreen",
     "notification:default",
-    "global-shortcut:allow-register",
-    "global-shortcut:allow-unregister",
-    "global-shortcut:allow-is-registered",
     "updater:default",
     "process:allow-restart",
     "opener:allow-open-url"

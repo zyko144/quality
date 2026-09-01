@@ -21,6 +21,7 @@ import { ouvrirPorte, type Porte } from './porte';
 import { capturerSonSysteme, type SonSysteme } from './sonSysteme';
 import { journal } from '@/lib/journal';
 import { decider, etatPairsVide } from './pairs';
+import { noter, etatMartelementVide } from './martelement';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -138,6 +139,15 @@ interface VoiceState {
   userId: UUID | null;
   connecting: boolean;
   error: string | null;
+
+  /**
+   * Ce qu'on signale sans que ce soit une panne.
+   *
+   * Distinct de `error` : celui-ci decrit un echec, celui-la un usage qui va
+   * se retourner contre soi. Les melanger ferait passer un conseil pour une
+   * panne — et, pire, ferait disparaitre une vraie panne sous un conseil.
+   */
+  avertissement: string | null;
 
   muted: boolean;
   deafened: boolean;
@@ -573,6 +583,35 @@ function dedupliquer(entrees: VoiceParticipant[]): VoiceParticipant[] {
 }
 
 export const useVoice = create<VoiceState>((set, get) => {
+  const martelement = etatMartelementVide();
+  let effacementAvis: number | null = null;
+
+  /**
+   * Previent quand on enchaine les bascules plus vite qu'elles ne partent.
+   *
+   * Ce n'est pas une limite : la bascule est appliquee comme d'habitude. C'est
+   * une explication, donnee au moment ou elle sert — sans quoi on voit un
+   * bouton qui dit une chose, des gens qui en voient une autre, et l'on
+   * recommence, ce qui ne fait qu'agrandir l'ecart.
+   *
+   * La mesure vit dans `martelement.ts`, avec ses cas : des seuils qu'on ne
+   * peut pas eprouver sont des seuils qu'on regle au hasard.
+   */
+  function surveillerMartelement(): void {
+    if (!noter(martelement, Date.now())) return;
+
+    set({
+      avertissement:
+        'Doucement — vous changez d’etat plus vite que le salon ne peut l’annoncer. Attendez une seconde : ce que voient les autres va se remettre a jour.',
+    });
+
+    if (effacementAvis !== null) window.clearTimeout(effacementAvis);
+    effacementAvis = window.setTimeout(() => {
+      effacementAvis = null;
+      set({ avertissement: null });
+    }, 8000);
+  }
+
   /**
    * Publie l'etat vocal, au plus une fois par intervalle.
    *
@@ -655,8 +694,23 @@ export const useVoice = create<VoiceState>((set, get) => {
         ),
       ]);
     } catch {
-      // Un envoi perdu n'est pas grave en soi : le suivant portera l'etat
-      // complet, puisque c'est l'etat courant qui est publie, non un delta.
+      /*
+       * Un envoi perdu est remis dans la file, et c'etait le defaut le plus
+       * couteux de tout le vocal.
+       *
+       * L'ancien commentaire disait vrai a moitie : le suivant porte bien
+       * l'etat complet — mais il n'y a pas de suivant. La fenetre qui se rouvre
+       * plus bas appelle `emettre`, laquelle rend la main aussitot quand rien
+       * n'est en attente. Une seule publication perdue suffisait donc a ne plus
+       * jamais rien publier.
+       *
+       * La consequence est severe et correspond mot pour mot a ce qui est
+       * rapporte : la presence ne porte plus notre entree, on **disparait de la
+       * liste du salon**, et personne n'ouvre de connexion vers quelqu'un qu'il
+       * ne voit pas — donc plus personne ne nous entend. Rien dans l'interface
+       * ne le laissait deviner, et relancer l'application etait la seule issue.
+       */
+      etatEnAttente = true;
     } finally {
       publicationEnVol = false;
     }
@@ -1614,6 +1668,7 @@ let derniereQualite: string | null = null;
     userId: null,
     connecting: false,
     error: null,
+    avertissement: null,
 
     muted: false,
     deafened: false,
@@ -1788,6 +1843,22 @@ let derniereQualite: string | null = null;
         const salon = get().channelId;
         if (!salon) return;
         syncPeers(get().participantsByChannel[salon] ?? []);
+
+        /*
+         * On se re-annonce, meme sans rien avoir change.
+         *
+         * La presence de Realtime est declarative : elle ne vaut que tant que
+         * le serveur en garde la trace. Une reconnexion du socket, un envoi
+         * perdu, une coupure d'une seconde — et notre entree n'y est plus,
+         * sans que rien ici ne s'en apercoive. On reste alors invisible dans
+         * son propre salon, ce qui est exactement le defaut rapporte.
+         *
+         * Republier coute un message toutes les trois secondes, et c'est le
+         * meme message que celui qu'on emet en changeant d'etat : cela ne
+         * peut pas diverger de l'etat courant, puisque c'est l'etat courant
+         * qui est envoye.
+         */
+        publishState();
       }, 3000);
 
       /*
@@ -1976,6 +2047,7 @@ let derniereQualite: string | null = null;
     },
 
     toggleMute: () => {
+      surveillerMartelement();
       const next = !get().muted;
 
       // Reactiver le micro alors qu'on est sourd n'aurait pas de sens : on
@@ -1996,6 +2068,7 @@ let derniereQualite: string | null = null;
      * et se voyait surtout apres plusieurs bascules d'affilee.
      */
     toggleDeafen: () => {
+      surveillerMartelement();
       const { deafened, muted } = get();
       const next = !deafened;
 
@@ -2244,7 +2317,7 @@ let derniereQualite: string | null = null;
                   : 'Le peripherique capture ne joue rien.') +
                 ' Choisissez la bonne sortie dans Parametres › Voix et video, ou changez la sortie par defaut de Windows.',
             });
-          });
+          }, sourceId ?? null);
 
           if (resultat.ok) {
             sonNatif = resultat.son;

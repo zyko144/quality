@@ -6,6 +6,7 @@ import {
   type ActionVocale,
   type Combinaison,
 } from '@/store/raccourcis';
+import { clavierGlobalActif } from '@/features/voice/clavierGlobal';
 
 /**
  * Choisir ses touches.
@@ -24,6 +25,10 @@ export function ReglageRaccourcis() {
   const definir = useRaccourcis((state) => state.definir);
   const conflit = useRaccourcis((state) => state.conflit);
   const reinitialiser = useRaccourcis((state) => state.reinitialiser);
+
+  // Lu une fois : la surveillance est posee au demarrage de l'espace de
+  // travail, donc bien avant qu'on ouvre les reglages.
+  const [global] = useState(() => clavierGlobalActif());
 
   const [ecoute, setEcoute] = useState<ActionVocale | null>(null);
   const [remplace, setRemplace] = useState<string | null>(null);
@@ -81,6 +86,27 @@ export function ReglageRaccourcis() {
         Cliquez sur une touche pour la changer, puis appuyez sur la combinaison
         voulue. Echap annule. Ces raccourcis ne repondent qu&rsquo;une fois
         connecte a un salon, et jamais pendant qu&rsquo;on ecrit.
+      </p>
+
+      {/* Ce qui est vrai, pas ce qui devrait l'etre : promettre des touches
+          qui repondent en jeu alors que le systeme a refuse ferait chercher la
+          panne du mauvais cote. */}
+      <p className="settings__hint" role="status">
+        {global ? (
+          <>
+            Ces touches repondent <strong>meme quand Echow n&rsquo;est pas
+            devant</strong> — en pleine partie, par exemple. Elles ne sont pas
+            confisquees pour autant : le jeu les recoit aussi. Une seule
+            exception, imposee par Windows : un jeu lance en administrateur ne
+            transmet ses touches qu&rsquo;a des programmes qui le sont aussi.
+          </>
+        ) : (
+          <>
+            Ces touches ne repondent que lorsque la fenetre est devant. La
+            surveillance hors application n&rsquo;existe que dans
+            l&rsquo;application de bureau.
+          </>
+        )}
       </p>
 
       {remplace ? (

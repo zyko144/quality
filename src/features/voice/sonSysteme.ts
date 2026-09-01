@@ -161,6 +161,7 @@ function mesurerNiveau(
 export async function capturerSonSysteme(
   peripherique?: string | null,
   surSilence?: (peripherique: string | null) => void,
+  fenetre?: string | null,
 ): Promise<ResultatSon> {
   if (!DANS_TAURI) {
     return {
@@ -194,8 +195,17 @@ export async function capturerSonSysteme(
    */
   let format: FormatSon;
   try {
+    /*
+     * La fenetre partagee, quand il y en a une.
+     *
+     * Elle sert a suivre le son de CETTE application plutot que celui de tout
+     * l'ordinateur. C'est ce qui supprime l'echo pour de bon : exclure notre
+     * propre processus ne suffisait pas, un routeur audio virtuel rejouant
+     * notre son depuis un processus qui n'est pas le notre.
+     */
     format = await invoke<FormatSon>('demarrer_son_systeme', {
       peripherique: peripherique ?? null,
+      fenetre: fenetre ?? null,
     });
 
     journal.info('partage', 'Bouclage ouvert', {
@@ -377,6 +387,10 @@ export async function capturerSonSysteme(
         // Vrai quand la capture laisse nos propres voix de cote : les deux
         // routes se ressemblent du dehors, et seule celle-ci evite l'echo.
         sansNosVoix: (natif as unknown as { exclusion?: boolean } | null)?.exclusion ?? null,
+        // « application », « sauf-nous » ou « tout » : c'est ce qui distingue
+        // « il s'entend encore » de « il s'entend parce que Windows est trop
+        // ancien », deux phrases qui n'appellent pas la meme reponse.
+        modeSon: (natif as unknown as { mode?: string } | null)?.mode ?? null,
         fluxBlocs: paquetsRecus,
         fluxOctets: octetsRecus,
         fluxSommet: Math.round(sommetRecu * 1000),

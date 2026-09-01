@@ -1497,6 +1497,23 @@
   color: #fff;
 }
 
+/*
+ * L'avertissement n'est pas une panne, et ne doit pas en avoir l'air.
+ *
+ * Il decrit un usage qui va se retourner contre soi — marteler une commande
+ * plus vite que le salon ne peut l'annoncer. Le peindre en rouge le ferait
+ * lire comme un echec, et surtout : il apparaitrait au meme titre qu'une vraie
+ * panne, qu'on finirait par ne plus distinguer.
+ */
+.toast.is-avertissement {
+  background: var(--warning);
+  color: #1a1206;
+}
+
+.toast.is-avertissement .icon-btn {
+  color: #1a1206;
+}
+
 /* --------------------------------------------------------------------------
    Adaptation aux petits ecrans
    -------------------------------------------------------------------------- */
