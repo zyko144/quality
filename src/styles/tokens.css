@@ -164,6 +164,16 @@
   --border-default: #cfd1d4;
   --border-strong: #b5b8bd;
 
+  /*
+   * Le violet ne sert qu'a une chose : la touche « se taire » tenue.
+   *
+   * Il fallait une couleur qui ne soit ni l'orange du micro coupe ni le rouge
+   * de la sourdine, et qui ne se confonde pas avec l'accent de l'application —
+   * lequel est deja un bleu-violet. Celui-ci tire franchement vers le mauve.
+   */
+  --tenu: #a855f7;
+  --tenu-soft: rgba(168, 85, 247, 0.16);
+
   --accent: #5865f2;
   --accent-hover: #4752c4;
   --accent-soft: rgba(88, 101, 242, 0.12);

@@ -41,6 +41,7 @@ export function VoiceStage({ channel }: { channel: Channel }) {
   const localCamera = useVoice((state) => state.localCamera);
   const remoteCameras = useVoice((state) => state.remoteCameras);
   const cameraOn = useVoice((state) => state.cameraOn);
+  const pousseePourCouper = useVoice((state) => state.pousseePourCouper);
   const focusedShare = useVoice((state) => state.focusedShare);
   const watchedShares = useVoice((state) => state.watchedShares);
   const toggleWatch = useVoice((state) => state.toggleWatch);
@@ -224,6 +225,11 @@ export function VoiceStage({ channel }: { channel: Channel }) {
                 deafened,
                 sharing,
                 video: cameraOn,
+                // Notre propre touche tenue vient de l'etat local, comme le
+                // reste : l'annonce fait un aller-retour, et une touche tenue
+                // dure parfois moins que cet aller-retour.
+                pousse_pour_couper: pousseePourCouper,
+                son_partage: undefined,
               }
             : participant;
 
@@ -236,18 +242,25 @@ export function VoiceStage({ channel }: { channel: Channel }) {
               // fantome dans la grille, et rien ne permettait plus de dire
               // laquelle etait la sienne.
               isMe={isMe}
-              // Un seul etat porte l'anneau a la fois, du plus grave au plus
-              // anodin : sourd, puis micro coupe, puis en train de parler.
-              // Les cumuler donnerait deux couleurs sur le meme bord.
+              /*
+                Un seul etat porte l'anneau a la fois, du plus explicatif au
+                plus anodin : touche tenue, sourd, micro coupe, puis en train
+                de parler. Les cumuler donnerait deux couleurs sur le meme bord.
+
+                La touche tenue vient en tete parce qu'elle coupe le micro : les
+                deux etats sont vrais ensemble, et c'est elle qui dit pourquoi.
+              */
               className={
                 'voice-tile' +
-                (etat.deafened
-                  ? ' is-deafened'
-                  : etat.muted
-                    ? ' is-muted'
-                    : isSpeaking
-                      ? ' is-speaking'
-                      : '')
+                (etat.pousse_pour_couper
+                  ? ' is-tenu'
+                  : etat.deafened
+                    ? ' is-deafened'
+                    : etat.muted
+                      ? ' is-muted'
+                      : isSpeaking
+                        ? ' is-speaking'
+                        : '')
               }
             >
               {etat.video ? (
@@ -278,8 +291,18 @@ export function VoiceStage({ channel }: { channel: Channel }) {
                 {isMe ? ' (vous)' : ''}
               </button>
               <span className="voice-tile__icons">
-                {etat.muted ? <Icon name="mic-off" size={14} /> : null}
-                {etat.deafened ? <Icon name="headphones-off" size={14} /> : null}
+                {/*
+                  La touche tenue passe devant les deux autres : elle coupe le
+                  micro, donc « muet » est vrai en meme temps — et c'est elle
+                  qui explique pourquoi.
+                */}
+                {etat.pousse_pour_couper ? (
+                  <Icon name="mic-tenu" size={15} className="voice-tile__signe--tenu" />
+                ) : etat.deafened ? (
+                  <Icon name="headphones-off" size={15} />
+                ) : etat.muted ? (
+                  <Icon name="mic-off" size={15} />
+                ) : null}
               </span>
 
               {/*

@@ -191,6 +191,12 @@ interface VoiceState {
    * Ni une erreur ni un etat durable : une precision a donner a qui partage,
    * qui autrement n'a aucun moyen de distinguer un refus d'un jeu silencieux.
    */
+  /** Vrai tant qu'on tient la touche « se taire ». Voir `PousserPour`. */
+  pousseePourCouper: boolean;
+
+  /** Annonce qu'on tient — ou qu'on lache — la touche « se taire ». */
+  signalerPoussee: (tenue: boolean) => void;
+
   partageSansSon: boolean;
 
   /**
@@ -623,6 +629,7 @@ export const useVoice = create<VoiceState>((set, get) => {
         channel_id: courant.channelId,
         muted: courant.muted,
         deafened: courant.deafened,
+        pousse_pour_couper: courant.pousseePourCouper,
         sharing: courant.sharing,
         video: courant.cameraOn,
         // Une piste sonore dans le flux du partage, ou rien. C'est la seule
@@ -1605,6 +1612,7 @@ let derniereQualite: string | null = null;
     speaking: {},
     participantsByChannel: {},
     masquageActif: 'inconnu',
+    pousseePourCouper: false,
     partageSansSon: false,
     raisonSansSon: null,
     outboundStats: null,
@@ -1899,6 +1907,20 @@ let derniereQualite: string | null = null;
           participantsByChannel,
         };
       });
+    },
+
+    /*
+     * L'annonce est immediate, pas differee.
+     *
+     * Une touche tenue dure parfois moins d'une seconde. Passer par la fenetre
+     * de publication ordinaire ferait apparaitre le signe apres qu'on a lache,
+     * ou pas du tout — et un indicateur qui arrive en retard est pire que pas
+     * d'indicateur : il decrit un present qui n'existe plus.
+     */
+    signalerPoussee: (tenue) => {
+      if (get().pousseePourCouper === tenue) return;
+      set({ pousseePourCouper: tenue });
+      publishState();
     },
 
     toggleMute: () => {

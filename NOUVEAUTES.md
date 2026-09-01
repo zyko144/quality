@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.6
+
+### Nouveau
+
+- **Se taire en maintenant une touche.** L'inverse de « parler en maintenant » : le micro se ferme tant que la touche est enfoncee. Utile quand on parle la plupart du temps et qu'on veut se taire un instant — tousser, repondre a cote — sans chercher un bouton. A regler dans Parametres › Raccourcis ; aucune touche par defaut, car une touche imposee entrerait en conflit avec ce que font les jeux.
+- **Un signe violet dit qui tient sa touche**, sur la scene vocale comme dans la liste des salons. Il fallait le distinguer des deux autres etats : le violet dit un micro ferme volontairement et pour quelques secondes, la ou l'orange dit un micro coupe qui peut durer une heure. On n'attend pas la meme chose de la personne.
+
+### Corrige
+
+- **L'etat des gens dans la liste des salons se lit de nouveau.** Les icones y etaient a douze pixels, ou l'on ne distinguait pas un casque d'un micro, et elles portaient la couleur du texte — elles disaient qu'il se passait quelque chose sans dire quoi. Elles passent a quinze et prennent la couleur de leur etat.
+
 ## 0.6.5
 
 ### Corrige

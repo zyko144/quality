@@ -590,23 +590,45 @@ function ChannelItem({
                   <span
                     className={
                       'voice-member__face' +
-                      (participant.deafened
-                        ? ' is-deafened'
-                        : participant.muted
-                          ? ' is-muted'
-                          : '')
+                      (participant.pousse_pour_couper
+                        ? ' is-tenu'
+                        : participant.deafened
+                          ? ' is-deafened'
+                          : participant.muted
+                            ? ' is-muted'
+                            : '')
                     }
                   >
                     <Avatar profile={profile} size={20} />
                   </span>
 
                   <span className="truncate">{profile?.display_name ?? 'Quelqu’un'}</span>
-                  {participant.deafened ? (
-                    <Icon name="headphones-off" size={12} />
+
+                  {/*
+                    L'etat se lit deux fois : par l'anneau et par le dessin.
+
+                    L'anneau se voit d'un coup d'oeil, le dessin dit lequel des
+                    trois etats c'est — et reste lisible pour qui ne distingue
+                    pas l'orange du rouge, ce qui est frequent. Les icones
+                    etaient a douze pixels, ou l'on ne distinguait pas un casque
+                    d'un micro ; elles passent a quinze et prennent la couleur
+                    de leur etat.
+                  */}
+                  {participant.pousse_pour_couper ? (
+                    <Icon name="mic-tenu" size={15} className="voice-member__signe is-tenu" />
+                  ) : participant.deafened ? (
+                    <Icon
+                      name="headphones-off"
+                      size={15}
+                      className="voice-member__signe is-deafened"
+                    />
                   ) : participant.muted ? (
-                    <Icon name="mic-off" size={12} />
+                    <Icon name="mic-off" size={15} className="voice-member__signe is-muted" />
                   ) : null}
-                  {participant.sharing ? <Icon name="screen" size={12} /> : null}
+
+                  {participant.sharing ? (
+                    <Icon name="screen" size={15} className="voice-member__signe is-partage" />
+                  ) : null}
                 </button>
               </li>
             );

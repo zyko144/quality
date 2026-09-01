@@ -2334,3 +2334,38 @@ button.userbar__voice-info:hover {
 .voice-member__face.is-deafened {
   box-shadow: 0 0 0 3px var(--danger);
 }
+
+/* La touche « se taire » tenue : violet, et rien d'autre ne l'est. Voir
+   `--tenu` dans les jetons pour le choix de la couleur. */
+.voice-member__face.is-tenu {
+  box-shadow: 0 0 0 3px var(--tenu);
+}
+
+/*
+ * Le dessin qui accompagne l'anneau.
+ *
+ * L'anneau se voit d'un coup d'oeil, le dessin dit lequel des trois etats
+ * c'est. Il porte sa couleur plutot que celle du texte : gris, il disait qu'il
+ * se passait quelque chose sans dire quoi, et il fallait le regarder de pres —
+ * a douze pixels, un casque et un micro se ressemblent.
+ */
+.voice-member__signe {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.voice-member__signe.is-muted {
+  color: var(--warning, #f0b232);
+}
+
+.voice-member__signe.is-deafened {
+  color: var(--danger);
+}
+
+.voice-member__signe.is-tenu {
+  color: var(--tenu);
+}
+
+.voice-member__signe.is-partage {
+  color: var(--success);
+}

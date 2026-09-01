@@ -24,7 +24,7 @@ import { FriendsPage } from '@/features/friends/FriendsPage';
 import { Waves } from '@/features/abonnement/Waves';
 import { Suggestions } from '@/features/suggestions/Suggestions';
 import { useRaccourcis, correspond } from '@/store/raccourcis';
-import { PousserPourParler } from '@/features/voice/PousserPourParler';
+import { PousserPour } from '@/features/voice/PousserPour';
 import { Support } from '@/features/support/Support';
 import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
@@ -442,7 +442,7 @@ export function Workspace() {
       <SortieAudio />
       <Sonnerie />
       <EcouteVocale />
-      <PousserPourParler />
+      <PousserPour />
 
       {/* Sur petit ecran, la navigation recouvre la conversation : il faut un
           voile pour la refermer, et l'ecarter des lecteurs d'ecran quand elle

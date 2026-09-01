@@ -16,14 +16,21 @@ test.describe('Raccourcis vocaux', () => {
     await expect(page.locator('.raccourcis__ligne').first()).toBeVisible();
   };
 
-  test('les six actions sont reglables, dont parler en maintenant', async ({ page }) => {
+  test('les sept actions sont reglables, dont les deux touches maintenues', async ({ page }) => {
     await ouvrir(page);
 
     const lignes = page.locator('.raccourcis__ligne');
-    await expect(lignes).toHaveCount(6);
+    await expect(lignes).toHaveCount(7);
 
-    // Celle-ci n'existait pas : c'est la seule qui suive l'enfoncement.
+    /*
+     * Les deux seules qui suivent l'enfoncement, et elles sont opposees.
+     *
+     * « Se taire » a rejoint « parler » : on parle la plupart du temps, et l'on
+     * veut pouvoir se taire un instant — tousser, repondre a cote — sans
+     * chercher un bouton.
+     */
     await expect(page.locator('.raccourcis')).toContainText('Parler en maintenant');
+    await expect(page.locator('.raccourcis')).toContainText('Se taire en maintenant');
   });
 
   test('appuyer sur une touche la prend, et Echap annule', async ({ page }) => {

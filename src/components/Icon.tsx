@@ -96,6 +96,20 @@ const PATHS = {
      donnerait deux traits qui se croisent sans raison lisible. */
   'headphones-off':
     'M3 3l18 18 M3.4 18v-6a8.6 8.6 0 0 1 12.9-7.4 M20.6 18v-6a8.5 8.5 0 0 0-.6-3.1 M4.4 14.6v5.4 M19.6 14.6v5.4',
+  /*
+   * Micro tenu : la capsule, et une fleche vers le bas.
+   *
+   * Il fallait la distinguer du micro barre — qui dit « coupe », un etat qui
+   * dure — alors que celle-ci dit « on appuie », un etat qui se relache dans la
+   * seconde. La fleche vers le bas porte cette idee sans un mot : c'est le
+   * dessin qu'on met sur une touche qu'on maintient.
+   *
+   * L'arceau de la capsule est retire : a quatorze pixels, la capsule, l'arceau
+   * et la fleche donnaient une tache. On garde ce qui identifie — la capsule —
+   * et ce qui distingue — la fleche.
+   */
+  'mic-tenu':
+    'M12 3a3.2 3.2 0 0 0-3.2 3.2v4.4a3.2 3.2 0 0 0 6.4 0V6.2A3.2 3.2 0 0 0 12 3Z M12 15.4V21 M9.4 18.4 12 21l2.6-2.6',
   screen: 'M2 4h20v12H2Z M8 20h8 M12 16v4',
   // Combine classique : le microtelephone incline. Trace dans le meme style
   // que `phone-off`, dont il est le pendant, pour que les deux etats du bouton

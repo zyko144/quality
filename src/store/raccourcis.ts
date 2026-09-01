@@ -18,7 +18,8 @@ export type ActionVocale =
   | 'camera'
   | 'partage'
   | 'quitter'
-  | 'pousser-pour-parler';
+  | 'pousser-pour-parler'
+  | 'pousser-pour-couper';
 
 /**
  * Une combinaison, decrite par ce que le navigateur nous donne.
@@ -66,6 +67,13 @@ const DEFAUTS: Raccourci[] = [
     libelle: 'Parler en maintenant la touche',
     detail:
       'Le micro s’ouvre tant que la touche est enfoncee, et se referme des qu’on la lache. Aucun raccourci par defaut : la touche depend trop de ce qu’on fait a cote.',
+    combinaison: null,
+  },
+  {
+    action: 'pousser-pour-couper',
+    libelle: 'Se taire en maintenant la touche',
+    detail:
+      'L’inverse du precedent : le micro se ferme tant que la touche est enfoncee. Utile quand on parle la plupart du temps et qu’on veut se taire un instant — tousser, repondre a cote. Aucun raccourci par defaut.',
     combinaison: null,
   },
   {
