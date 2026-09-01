@@ -5,16 +5,17 @@ import { openApp } from './session';
  * La page de l'abonnement.
  *
  * Nommee pour tomber dans le projet « authentifie » : elle vit sous la liste
- * des conversations privees.
+ * des conversations privees. Le fichier garde son nom `waves` : c'est celui du
+ * code, qui ne suit pas les changements d'etiquette commerciale.
  */
-test.describe('Waves', () => {
+test.describe('Echow +', () => {
   test('s ouvre depuis la liste et annonce sans vendre', async ({ page }) => {
     await openApp(page);
 
     // On passe en messages prives, ou vit l'entree.
     await page.locator('.rail__button--home, .rail__button').first().click();
 
-    const entree = page.getByRole('button', { name: /Waves/ });
+    const entree = page.getByRole('button', { name: /Echow \+/ });
     await expect(entree).toBeVisible({ timeout: 15_000 });
 
     /*
@@ -27,7 +28,7 @@ test.describe('Waves', () => {
     await expect(entree).toContainText('Maintenance');
 
     await entree.click();
-    await expect(page.getByRole('heading', { name: 'Waves', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Echow +', level: 1 })).toBeVisible();
 
     // La page reprend le mot de l'entree, plutot que d'en donner un deuxieme.
     await expect(page.locator('.waves__annonce')).toContainText(/maintenance/i);

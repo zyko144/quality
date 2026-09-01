@@ -22,7 +22,7 @@ correspondant a leur numero de version.
 ### Ameliore
 
 - **Les commandes de fenetre sont trois pastilles de couleur** : vert pour reduire, orange pour agrandir, rouge pour fermer. Le trait, le carre et la croix disaient ce que la position dit deja. Les noms restent pour le clavier et les lecteurs d'ecran — une couleur ne se lit pas, et beaucoup ne distinguent pas le vert du rouge.
-- **Waves passe en maintenance**, barre en rouge dans la liste. « Bientot » annoncait une attente qui avance ; ce n'etait plus vrai.
+- **L'abonnement s'appelle desormais « Echow + »**, et passe en maintenance : barre en rouge dans la liste. « Bientot » annoncait une attente qui avance, ce qui n'etait plus vrai.
 
 ## 0.4.2
 

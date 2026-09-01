@@ -81,7 +81,7 @@ function WavesEntry() {
       aria-current={wavesOpen ? 'page' : undefined}
     >
       <Icon name="sparkles" size={19} />
-      <span className="dm-waves__nom">Waves</span>
+      <span className="dm-waves__nom">Echow +</span>
       <span className="dm-waves__etat">Maintenance</span>
     </button>
   );

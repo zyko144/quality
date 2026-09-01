@@ -2,7 +2,17 @@ import { Icon, type IconName } from '@/components/Icon';
 import { QualityLogo } from '@/components/QualityLogo';
 
 /**
- * Waves — l'abonnement de Echow.
+ * Echow + — l'abonnement de Echow.
+ *
+ * Le nom affiche a change deux fois : « Vague », puis « Waves », maintenant
+ * « Echow + ». Le nom DANS LE CODE, lui, n'a pas bouge — fichier, classes CSS,
+ * cles du magasin disent toujours `waves`.
+ *
+ * Ce n'est pas un oubli. Un nom commercial se choisit et se rechoisit ; un nom
+ * de symbole se lit dans des centaines d'endroits et se renomme mal. Les faire
+ * suivre l'un l'autre reviendrait a repasser sur tout le code a chaque fois
+ * qu'on hesite sur une etiquette. Ce qui se voit a l'ecran est ici ; le reste
+ * garde son nom d'origine.
  *
  * Le nom vient du logo, une vague en spirale — au pluriel, parce qu'il y en
  * aura d'autres. Il dit aussi ce que l'abonnement est : ce qui pousse
@@ -72,7 +82,7 @@ export function Waves() {
         </span>
 
         <p className="waves__annonce waves__annonce--arret">En maintenance</p>
-        <h1 className="waves__titre">Waves</h1>
+        <h1 className="waves__titre">Echow +</h1>
 
         <p className="waves__accroche">
           L&rsquo;abonnement est suspendu le temps qu&rsquo;on le remette
@@ -108,7 +118,7 @@ export function Waves() {
       </ul>
 
       <section className="waves__promesse">
-        <h2 className="waves__promesse-titre">Ce que Waves ne fera jamais</h2>
+        <h2 className="waves__promesse-titre">Ce que Echow + ne fera jamais</h2>
         <ul>
           <li>
             Rendre payant ce qui est gratuit aujourd&rsquo;hui. Les salons, la

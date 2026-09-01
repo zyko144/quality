@@ -1435,7 +1435,10 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 }
 
 /* ==========================================================================
-   Waves — la page de l'abonnement
+   Waves — la page de l'abonnement, affichee sous le nom « Echow + »
+   ==========================================================================
+   Les classes gardent `waves` : un nom commercial se rechoisit, un nom de
+   symbole se lit partout et se renomme mal. Voir `Waves.tsx`.
    ==========================================================================
    Elle annonce, elle ne vend pas : le ton reste celui du reste de
    l'application, sans degrade criard ni compte a rebours. Ce qui la distingue
