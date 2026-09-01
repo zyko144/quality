@@ -359,7 +359,7 @@ pub struct FluxImage {
 /// `ecran:N`. C'est le meme vocabulaire que le selecteur, pour qu'un choix se
 /// transmette sans traduction.
 #[tauri::command]
-pub fn demarrer_image(source: String) -> Result<FluxImage, String> {
+pub fn demarrer_image(source: String, images: u32) -> Result<FluxImage, String> {
     let capture = ouvrir_source(&source)?;
     let (largeur, hauteur) = premiere_taille(&capture)?;
 
@@ -379,11 +379,35 @@ pub fn demarrer_image(source: String) -> Result<FluxImage, String> {
      */
     let (expediteur, receveur) = std::sync::mpsc::sync_channel::<Vec<u8>>(1);
 
+    /*
+     * La cadence est bornee a ce qui a ete demande.
+     *
+     * La capture de Windows suit le rafraichissement de l'ecran : cent
+     * quarante-quatre images par seconde sur un moniteur de joueur. Elles
+     * partaient toutes, et l'encodeur devait les caser dans un budget calcule
+     * pour soixante — chacune recevait donc deux fois et demie moins de
+     * donnees. Le resultat n'est pas un partage plus fluide mais un partage
+     * plus sale, ce qui se decrit de la meme facon et se corrige autrement.
+     *
+     * Une image trop precoce est abandonnee plutot que retardee : la garder
+     * pour l'envoyer au bon moment ferait du retard, et l'on a deja l'image
+     * suivante quand ce moment arrive.
+     */
+    let intervalle = std::time::Duration::from_secs_f64(1.0 / images.clamp(5, 240) as f64);
+
     std::thread::spawn(move || {
+        let mut precedente = std::time::Instant::now() - intervalle;
+
         while GENERATION.load(Ordering::SeqCst) == generation {
             let Some(image) = capture.suivante() else {
                 break;
             };
+
+            let maintenant = std::time::Instant::now();
+            if maintenant.duration_since(precedente) < intervalle {
+                continue;
+            }
+            precedente = maintenant;
 
             /*
              * Chaque image porte sa taille.

@@ -83,7 +83,10 @@ export function captureNativeDisponible(): boolean {
  *
  * `source` est l'identifiant du selecteur : `fenetre:N` ou `ecran:N`.
  */
-export async function capturerSource(source: string): Promise<ResultatImage> {
+export async function capturerSource(
+  source: string,
+  images: number,
+): Promise<ResultatImage> {
   if (!captureNativeDisponible()) {
     return { ok: false, raison: 'La capture native n’est pas disponible ici.' };
   }
@@ -98,7 +101,7 @@ export async function capturerSource(source: string): Promise<ResultatImage> {
 
   let flux: FluxImage;
   try {
-    flux = await invoke<FluxImage>('demarrer_image', { source });
+    flux = await invoke<FluxImage>('demarrer_image', { source, images });
   } catch (cause) {
     return {
       ok: false,
@@ -119,7 +122,8 @@ export async function capturerSource(source: string): Promise<ResultatImage> {
   const generateur = new MediaStreamTrackGenerator({ kind: 'video' });
   const ecrivain = generateur.writable.getWriter();
 
-  let images = 0;
+  /** Images effectivement reçues, pour le releve. */
+  let recues = 0;
   const depart = performance.now();
 
   void (async () => {
@@ -170,7 +174,7 @@ export async function capturerSource(source: string): Promise<ResultatImage> {
           });
 
           await ecrivain.write(image);
-          images += 1;
+          recues += 1;
         }
       }
     } catch {

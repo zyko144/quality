@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.6.7
+
+### Corrige
+
+- **L'application devenait inutilisable en rejoignant un salon apres un partage.** Ecran noir, et rien qui dise pourquoi — au point qu'on croyait a un bannissement et qu'on reinstallait. La cause : la reconciliation des salons ecoutes est programmee huit cents millisecondes apres avoir quitte, donc en plein milieu d'une jonction si l'on rejoint aussitot. Elle ouvrait un canal sur le salon qu'on etait en train de rejoindre, et poser un ecouteur sur un canal deja souscrit leve une exception qui emportait toute l'interface. Le salon rejoint est desormais protege pendant la jonction, et plus aucune exception ne peut emporter l'application depuis cet endroit — au pire un message, jamais un ecran noir.
+- **La qualite du partage s'effondrait sur les ecrans rapides.** La capture ne bornait pas sa cadence : elle suit le rafraichissement du moniteur, soit cent quarante-quatre images par seconde sur un ecran de joueur, quand le debit est calcule pour soixante. Chaque image recevait deux fois et demie moins de donnees. Ce n'est pas un partage plus fluide qu'on obtenait, mais un partage plus sale.
+
 ## 0.6.6
 
 ### Nouveau

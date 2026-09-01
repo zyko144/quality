@@ -408,6 +408,15 @@ const peers = new Map<UUID, Peer>();
  */
 const REPLI_CLASSEMENT = 1500;
 
+/**
+ * Salon en cours de jonction, ou `null`.
+ *
+ * `channelId` n'est pose qu'une fois la jonction aboutie ; entre-temps, rien ne
+ * disait qu'on visait ce salon. Voir `reconcilierObservateurs`, qui s'en sert
+ * pour ne pas ouvrir un observateur sur le salon qu'on rejoint.
+ */
+let salonEnJonction: UUID | null = null;
+
 /** Ce que la decision sur les pairs retient d'une synchronisation a l'autre. */
 const etatPairs = etatPairsVide();
 
@@ -770,7 +779,18 @@ export const useVoice = create<VoiceState>((set, get) => {
    * On laisse donc passer les sujets occupes, et l'on repasse un peu plus tard.
    */
   function reconcilierObservateurs(): void {
-    const rejoint = get().channelId;
+    /*
+     * Le salon qu'on rejoint est exclu, meme avant d'y etre.
+     *
+     * `channelId` n'est pose qu'a la FIN de `join`. Cette reconciliation, elle,
+     * est programmee huit cents millisecondes apres avoir quitte — donc en
+     * plein milieu d'une jonction si l'on rejoint aussitot, ce que fait tout
+     * le monde apres avoir arrete un partage. Elle voyait alors « aucun salon
+     * rejoint », ouvrait un observateur sur celui qu'on etait en train de
+     * rejoindre, et `supabase.channel(sujet)` rendait ensuite CE canal-la —
+     * deja souscrit. Poser un ecouteur dessus leve une exception.
+     */
+    const rejoint = get().channelId ?? salonEnJonction;
     const voulus = new Set(salonsVoulus.filter((id) => id !== rejoint));
 
     for (const [id, canal] of observateurs) {
@@ -1620,6 +1640,7 @@ let derniereQualite: string | null = null;
     join: async (channelId, userId) => {
       if (get().channelId === channelId) return;
 
+      salonEnJonction = channelId;
       set({ connecting: true, error: null });
 
       /*
@@ -1769,9 +1790,37 @@ let derniereQualite: string | null = null;
         syncPeers(get().participantsByChannel[salon] ?? []);
       }, 3000);
 
-      room = supabase.channel(`orbit:voice:${channelId}`, {
-        config: { presence: { key: userId }, broadcast: { self: false } },
-      });
+      /*
+       * L'installation du canal ne doit jamais emporter l'interface.
+       *
+       * `supabase.channel(sujet)` rend un canal DEJA EXISTANT quand il en
+       * trouve un sur ce sujet, et poser un ecouteur sur un canal souscrit leve
+       * une exception. Elle partait d'ici, remontait jusqu'a React, et emportait
+       * tout l'arbre : ecran noir, application inutilisable, et rien qui dise
+       * pourquoi. Deux traces l'ont montre avant qu'on la comprenne.
+       *
+       * La cause est traitee au-dessus — l'observateur ne s'ouvre plus sur le
+       * salon qu'on rejoint. Ce garde-fou traite la CONSEQUENCE : quoi qu'il
+       * arrive ici, on repart avec un message plutot qu'un ecran noir.
+       */
+      try {
+        room = supabase.channel(`orbit:voice:${channelId}`, {
+          config: { presence: { key: userId }, broadcast: { self: false } },
+        });
+      } catch (cause) {
+        journal.erreur('vocal', 'Canal du salon inutilisable', {
+          salon: channelId,
+          cause: String(cause),
+        });
+
+        room = null;
+        set({
+          connecting: false,
+          error: 'Le salon vocal n’a pas pu s’ouvrir. Reessayez dans un instant.',
+        });
+        void get().leave();
+        return;
+      }
 
       room
         .on('broadcast', { event: 'voice-signal' }, ({ payload }) => {
@@ -1820,9 +1869,12 @@ let derniereQualite: string | null = null;
         });
 
       startSpeechDetection();
+      salonEnJonction = null;
     },
 
     leave: async () => {
+      salonEnJonction = null;
+
       if (get().channelId) {
         playCue('leave');
         journal.info('vocal', 'Salon quitte', { salon: get().channelId });
@@ -2051,7 +2103,10 @@ let derniereQualite: string | null = null;
           const { captureNativeDisponible, capturerSource } = await import('./imageSysteme');
 
           if (captureNativeDisponible()) {
-            const capture = await capturerSource(sourceId);
+            const capture = await capturerSource(
+              sourceId,
+              useDevices.getState().media.screenFrameRate,
+            );
 
             if (capture.ok) {
               captureNative = capture.image;
