@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.1
+
+### Corrections
+
+- **« Se connecter » repond enfin dans l'application de bureau.** Le bouton rechargeait toute l'application au lieu d'ouvrir la connexion : impossible d'entrer sur une installation neuve. La correction precedente ne prenait que si le pont de Tauri etait pose avant le demarrage du paquet — ce que rien ne garantit.
+- L'arret d'un partage d'ecran fait desormais le meme menage, qu'on coupe depuis l'application ou depuis la barre du systeme. Les deux en oubliaient chacun une partie, pas la meme.
+- Le menu d'un membre dit pourquoi le deplacement en vocal est indisponible, au lieu de n'afficher rien.
+
 ## 9.5.0
 
 ### Profil

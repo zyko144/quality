@@ -33,9 +33,6 @@ test.describe('Routage dans l application de bureau', () => {
 
   test('changer d ecran n ecrit jamais dans l historique', async ({ page }) => {
     await page.addInitScript(() => {
-      // Ce que l'application regarde pour se savoir dans Tauri.
-      (window as unknown as Record<string, unknown>)['__TAURI_INTERNALS__'] = {};
-
       const journal: string[] = [];
       (window as unknown as Record<string, unknown>)['__historique'] = journal;
 
@@ -52,6 +49,22 @@ test.describe('Routage dans l application de bureau', () => {
     });
 
     await page.goto('/');
+
+    /*
+     * Le pont de Tauri est pose APRES le chargement, a dessein.
+     *
+     * Le cas precedent l'installait avant, et passait donc sur un defaut qui
+     * n'apparait que dans l'ordre inverse : la detection etait une constante
+     * evaluee au chargement du module, figee pour toute la session. Quand Tauri
+     * arrivait apres, l'application se croyait dans un navigateur, ecrivait
+     * l'historique, et rechargeait au premier changement d'ecran.
+     *
+     * Rien ne garantit que le pont soit pose avant le paquet. Le cas doit donc
+     * couvrir les deux ordres, et c'est le tardif qui a fait defaut.
+     */
+    await page.evaluate(() => {
+      (window as unknown as Record<string, unknown>)['__TAURI_INTERNALS__'] = {};
+    });
 
     /*
      * Deux portes menent a la connexion selon l'etat de la maintenance :

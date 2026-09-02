@@ -44,7 +44,36 @@ function notify(): void {
  * « precedent », une adresse qui dit ou l'on est — n'existe de toute facon pas
  * dans une fenetre sans barre d'adresse.
  */
-const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+function dansTauri(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  // Le chemin normal, quand le pont est deja pose.
+  if ('__TAURI_INTERNALS__' in window) return true;
+
+  /*
+   * L'origine, quand il ne l'est pas encore.
+   *
+   * Ce test etait une constante evaluee au chargement du module — donc une
+   * seule fois, a la premiere ligne du paquet. Rien ne garantit que Tauri ait
+   * pose son pont a cet instant : quand il arrive apres, la valeur reste figee
+   * a `false` pour toute la session, l'historique est ecrit, et la fenetre
+   * recharge au premier changement d'ecran.
+   *
+   * C'est ce qui rendait le defaut invisible a la verification : un test qui
+   * pose le global avant le chargement de la page ne peut pas reproduire un
+   * global qui arrive trop tard.
+   *
+   * L'origine, elle, est connue des le premier octet et ne change jamais. La
+   * vue web de l'application de bureau sert ses fichiers depuis
+   * `tauri.localhost` sous Windows, et depuis le protocole `tauri:` ailleurs.
+   */
+  const hote = window.location.hostname;
+  return (
+    hote === 'tauri.localhost' ||
+    hote.endsWith('.tauri.localhost') ||
+    window.location.protocol === 'tauri:'
+  );
+}
 
 /**
  * La route en cours, tenue en memoire.
@@ -60,7 +89,7 @@ const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in win
  * navigation ne depend plus d'une interface qui a le droit de refuser.
  */
 let routeActuelle: Route =
-  typeof window === 'undefined' || DANS_TAURI ? '/' : currentPath();
+  typeof window === 'undefined' || dansTauri() ? '/' : currentPath();
 
 function lireRoute(): Route {
   return routeActuelle;
@@ -72,7 +101,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('popstate', () => {
     // Dans l'application de bureau, l'adresse ne suit pas la route : la relire
     // ramenerait a l'accueil au premier evenement venu.
-    if (DANS_TAURI) return;
+    if (dansTauri()) return;
     routeActuelle = currentPath();
     notify();
   });
@@ -91,7 +120,7 @@ export function navigate(route: Route, options: { replace?: boolean } = {}): voi
    * refuse l'ecriture prive de ces deux commodites, ce qui est supportable ;
    * empecher de changer d'ecran ne l'est pas.
    */
-  if (!DANS_TAURI) {
+  if (!dansTauri()) {
     try {
       if (options.replace) window.history.replaceState(null, '', route);
       else window.history.pushState(null, '', route);
