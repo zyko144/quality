@@ -427,3 +427,29 @@ as $$
 $$;
 
 grant execute on function public.ia_compter(bigint) to authenticated;
+
+/*
+ * Le total du jour, tous comptes confondus.
+ *
+ * La limite par personne protege contre un compte qui s'emballe ; elle ne
+ * protege pas contre trente comptes qui se servent normalement le meme jour, ni
+ * contre des comptes crees pour l'occasion. Le palier gratuit de Gemini est
+ * commun a tous : il faut donc un compteur commun.
+ *
+ * `security definer` parce que la politique de lecture ne montre a chacun que
+ * sa propre ligne — c'est voulu, savoir combien les autres consomment ne
+ * regarde personne — et que ce total-la doit pourtant etre lisible.
+ */
+create or replace function public.ia_total_du_jour()
+returns bigint
+language sql
+security definer
+stable
+set search_path = ''
+as $$
+  select coalesce(sum(appels), 0)::bigint
+    from public.ia_usage
+   where jour = current_date;
+$$;
+
+grant execute on function public.ia_total_du_jour() to authenticated;

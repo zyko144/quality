@@ -44,12 +44,25 @@ const MODELE = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.7-flash';
 /**
  * Ce qu'une personne peut demander par jour.
  *
- * Trente : de quoi poser toutes les questions qu'on se pose sur une
- * application en une journee, et pas de quoi tenir une conversation sans fin.
- * Reglable sans redeployer, parce que le bon chiffre ne se connait qu'a
- * l'usage.
+ * Cinquante : de quoi se servir de l'assistant sans jamais y penser. Le palier
+ * gratuit de Gemini Flash accorde mille cinq cents requetes par jour ; a
+ * cinquante chacun, trente personnes actives tiennent dedans.
  */
-const PAR_JOUR = Number(Deno.env.get('IA_LIMITE_JOUR') ?? '30');
+const PAR_JOUR = Number(Deno.env.get('IA_LIMITE_JOUR') ?? '50');
+
+/**
+ * Ce que TOUT LE MONDE peut demander par jour, ensemble.
+ *
+ * La limite par personne protege contre un compte qui s'emballe ; elle ne
+ * protege pas contre trente comptes qui se servent normalement le meme jour, ni
+ * contre des comptes crees pour l'occasion. Cinquante fois trente font
+ * exactement le palier gratuit : sans ce second plafond, une journee active le
+ * depasse et les appels suivants sont factures sans que personne l'ait decide.
+ *
+ * Mille quatre cents laisse cent requetes de marge sous le palier — de quoi
+ * absorber un comptage decale sans basculer en payant.
+ */
+const PAR_JOUR_TOTAL = Number(Deno.env.get('IA_LIMITE_GLOBALE') ?? '1400');
 
 /**
  * Longueur maximale d'une reponse, en jetons.
@@ -122,14 +135,36 @@ Deno.serve(async (requete) => {
      */
     const aujourdhui = new Date().toISOString().slice(0, 10);
 
-    const { data: usage } = await supabase
-      .from('ia_usage')
-      .select('appels')
-      .eq('profil_id', moi)
-      .eq('jour', aujourdhui)
-      .maybeSingle();
+    const [{ data: usage }, { data: total }] = await Promise.all([
+      supabase
+        .from('ia_usage')
+        .select('appels')
+        .eq('profil_id', moi)
+        .eq('jour', aujourdhui)
+        .maybeSingle(),
+      supabase.rpc('ia_total_du_jour'),
+    ]);
 
     const deja = usage?.appels ?? 0;
+
+    /*
+     * Le plafond commun passe en premier.
+     *
+     * Quand il est atteint, le message doit dire que cela ne vient pas de la
+     * personne : « vous avez atteint votre limite » alors qu'on n'a pose que
+     * deux questions ferait chercher une erreur la ou il n'y en a pas.
+     */
+    if (typeof total === 'number' && total >= PAR_JOUR_TOTAL) {
+      return repondre(
+        {
+          erreur: 'quota-global',
+          message:
+            'L’assistant a atteint sa limite pour aujourd’hui, tous comptes confondus. Il repartira demain.',
+          restant: 0,
+        },
+        429,
+      );
+    }
 
     if (deja >= PAR_JOUR) {
       return repondre(
