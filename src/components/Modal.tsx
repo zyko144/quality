@@ -14,6 +14,14 @@ interface ModalProps {
    * cadre. Utile quand le contenu est lui-meme une carte dessinee bord a bord.
    */
   bare?: boolean;
+  /**
+   * Une classe posee sur la fenetre elle-meme.
+   *
+   * Sert a la placer ailleurs qu'au centre : la fiche de profil se range a
+   * droite, la ou on l'a ouverte. Une propriete par position aurait fige la
+   * liste des positions possibles dans le composant.
+   */
+  classe?: string;
 }
 
 /**
@@ -32,6 +40,7 @@ export function Modal({
   footer,
   width = 460,
   bare = false,
+  classe = '',
 }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
@@ -105,7 +114,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={'modal' + (classe ? ` ${classe}` : '')}
       style={{ maxWidth: width }}
       {...(bare ? { 'aria-label': title } : { 'aria-labelledby': titreId })}
       // Un clic sur la zone hors du panneau ferme la boite, comme partout.

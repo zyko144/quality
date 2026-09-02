@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { journal } from '@/lib/journal';
 
 /**
  * Echow AI, cote application.
@@ -110,6 +111,25 @@ export const useEchowAI = create<EtatIA>((set, get) => ({
           const corps = await (error as { context?: Response }).context?.json();
           if (corps?.message) message = corps.message;
           if (typeof corps?.restant === 'number') set({ restant: corps.restant });
+
+          /*
+           * La raison exacte part au journal.
+           *
+           * La fonction la renvoie dans `detail` — « cle refusee », « quota
+           * epuise », « modele inconnu » — et le client la jetait. Restait
+           * « L'assistant est momentanement indisponible », qui ne dit ni ce
+           * qui se passe ni quoi faire, ni a celui qui lit ni a celui qui
+           * repare.
+           *
+           * Elle ne s'affiche pas : elle vient d'un service tiers et peut
+           * contenir n'importe quoi. Le journal la garde pour qui la cherche.
+           */
+          if (corps?.detail) {
+            journal.erreur('ia', 'Echow AI a refuse la demande', {
+              message: String(corps.message ?? ''),
+              detail: String(corps.detail).slice(0, 300),
+            });
+          }
         } catch {
           // Le corps n'est pas lisible : le message par defaut fera l'affaire.
         }

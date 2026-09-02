@@ -12,6 +12,35 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.0
+
+### Profil
+
+- **La fiche s'ouvre a droite**, la ou on l'a demandee, au lieu de sauter au centre de l'ecran.
+- **Les badges se lisent deux fois** : les dessins a cote du nom disent qu'on en a, la liste dessous dit lesquels. Les dessins sont plus grands, et le nom un cran plus petit.
+
+### Badges
+
+- Vingt-sept badges, dont dix-sept portent leur dessin. Ils s'attribuent tout seuls des que la condition est remplie.
+- « Pionnier » n'a que cent places : une fois la centieme prise, plus personne ne pourra l'obtenir.
+
+### Echow AI
+
+- Un assistant qui repond dans l'application, et qui dit maintenant POURQUOI quand il ne peut pas repondre.
+
+### Telephone
+
+- Les reglages tiennent dans un ecran de telephone : la liste des sections, puis la section choisie.
+- Les amis, l'assistant, les badges, les suggestions et le support ont leur bouton de retour. On y entrait, et plus rien n'en sortait.
+- Le micro redevient atteignable en vocal : la barre de commandes sortait de l'ecran par la gauche.
+
+### Corrections
+
+- La page d'accueil et l'ecran de connexion defilent : tout ce qui passait sous le bord de la fenetre etait inatteignable.
+- « Acces equipe » repond dans l'application de bureau. Le bouton rechargeait tout au lieu de changer d'ecran.
+- Les badges, leurs vignettes et la fiche de profil cessent d'etre illisibles hors du theme sombre.
+- Le cache de l'ancienne interface n'est plus efface a chaque demarrage, ni pendant que la fenetre s'ouvre.
+
 ## 0.9.4
 
 ### Corrections

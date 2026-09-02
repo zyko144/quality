@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useChat } from '@/store/chat';
@@ -284,6 +285,41 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                   <li key={role} className={`profile-badge profile-badge--${role}`}>
                     <Icon name={ROLE_ICON[role]} size={13} />
                     {ROLE_LABEL[role]}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {/*
+              Les badges, nommes, sous les roles.
+              
+              Les dessins a cote du nom disent QU ON en a ; ils ne disent pas
+              lesquels. A vingt-deux pixels une plume dorée et une plume orange
+              se ressemblent, et il faut viser l'infobulle pour les distinguer —
+              ce qui suppose de savoir qu'il y en a une.
+              
+              La liste les nomme, une fois, sous les roles. Ce n'est pas une
+              redite : l'une se regarde d'un coup d'oeil, l'autre se lit.
+            */}
+            {mesBadges.length > 0 ? (
+              <ul className="profile__badges profile__badges--obtenus">
+                {mesBadges.map(({ badge, obtenu }) => (
+                  <li
+                    key={badge.cle}
+                    className="profile-badge-item"
+                    style={{ '--teinte': badge.teinte } as React.CSSProperties}
+                    title={badge.description}
+                  >
+                    <BadgeVisual
+                      badgeCle={badge.cle}
+                      nom={badge.nom}
+                      teinte={badge.teinte}
+                      size={16}
+                    />
+                    <span>{badge.nom}</span>
+                    {obtenu.position !== null ? (
+                      <span className="profile-badge-item__rang">n&deg;{obtenu.position}</span>
+                    ) : null}
                   </li>
                 ))}
               </ul>
