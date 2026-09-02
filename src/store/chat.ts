@@ -175,6 +175,9 @@ interface ChatState {
   openDm: (otherUserId: UUID) => Promise<Channel | null>;
   createGroupDm: (userIds: UUID[], name?: string) => Promise<Channel | null>;
   hideDm: (channelId: UUID) => Promise<void>;
+  /** Sort d'un groupe pour de bon, contrairement a `hideDm` qui ne fait que masquer. */
+  quitterGroupe: (channelId: UUID) => Promise<void>;
+  renommerGroupe: (channelId: UUID, nom: string) => Promise<void>;
 
   toggleBookmark: (messageId: UUID, note?: string | null) => Promise<void>;
   reportMessage: (messageId: UUID, reason: string) => Promise<boolean>;
@@ -767,6 +770,47 @@ export const useChat = create<ChatState>((set, get) => ({
     }));
 
     const { error } = await supabase.rpc('hide_dm', { p_channel_id: channelId });
+    if (error) {
+      set({ error: errorMessage(error) });
+      await get().bootstrap();
+    }
+  },
+
+  /**
+   * Quitte un groupe.
+   *
+   * A ne pas confondre avec `hideDm`, qui retire la conversation de sa propre
+   * liste : les autres continuent de vous y compter, et le moindre message la
+   * fait reapparaitre. Masquer n'est pas partir.
+   */
+  quitterGroupe: async (channelId) => {
+    // Retrait immediat : on vient de decider de sortir, l'attendre serait
+    // laisser croire que le clic n'a rien fait.
+    set((state) => ({
+      channels: state.channels.filter((item) => item.id !== channelId),
+    }));
+
+    const { error } = await supabase.rpc('quitter_groupe', { p_channel_id: channelId });
+    if (error) {
+      set({ error: errorMessage(error) });
+      await get().bootstrap();
+    }
+  },
+
+  renommerGroupe: async (channelId, nom) => {
+    // Le nom change tout de suite : c'est ce qu'on vient de taper, et le voir
+    // apparaitre est la seule confirmation dont on ait besoin.
+    set((state) => ({
+      channels: state.channels.map((item) =>
+        item.id === channelId ? { ...item, name: nom } : item,
+      ),
+    }));
+
+    const { error } = await supabase.rpc('renommer_groupe', {
+      p_channel_id: channelId,
+      p_nom: nom,
+    });
+
     if (error) {
       set({ error: errorMessage(error) });
       await get().bootstrap();

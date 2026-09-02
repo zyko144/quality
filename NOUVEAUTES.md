@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.9
+
+### Groupes
+
+- **On peut enfin quitter un groupe, et le renommer.** Le clic droit sur un groupe ouvre ses actions. Il n'existait rien : « masquer » ne retirait la conversation que de sa propre liste, les autres continuaient de vous y compter, et le moindre message la faisait reapparaitre.
+- Le dernier a partir emporte le groupe avec lui : un groupe vide n'apparait dans aucune liste et personne ne peut y revenir.
+
+### Profil
+
+- L'arobase disparait devant le pseudo. Elle sert a mentionner quelqu'un ; sur sa propre fiche il n'y a personne a mentionner.
+
 ## 9.5.8
 
 ### Mises a jour

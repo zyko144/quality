@@ -276,7 +276,15 @@ export function ProfileCard({ userId }: { userId: UUID }) {
               </div>
 
               <p className="profile__handle">
-                @{profile.username}
+                {/*
+                  Le pseudo sans arobase.
+                  
+                  Elle sert a MENTIONNER quelqu'un — dans un message, dans une
+                  recherche. Sur sa propre fiche il n'y a personne a mentionner :
+                  elle ne fait qu'ajouter un caractere devant un nom qui se
+                  suffit.
+                */}
+                {profile.username}
                 {profile.pronouns ? (
                   <>
                     <span className="profile__dot" aria-hidden="true">

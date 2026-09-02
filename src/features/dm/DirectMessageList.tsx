@@ -9,6 +9,7 @@ import { Icon } from '@/components/Icon';
 import { Avatar, AvatarStack } from '@/components/Avatar';
 import type { Channel, Profile, UUID } from '@/types/db';
 import { UserContextMenu } from '@/features/profile/UserContextMenu';
+import { ContextMenu } from '@/components/ContextMenu';
 
 /**
  * Nom lisible d'une conversation privee.
@@ -151,6 +152,12 @@ export function DirectMessageList() {
    * volume. Il n'y avait qu'a le brancher.
    */
   const [menuAmi, setMenuAmi] = useState<{ userId: string; x: number; y: number } | null>(null);
+  const [menuGroupe, setMenuGroupe] = useState<
+    { id: string; nom: string; x: number; y: number } | null
+  >(null);
+
+  const quitterGroupe = useChat((state) => state.quitterGroupe);
+  const renommerGroupe = useChat((state) => state.renommerGroupe);
   const channels = useChat((state) => state.channels);
   const dmParticipants = useChat((state) => state.dmParticipants);
   const profiles = useChat((state) => state.profiles);
@@ -202,6 +209,33 @@ export function DirectMessageList() {
           userId={menuAmi.userId}
           position={{ x: menuAmi.x, y: menuAmi.y }}
           onClose={() => setMenuAmi(null)}
+        />
+      ) : null}
+
+      {menuGroupe ? (
+        <ContextMenu
+          position={{ x: menuGroupe.x, y: menuGroupe.y }}
+          onClose={() => setMenuGroupe(null)}
+          label="Actions du groupe"
+          entries={[
+            {
+              id: 'renommer',
+              label: 'Renommer le groupe',
+              icon: <Icon name="edit" size={15} />,
+              onSelect: () => {
+                const nom = window.prompt('Nouveau nom du groupe', menuGroupe.nom);
+                if (nom !== null) void renommerGroupe(menuGroupe.id, nom);
+              },
+            },
+            { id: 'sep', separator: true },
+            {
+              id: 'quitter',
+              label: 'Quitter le groupe',
+              icon: <Icon name="log-out" size={15} />,
+              danger: true,
+              onSelect: () => void quitterGroupe(menuGroupe.id),
+            },
+          ]}
         />
       ) : null}
 
@@ -281,10 +315,27 @@ export function DirectMessageList() {
                     }
                     onClick={() => selectChannel(channel.id)}
                     onContextMenu={(event) => {
-                      // Seulement pour une conversation a deux : un groupe n'a
-                      // pas « une » personne dont on ouvrirait la fiche.
-                      if (!other?.id || others.length !== 1) return;
                       event.preventDefault();
+
+                      /*
+                       * Deux menus, selon ce qu'on a sous le curseur.
+                       *
+                       * Une conversation a deux mene a une personne : sa fiche,
+                       * l'ajout en ami, le blocage. Un groupe n'a pas « une »
+                       * personne — il a un nom qu'on peut changer et qu'on peut
+                       * quitter, ce que rien ne permettait de faire.
+                       */
+                      if (channel.kind === 'group') {
+                        setMenuGroupe({
+                          id: channel.id,
+                          nom: title,
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                        return;
+                      }
+
+                      if (!other?.id || others.length !== 1) return;
                       setMenuAmi({ userId: other.id, x: event.clientX, y: event.clientY });
                     }}
                     aria-current={isActive ? 'true' : undefined}
