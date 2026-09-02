@@ -311,40 +311,13 @@
    Badges dans la fiche de profil (ProfileCard) & BadgesPage
    -------------------------------------------------------------------------- */
 
-.profile__badges--obtenus {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 6px 0;
-}
-
-.profile-badge-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 6px;
-  background: var(--bg-sunken);
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-  backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
-}
-
-.profile-badge-item:hover {
-  background: color-mix(in oklab, var(--text-primary) 8%, var(--bg-sunken));
-  border-color: var(--border-strong);
-  transform: translateY(-1px);
-}
-
-.profile-badge-item__rang {
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--badge-color, #6366f1) 30%, transparent);
-  color: var(--text-primary);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
+/*
+ * Les badges dans la fiche de profil.
+ *
+ * Ils y etaient des pastilles portant leur nom en toutes lettres, en liste sous
+ * les roles. Ils sont maintenant a droite du nom, dessin seul : voir
+ * `.profile__fanions` dans `surfaces.css`. A dix-huit pixels le dessin se
+ * reconnait sans etre nomme, et il en faut plusieurs sur une ligne.
+ *
+ * Le nom est passe dans l'infobulle, ou il ne coute aucune place.
+ */

@@ -110,6 +110,36 @@ export function devPreview(name: string): ReactNode | null {
     useChat.setState((state) => ({ profiles: { ...state.profiles, [faux.id]: faux as never } }));
 
     /*
+     * Quelques badges, sinon la ligne du nom se verifie a vide.
+     *
+     * C'est justement leur place a cote du nom qu'on regarde ici, et une fiche
+     * sans badge ne montre pas ce qu'on cherche : comment un nom long cohabite
+     * avec plusieurs dessins, et ce qui se passe quand la ligne deborde.
+     */
+    useBadges.setState({
+      catalogue: [
+        ['pionnier', 'Pionnier', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
+        ['premiere-heure', 'Premiere heure', 'Present le jour de l’ouverture.', 'soutien', '#ec4899', null, 2],
+        ['rapporteur', 'Chasseur de bogues', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
+        ['messages-100k', 'Plume — 100 000', 'A ecrit cent mille messages.', 'succes', '#a855f7', null, 22],
+        ['anciennete-3ans', 'Veteran — 3 ans', 'Compte ouvert depuis plus de trois ans.', 'anciennete', '#f59e0b', null, 41],
+      ].map(([cle, nom, description, famille, teinte, limite, rang]) => ({
+        cle, nom, description, famille, teinte, limite, rang,
+      })) as Badge[],
+      parProfil: {
+        [faux.id]: [
+          { badge_cle: 'pionnier', position: 7, obtenu_le: '2026-08-26T00:20:00.000Z' },
+          { badge_cle: 'premiere-heure', position: null, obtenu_le: '2026-08-26T00:20:00.000Z' },
+          { badge_cle: 'rapporteur', position: null, obtenu_le: '2026-08-30T10:00:00.000Z' },
+          { badge_cle: 'messages-100k', position: null, obtenu_le: '2026-09-01T10:00:00.000Z' },
+          { badge_cle: 'anciennete-3ans', position: null, obtenu_le: '2026-09-01T10:00:00.000Z' },
+        ],
+      },
+      chargement: false,
+      charger: async () => {},
+    });
+
+    /*
      * `?preview=profil:moi` ouvre sa PROPRE fiche.
      *
      * C'est un autre rendu : l'avatar y est enveloppe dans un bouton, la

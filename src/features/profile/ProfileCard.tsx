@@ -227,7 +227,44 @@ export function ProfileCard({ userId }: { userId: UUID }) {
             </div>
 
             <div className="profile__identity">
-              <h2 className="profile__name">{profile.display_name}</h2>
+              {/*
+                Les badges obtenus se rangent a droite du nom.
+
+                Ils etaient plus bas, en pastilles portant leur nom en toutes
+                lettres — une deuxieme liste sous celle des roles, qui poussait
+                le statut et la suite de la fiche vers le bas et se lisait comme
+                un inventaire. Un badge n'est pas une ligne d'inventaire : c'est
+                une marque a cote du nom, et c'est la qu'on la cherche.
+
+                Le nom du badge passe dans l'infobulle. A cette taille le dessin
+                se reconnait sans etre nomme, et il en faut plusieurs sur une
+                ligne.
+              */}
+              <div className="profile__ligne-nom">
+                <h2 className="profile__name">{profile.display_name}</h2>
+
+                {mesBadges.length > 0 ? (
+                  <ul className="profile__fanions">
+                    {mesBadges.map(({ badge, obtenu }) => (
+                      <li
+                        key={badge.cle}
+                        title={
+                          `${badge.nom} : ${badge.description}` +
+                          (obtenu.position !== null ? ` (n°${obtenu.position})` : '')
+                        }
+                      >
+                        <BadgeVisual
+                          badgeCle={badge.cle}
+                          nom={badge.nom}
+                          teinte={badge.teinte}
+                          size={18}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+
               <p className="profile__handle">
                 @{profile.username}
                 {profile.pronouns ? (
@@ -247,37 +284,6 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                   <li key={role} className={`profile-badge profile-badge--${role}`}>
                     <Icon name={ROLE_ICON[role]} size={13} />
                     {ROLE_LABEL[role]}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-
-            {/*
-              Les badges obtenus, apres les roles.
-
-              Les deux se ressemblent a l'ecran et n'ont rien a voir : un role
-              dit ce qu'on peut faire dans un espace, un badge dit ce qu'on a
-              fait. On les separe donc par leur teinte, qui vient du badge
-              lui-meme.
-            */}
-            {mesBadges.length > 0 ? (
-              <ul className="profile__badges profile__badges--obtenus">
-                {mesBadges.map(({ badge, obtenu }) => (
-                  <li
-                    key={badge.cle}
-                    className="profile-badge-item"
-                    title={`${badge.nom} : ${badge.description}`}
-                  >
-                    <BadgeVisual
-                      badgeCle={badge.cle}
-                      nom={badge.nom}
-                      teinte={badge.teinte}
-                      size={20}
-                    />
-                    <span>{badge.nom}</span>
-                    {obtenu.position !== null ? (
-                      <span className="profile-badge-item__rang">#{obtenu.position}</span>
-                    ) : null}
                   </li>
                 ))}
               </ul>

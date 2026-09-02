@@ -8,6 +8,8 @@ Options
     --fond R,G,B  couleur du fond, si l'estimation se trompe
     --seuil A,B   distances de bascule, sur 255 (14,140 par defaut ; la borne
                   basse est remontee toute seule si le fond est bruite)
+    --net S       jette le halo sous S d'opacite (0 a 1) et remet le reste a
+                  l'echelle ; 0.45 retire une lueur qui salit sur page claire
     --principal   ne garde que le dessin, et jette ce qui flotte a cote
     --apercu F    ecrit en plus une planche avant/apres, sur damier
 
@@ -213,6 +215,25 @@ def detourer(
     return Image.fromarray(sortie.astype(np.uint8), 'RGBA')
 
 
+def jeter_le_voile(image: Image.Image, seuil: float) -> Image.Image:
+    """Retire le halo tres transparent, garde l'anticrenelage des vrais bords.
+
+    Le detourage rend la lueur telle qu'elle est : du semi-transparent. C'est
+    exact, et parfois indesirable — sur ces dessins la lueur s'etale largement,
+    et une fois posee sur une page claire elle se lit comme une salissure autour
+    du badge plutot que comme un rayonnement.
+
+    On ne coupe pas net a l'opacite voulue, ce qui crenellerait tous les bords :
+    l'opacite est REMISE A L'ECHELLE. Ce qui etait sous le seuil disparait, ce
+    qui etait au-dessus retrouve une rampe complete, et le pourtour du dessin
+    garde sa transition douce.
+    """
+    a = np.asarray(image).astype(np.float64)
+    plancher = seuil * 255
+    a[..., 3] = np.clip((a[..., 3] - plancher) / (255 - plancher), 0, 1) * 255
+    return Image.fromarray(a.astype(np.uint8), 'RGBA')
+
+
 def garder_le_principal(image: Image.Image, part: float = 0.06) -> Image.Image:
     """Ne garde que le dessin, et jette ce qui flotte a cote.
 
@@ -304,6 +325,8 @@ def main(argv: list[str]) -> int:
 
     source = Image.open(entree)
     detoure = detourer(source, fond, seuil)
+    if 'net' in options:
+        detoure = jeter_le_voile(detoure, float(options['net']))
     if 'principal' in options:
         detoure = garder_le_principal(detoure)
     decoupe = cadrer(detoure, taille, marge)
