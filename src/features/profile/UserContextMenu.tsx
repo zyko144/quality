@@ -290,6 +290,24 @@ export function UserContextMenu({
        * Comme la deconnexion, c'est une demande : le client vise la recoit et
        * change de salon de lui-meme. Voir `Deplacement` dans `useVoice`.
        */
+      /*
+       * S'il n'y a nulle part ou aller, on le dit.
+       *
+       * Sans autre salon vocal, la boucle ci-dessous ne produisait rien et le
+       * menu s'ouvrait sans la moindre mention du deplacement. Une option
+       * absente et une option cassee se ressemblent : on cherche ce qu'on a mal
+       * fait, alors qu'il manque simplement une destination.
+       */
+      if (autresSalonsVocaux.length === 0) {
+        entrees.push({
+          id: 'deplacer-nulle-part',
+          label: 'Aucun autre salon vocal ou deplacer',
+          icon: <Icon name="volume" size={15} />,
+          disabled: true,
+          onSelect: () => undefined,
+        });
+      }
+
       for (const salon of autresSalonsVocaux) {
         entrees.push({
           id: `deplacer-${salon.id}`,

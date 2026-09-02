@@ -1181,6 +1181,70 @@ let cadenceCapture = 0;
     set({ outboundStats: null });
   }
 
+  /**
+   * Demonte un partage d'ecran, quelle que soit la facon dont il s'arrete.
+   *
+   * Il y a deux chemins : le bouton de l'application, et la barre du systeme —
+   * qui declenche l'evenement `ended` de la piste. Chacun faisait son propre
+   * menage, et chacun en oubliait une partie, pas la meme :
+   *
+   *   le bouton         oubliait de retirer `screenAudioSender`, qui restait
+   *                     attache a chaque pair apres la fin du partage ;
+   *   la barre systeme  oubliait d'arreter les pistes locales, la decoupe, et
+   *                     les mesures — la decoupe tient un canevas, une balise
+   *                     video et deux minuteurs, qui continuaient de dessiner
+   *                     dans le vide.
+   *
+   * Deux menages a tenir d'accord, c'est un menage de trop : ils ont diverge, et
+   * le defaut ne se produisait donc que selon la maniere dont on avait coupe.
+   * C'est ce qui le rendait insaisissable — « des fois ca bugue ».
+   *
+   * `pistes` est facultatif : quand la piste s'est arretee d'elle-meme, il n'y a
+   * plus rien a arreter, mais le reste du menage reste du.
+   */
+  function demonterLePartage(pistes: MediaStream | null, sonDeFin: boolean): void {
+    for (const peer of peers.values()) {
+      if (peer.screenSender) {
+        // `removeTrack` declenche `onnegotiationneeded` : la renegociation part
+        // toute seule, sans offre construite a la main.
+        peer.connection.removeTrack(peer.screenSender);
+        peer.screenSender = null;
+      }
+      if (peer.screenAudioSender) {
+        peer.connection.removeTrack(peer.screenAudioSender);
+        peer.screenAudioSender = null;
+      }
+    }
+
+    for (const piste of pistes?.getTracks() ?? []) piste.stop();
+
+    arreterDecoupe?.();
+    arreterDecoupe = null;
+
+    couperSonNatif();
+    couperCaptureNative();
+    stopStats();
+
+    set((etat) => {
+      const moi = etat.userId;
+      return {
+        sharing: false,
+        localScreen: null,
+        partageSansSon: false,
+        raisonSansSon: null,
+        // On oublie qu'on le regardait, sinon le partage suivant heriterait
+        // d'un choix pris pour un autre.
+        watchedShares: moi ? retirer(etat.watchedShares, moi) : etat.watchedShares,
+        focusedShare: etat.focusedShare === moi ? null : etat.focusedShare,
+      };
+    });
+
+    // Pas de son quand c'est le systeme qui a coupe : la personne vient d'agir
+    // ailleurs, et un signal sonore de l'application la surprendrait.
+    if (sonDeFin) playCue('share-stop');
+    publishState();
+  }
+
   function stopSpeechDetection(): void {
     if (speechTimer !== null) {
       window.clearInterval(speechTimer);
@@ -2371,41 +2435,10 @@ let cadenceCapture = 0;
         const { sharing, localScreen } = get();
 
         if (sharing) {
-          for (const peer of peers.values()) {
-            if (peer.screenSender) {
-              // `removeTrack` declenche `onnegotiationneeded` : la renegociation
-              // part toute seule, sans offre construite a la main.
-              peer.connection.removeTrack(peer.screenSender);
-              peer.screenSender = null;
-            }
-          }
-          for (const track of localScreen?.getTracks() ?? []) track.stop();
-
-          // La decoupe tient un canevas, une balise video et deux minuteurs :
-          // les laisser tourner apres l'arret consommerait un coeur pour dessiner
-          // dans le vide.
-          arreterDecoupe?.();
-          arreterDecoupe = null;
-
-          couperSonNatif();
-          couperCaptureNative();
-
-          set((etat) => {
-            const moi = etat.userId;
-            return {
-              sharing: false,
-              localScreen: null,
-              partageSansSon: false,
-              raisonSansSon: null,
-              // On oublie qu'on le regardait, sinon le partage suivant
-              // heriterait d'un choix pris pour un autre.
-              watchedShares: moi ? retirer(etat.watchedShares, moi) : etat.watchedShares,
-              focusedShare: etat.focusedShare === moi ? null : etat.focusedShare,
-            };
-          });
-          stopStats();
-          playCue('share-stop');
-          publishState();
+          // Le meme demontage que pour un arret venu du systeme : voir
+          // `demonterLePartage`. Les deux en tenaient un chacun, et ils avaient
+          // diverge.
+          demonterLePartage(localScreen, true);
           return;
         }
 
@@ -2541,32 +2574,16 @@ let cadenceCapture = 0;
         // Le partage s'arrete aussi depuis la barre du navigateur. Sans suivre cet
         // evenement, l'interface afficherait un partage qui n'existe plus.
         videoTrack.addEventListener('ended', () => {
-          for (const peer of peers.values()) {
-            if (peer.screenSender) {
-              peer.connection.removeTrack(peer.screenSender);
-              peer.screenSender = null;
-            }
-            if (peer.screenAudioSender) {
-              peer.connection.removeTrack(peer.screenAudioSender);
-              peer.screenAudioSender = null;
-            }
-          }
-          couperSonNatif();
-          couperCaptureNative();
-          set((etat) => {
-            const moi = etat.userId;
-            return {
-              sharing: false,
-              localScreen: null,
-              partageSansSon: false,
-              raisonSansSon: null,
-              // On oublie qu'on le regardait, sinon le partage suivant
-              // heriterait d'un choix pris pour un autre.
-              watchedShares: moi ? retirer(etat.watchedShares, moi) : etat.watchedShares,
-              focusedShare: etat.focusedShare === moi ? null : etat.focusedShare,
-            };
-          });
-          publishState();
+          /*
+           * La piste video s'est arretee d'elle-meme, mais le reste du partage
+           * est toujours debout : le son du systeme, la decoupe, les mesures,
+           * et les emetteurs poses chez chaque pair.
+           *
+           * On passe le flux entier pour que ses AUTRES pistes — le son du
+           * partage — soient arretees elles aussi. Sans cela, couper depuis la
+           * barre du systeme laissait le son vivant.
+           */
+          demonterLePartage(get().localScreen, false);
         });
 
         const media = useDevices.getState().media;
