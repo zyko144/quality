@@ -12,6 +12,24 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.2
+
+### Profil
+
+- **Les badges n'affichent plus que leur dessin**, un peu plus petit. Leur nom parait quand on laisse le curseur dessus. La liste nommee sous les roles est retiree : deux presentations du meme fait demandaient de regarder deux fois pour n'apprendre qu'une chose.
+- La fiche revient au centre.
+
+### Badges
+
+- « Chasseur de bogues » devient **Bug Hunter**, le nom que porte son dessin.
+- « Pionnier » devient **100 premiers soutiens** : l'ancien nom ne disait pas ce qui fait sa valeur — cent places, et elles se ferment.
+
+### Vocal
+
+- **Un partage qu'on demande a voir ne disparait plus en silence.** La vignette restait invisible tant que le flux n'etait pas arrive : le clic paraissait ignore. Elle affiche desormais « Connexion au partage… ».
+- L'arret d'un partage fait le meme menage, qu'on coupe depuis l'application ou depuis la barre du systeme. Les deux en oubliaient chacun une partie, pas la meme.
+- Le menu d'un membre dit pourquoi le deplacement est indisponible, au lieu de n'afficher rien.
+
 ## 9.5.1
 
 ### Corrections

@@ -258,7 +258,7 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                           badgeCle={badge.cle}
                           nom={badge.nom}
                           teinte={badge.teinte}
-                          size={22}
+                          size={19}
                         />
                       </li>
                     ))}
