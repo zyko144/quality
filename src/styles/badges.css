@@ -147,6 +147,68 @@
 }
 
 /* --------------------------------------------------------------------------
+   Eteint : ce qu'on n'a pas encore
+
+   Les paliers du haut brillaient pour tout le monde. « Voix - 1 000 h »
+   pulsait, « Plume - 500 000 » rayonnait, alors que personne ne les avait : un
+   badge non obtenu qui brille comme un badge obtenu retire a celui qu'on
+   possede la seule chose qui le distinguait. Le catalogue ressemblait a une
+   collection complete.
+
+   Le dessin et la teinte restent - c'est ce qui donne envie. Ce qui s'eteint,
+   c'est l'emission : halo, pulsation, prisme, reflet. Non pas grise, ce qui se
+   lirait comme un defaut, mais SOMBRE, ce qui se lit comme « pas encore ».
+
+   Le survol rallume. Passer la souris est un geste volontaire, jamais un etat
+   de la page : montrer alors le badge tel qu'il sera une fois obtenu ne trompe
+   personne et donne le but a atteindre.
+
+   Ces regles viennent APRES les paliers a dessein. Elles ont la meme
+   specificite, et c'est l'ordre qui tranche - pas un `!important` qu'il
+   faudrait ensuite contourner ailleurs.
+   -------------------------------------------------------------------------- */
+
+.echow-badge-icon--eteint {
+  background: color-mix(in oklab, var(--badge-color, #6366f1) 9%, #101015);
+  border: 1px solid color-mix(in oklab, var(--badge-color, #6366f1) 26%, transparent);
+  box-shadow: none;
+  color: color-mix(in oklab, var(--badge-color, #6366f1) 68%, #64748b);
+  animation: none;
+}
+
+.echow-badge-icon--eteint svg {
+  /* Sans cela, le `drop-shadow` colore des paliers rares survit a l'extinction. */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* Le reflet holographique des mythiques : une animation permanente sur un
+   badge que personne ne possede attire l'oeil vers ce qui n'existe pas. */
+.echow-badge-icon--eteint .echow-badge-icon__shimmer {
+  display: none;
+}
+
+.echow-badge-icon--eteint:hover {
+  background: color-mix(in oklab, var(--badge-color, #6366f1) 20%, #101015);
+  border-color: color-mix(in oklab, var(--badge-color, #6366f1) 72%, transparent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--badge-color, #6366f1) 38%, transparent);
+  color: var(--badge-color, #6366f1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* La pulsation et le prisme tournent sans fin. Ce qui reste : la couleur et
+     le halo fixe, qui disent la meme chose sans bouger. */
+  .badge-glow--legendary,
+  .badge-glow--mythic {
+    animation: none;
+  }
+
+  .echow-badge-icon__shimmer {
+    animation: none;
+    opacity: 0.25;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Badges dans la fiche de profil (ProfileCard) & BadgesPage
    -------------------------------------------------------------------------- */
 

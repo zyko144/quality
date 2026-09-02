@@ -6,6 +6,8 @@ import { ProfileEditor } from '@/features/profile/ProfileEditor';
 import { useSession } from '@/store/session';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { useUI, type SettingsSection } from '@/store/ui';
+import { BadgesPage } from '@/features/badges/BadgesPage';
+import { useBadges, type Badge } from '@/store/badges';
 
 /**
  * Apercu d'un ecran isole, en developpement seulement.
@@ -22,6 +24,61 @@ import { useUI, type SettingsSection } from '@/store/ui';
  */
 export function devPreview(name: string): ReactNode | null {
   if (name === 'amis') return <FriendsPage />;
+
+  if (name === 'badges') {
+    /*
+     * Les badges, avec un catalogue pose a la main.
+     *
+     * C'est le seul ecran dont l'apparence depend de donnees qu'aucun etat vide
+     * ne represente : un badge se dessine d'apres sa cle et sa teinte, et son
+     * eclat d'apres qu'on le possede ou non. A vide, la page ne montre rien du
+     * tout — donc pas ce qu'il faut regarder.
+     *
+     * L'echantillon couvre les cinq paliers d'eclat et les deux etats, parce
+     * que ce qui se verifie ici est justement leur DIFFERENCE : un catalogue
+     * ou tout brille ne recompense plus rien, et cela ne se voit qu'en mettant
+     * cote a cote ce qu'on a et ce qu'on n'a pas.
+     */
+    const echantillon: Badge[] = [
+      ['pionnier', 'Pionnier', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
+      ['premiere-heure', 'Premiere heure', 'Present le jour de l’ouverture. Ne pourra plus jamais etre obtenu.', 'soutien', '#ec4899', null, 2],
+      ['equipe', 'Equipe Echow', 'Membre de l’equipe qui construit Echow.', 'equipe', '#6366f1', null, 3],
+      ['rapporteur', 'Chasseur de bogues', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
+      ['espace-100', 'Batisseur — 100', 'A cree un espace qui compte au moins cent membres.', 'succes', '#22c55e', null, 10],
+      ['espace-1m', 'Batisseur — 1M', 'A cree un espace qui compte au moins un million de membres.', 'succes', '#f43f5e', null, 13],
+      ['messages-10k', 'Plume — 10 000', 'A ecrit dix mille messages.', 'succes', '#38bdf8', null, 20],
+      ['messages-500k', 'Plume — 500 000', 'A ecrit cinq cent mille messages.', 'succes', '#f97316', null, 23],
+      ['messages-1m', 'Plume — 1 million', 'A ecrit un million de messages.', 'succes', '#ec4899', null, 24],
+      ['vocal-50', 'Voix — 50 h', 'A passe cinquante heures en salon vocal.', 'succes', '#a855f7', null, 310],
+      ['vocal-150', 'Voix — 150 h', 'A passe cent cinquante heures en salon vocal.', 'succes', '#7c3aed', null, 320],
+      ['vocal-1000', 'Voix — 1 000 h', 'A passe mille heures en salon vocal.', 'succes', '#eab308', null, 340],
+      ['vocal-5000', 'Voix — 5 000 h', 'A passe cinq mille heures en salon vocal.', 'succes', '#d946ef', null, 360],
+      ['anciennete-1an', 'Veteran — 1 an', 'Compte ouvert depuis plus d’un an.', 'anciennete', '#94a3b8', null, 40],
+      ['anciennete-5ans', 'Veteran — 5 ans', 'Compte ouvert depuis plus de cinq ans.', 'anciennete', '#3b82f6', null, 42],
+    ].map(([cle, nom, description, famille, teinte, limite, rang]) => ({
+      cle, nom, description, famille, teinte, limite, rang,
+    })) as Badge[];
+
+    const moi = '00000000-0000-4000-8000-000000000003';
+    useSession.setState({ profile: { id: moi } as never });
+    useBadges.setState({
+      catalogue: echantillon,
+      // Deux badges possedes, de deux paliers differents : un mythique et un
+      // epique. C'est a eux qu'on compare les mythiques et epiques d'en bas.
+      parProfil: {
+        [moi]: [
+          { badge_cle: 'pionnier', position: 1, obtenu_le: '2026-08-26T00:12:00.000Z' },
+          { badge_cle: 'vocal-150', position: null, obtenu_le: '2026-09-01T09:00:00.000Z' },
+        ],
+      },
+      compte: { pionnier: 1, 'vocal-150': 4 },
+      chargement: false,
+      // `charger` ecraserait l'echantillon des le montage.
+      charger: async () => {},
+    });
+
+    return <BadgesPage />;
+  }
 
   if (name === 'profil' || name === 'profil:moi') {
     // Un profil rempli, pose directement dans le magasin : la carte se lit mal

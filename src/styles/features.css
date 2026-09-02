@@ -2565,6 +2565,56 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 }
 
 /*
+ * La rangee des trophees : ce qu'on possede, en tete de page.
+ *
+ * Ce fut une grille de vignettes, et chaque badge obtenu s'affichait alors deux
+ * fois — ici, puis a l'identique dans sa famille. Deux cartes semblables a un
+ * ecran d'intervalle se lisent comme un defaut d'affichage.
+ *
+ * Une autre forme, donc, plutot qu'un doublon : le dessin en grand, le nom, le
+ * rang. Ce qu'on possede se regarde ; ce qu'on ne possede pas se lit. La
+ * description et les places restantes vivent en bas, une seule fois.
+ */
+.badges-trophees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge-trophee {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3);
+  border: 1px solid color-mix(in oklab, var(--teinte) 45%, transparent);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    140deg,
+    color-mix(in oklab, var(--teinte) 16%, transparent),
+    var(--bg-raised) 70%
+  );
+}
+
+.badge-trophee__nom {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.badge-trophee__rang {
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--teinte) 30%, transparent);
+  color: var(--teinte);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
  * La vignette.
  *
  * Volontairement sobre : le dessin des badges viendra plus tard, et une

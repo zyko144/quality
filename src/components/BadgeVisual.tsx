@@ -9,6 +9,14 @@ interface BadgeVisualProps {
   size?: number;
   className?: string;
   showGlow?: boolean;
+  /**
+   * Le badge est-il possede ?
+   *
+   * Un badge non obtenu garde son dessin et sa teinte, mais pas son eclat : un
+   * halo identique sur ce qu'on a et sur ce qu'on n'a pas retire au premier
+   * la seule chose qui le distinguait. Voir `badges.css`, section « eteint ».
+   */
+  allume?: boolean;
 }
 
 /**
@@ -31,7 +39,7 @@ export function getBadgeTier(cle: string): { tier: 1 | 2 | 3 | 4 | 5; glowClass:
   return { tier: 1, glowClass: 'badge-glow--common', isMythic: false };
 }
 
-export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, className = '', showGlow = true }: BadgeVisualProps) {
+export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, className = '', showGlow = true, allume = true }: BadgeVisualProps) {
   const { tier, glowClass, isMythic } = getBadgeTier(badgeCle);
 
   // Choix de l'icone SVG en fonction de la famille ou de la cle
@@ -131,7 +139,7 @@ export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, clas
 
   return (
     <div
-      className={`echow-badge-icon ${showGlow ? glowClass : ''} ${isMythic ? 'is-mythic' : ''} ${className}`}
+      className={`echow-badge-icon ${showGlow ? glowClass : ''} ${isMythic ? 'is-mythic' : ''} ${allume ? '' : 'echow-badge-icon--eteint'} ${className}`}
       style={{
         '--badge-color': teinte,
         width: `${size}px`,

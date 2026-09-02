@@ -18,16 +18,30 @@ import {
  *
  * Ce qui fait leur valeur
  * -----------------------
- * Pas le dessin — il n'y en a pas encore, et c'est assume : on pose d'abord ce
- * qu'ils veulent dire. Ce qui les rend desirables, c'est de POUVOIR SE FERMER.
- * « Parmi les cent premiers » ne vaut rien tant que la centieme place est
- * libre, et vaut tout une fois qu'elle est prise. La page montre donc les
- * places restantes en premier : c'est l'information qui donne envie d'agir
- * maintenant plutot que plus tard.
+ * Pas le dessin, meme s'il existe maintenant. Ce qui les rend desirables, c'est
+ * de POUVOIR SE FERMER. « Parmi les cent premiers » ne vaut rien tant que la
+ * centieme place est libre, et vaut tout une fois qu'elle est prise. Les places
+ * restantes sont donc affichees sur chaque badge encore ouvert : c'est
+ * l'information qui donne envie d'agir maintenant plutot que plus tard.
  *
  * Les familles sont separees parce qu'elles ne se meritent pas de la meme
  * facon : etre arrive tot n'est pas un succes, c'est une chance, et les melanger
  * devaloriserait les deux.
+ *
+ * Pourquoi « les votres » n'est pas une grille
+ * -------------------------------------------
+ * Elle l'a ete, et chaque badge possede apparaissait alors DEUX FOIS : une
+ * carte en tete, la meme carte plus bas dans sa famille. Deux cartes identiques
+ * a un ecran d'intervalle se lisent comme un defaut d'affichage, pas comme une
+ * mise en avant.
+ *
+ * Retirer le badge de sa famille aurait ete pire : la serie « Voix » y perdrait
+ * la marche qu'on vient de franchir, et une serie trouee ne se lit plus.
+ *
+ * C'est donc la tete qui change de forme. Une rangee de trophees — le dessin en
+ * grand, le nom, le rang — dit « voici ce que vous avez » sans redire ce que
+ * chaque badge signifie ; la description reste en bas, une seule fois, la ou
+ * elle sert a ceux qui ne l'ont pas encore.
  */
 export function BadgesPage() {
   const catalogue = useBadges((etat) => etat.catalogue);
@@ -76,15 +90,27 @@ export function BadgesPage() {
               : 'Aucun pour l’instant. Les courses ouvertes sont plus bas — certaines se ferment vite.'}
           </p>
         ) : (
-          <ul className="badges-grille badges-grille--mienne">
+          <ul className="badges-trophees">
             {miens.map(({ badge, obtenu }) => (
-              <li key={badge.cle}>
-                <Vignette
-                  badge={badge}
-                  possede
-                  places={placesRestantes(badge, compte)}
-                  position={obtenu.position}
+              <li
+                className="badge-trophee"
+                key={badge.cle}
+                style={{ '--teinte': badge.teinte } as React.CSSProperties}
+              >
+                <BadgeVisual
+                  badgeCle={badge.cle}
+                  nom={badge.nom}
+                  teinte={badge.teinte}
+                  size={52}
                 />
+
+                <span className="badge-trophee__nom">{badge.nom}</span>
+
+                {obtenu.position !== null ? (
+                  <span className="badge-trophee__rang" title="Votre rang d’obtention">
+                    n&deg;{obtenu.position}
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -126,11 +152,12 @@ export function BadgesPage() {
 }
 
 /**
- * Une vignette de badge.
+ * Une vignette de badge, dans le catalogue.
  *
- * Le style viendra plus tard — pour l'instant une pastille teintee et le nom.
- * Ce qui compte deja est la : ce que le badge veut dire, et s'il est encore
- * possible de l'avoir.
+ * Le dessin est allume ou eteint selon qu'on possede le badge ou non. Sans
+ * cela, « Voix — 1 000 h » pulsait exactement comme le badge qu'on vient de
+ * gagner, et la distinction disparaissait : un catalogue entier qui brille ne
+ * recompense plus personne. Voir `badges.css`, section « eteint ».
  */
 function Vignette({
   badge,
@@ -165,6 +192,7 @@ function Vignette({
         nom={badge.nom}
         teinte={badge.teinte}
         size={36}
+        allume={possede}
         className="badge-vignette__visual"
       />
 
