@@ -178,6 +178,8 @@ interface ChatState {
   /** Sort d'un groupe pour de bon, contrairement a `hideDm` qui ne fait que masquer. */
   quitterGroupe: (channelId: UUID) => Promise<void>;
   renommerGroupe: (channelId: UUID, nom: string) => Promise<void>;
+  /** Pose ou retire la photo ou la banniere d'un groupe. `null` revient aux initiales. */
+  imageGroupe: (channelId: UUID, genre: 'icon' | 'banner', url: string | null) => Promise<void>;
 
   toggleBookmark: (messageId: UUID, note?: string | null) => Promise<void>;
   reportMessage: (messageId: UUID, reason: string) => Promise<boolean>;
@@ -809,6 +811,29 @@ export const useChat = create<ChatState>((set, get) => ({
     const { error } = await supabase.rpc('renommer_groupe', {
       p_channel_id: channelId,
       p_nom: nom,
+    });
+
+    if (error) {
+      set({ error: errorMessage(error) });
+      await get().bootstrap();
+    }
+  },
+
+  imageGroupe: async (channelId, genre, url) => {
+    // L'image parait tout de suite : elle vient d'etre choisie, et la voir
+    // apparaitre est la seule confirmation utile.
+    set((state) => ({
+      channels: state.channels.map((item) =>
+        item.id === channelId
+          ? { ...item, [genre === 'icon' ? 'icon_url' : 'banner_url']: url }
+          : item,
+      ),
+    }));
+
+    const { error } = await supabase.rpc('image_groupe', {
+      p_channel_id: channelId,
+      p_genre: genre,
+      p_url: url,
     });
 
     if (error) {

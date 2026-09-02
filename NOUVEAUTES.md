@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.0
+
+### Groupes
+
+- **Un groupe a maintenant sa photo et sa banniere.** Le clic droit permet de les changer. Sans image, trois groupes reunissant les memes personnes ne se distinguaient que par leur nom, dans une liste ou tout le reste se reconnait d'un coup d'oeil.
+- La photo remplace l'empilement des visages dans la liste : l'empilement dit qui est dedans, la photo dit ce que le groupe est.
+
 ## 9.5.9
 
 ### Groupes

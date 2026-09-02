@@ -10,6 +10,7 @@ import { Avatar, AvatarStack } from '@/components/Avatar';
 import type { Channel, Profile, UUID } from '@/types/db';
 import { UserContextMenu } from '@/features/profile/UserContextMenu';
 import { ContextMenu } from '@/components/ContextMenu';
+import { uploadSpaceImage } from '@/lib/upload';
 
 /**
  * Nom lisible d'une conversation privee.
@@ -158,6 +159,39 @@ export function DirectMessageList() {
 
   const quitterGroupe = useChat((state) => state.quitterGroupe);
   const renommerGroupe = useChat((state) => state.renommerGroupe);
+  const imageGroupe = useChat((state) => state.imageGroupe);
+  const moi = useSession((etat) => etat.profile?.id);
+
+  /*
+   * Choisir un fichier sans champ dans la page.
+   *
+   * Un `<input type="file">` pose dans le document devrait etre masque, garde
+   * en reference, et remis a zero apres chaque choix — sans quoi reprendre deux
+   * fois la meme image ne declenche rien. Un element cree pour l'occasion n'a
+   * aucun de ces problemes : il vit le temps du choix.
+   */
+  const choisirImage = (channelId: string, genre: 'icon' | 'banner') => {
+    if (!moi) return;
+
+    const champ = document.createElement('input');
+    champ.type = 'file';
+    champ.accept = 'image/*';
+
+    champ.addEventListener('change', () => {
+      const fichier = champ.files?.[0];
+      if (!fichier) return;
+
+      void uploadSpaceImage(fichier, moi, genre).then((issue) => {
+        if ('error' in issue) {
+          useChat.setState({ error: issue.error });
+          return;
+        }
+        void imageGroupe(channelId, genre, issue.url);
+      });
+    });
+
+    champ.click();
+  };
   const channels = useChat((state) => state.channels);
   const dmParticipants = useChat((state) => state.dmParticipants);
   const profiles = useChat((state) => state.profiles);
@@ -226,6 +260,18 @@ export function DirectMessageList() {
                 const nom = window.prompt('Nouveau nom du groupe', menuGroupe.nom);
                 if (nom !== null) void renommerGroupe(menuGroupe.id, nom);
               },
+            },
+            {
+              id: 'photo',
+              label: 'Changer la photo',
+              icon: <Icon name="image" size={15} />,
+              onSelect: () => choisirImage(menuGroupe.id, 'icon'),
+            },
+            {
+              id: 'banniere',
+              label: 'Changer la banniere',
+              icon: <Icon name="image" size={15} />,
+              onSelect: () => choisirImage(menuGroupe.id, 'banner'),
             },
             { id: 'sep', separator: true },
             {
@@ -341,11 +387,30 @@ export function DirectMessageList() {
                     aria-current={isActive ? 'true' : undefined}
                   >
                     {channel.kind === 'group' ? (
-                      <AvatarStack
-                        profiles={others.map((id) => profiles[id])}
-                        size={26}
-                        max={3}
-                      />
+                      channel.icon_url ? (
+                        /*
+                          La photo du groupe remplace l'empilement des visages.
+                          
+                          L'empilement dit QUI est dedans ; c'est utile tant que
+                          rien d'autre ne distingue le groupe. Des qu'une photo
+                          est posee, elle dit ce que le groupe EST, ce qui se
+                          reconnait plus vite que trois visages de vingt-six
+                          pixels.
+                        */
+                        <img
+                          src={channel.icon_url}
+                          alt=""
+                          className="dm-item__photo"
+                          width={26}
+                          height={26}
+                        />
+                      ) : (
+                        <AvatarStack
+                          profiles={others.map((id) => profiles[id])}
+                          size={26}
+                          max={3}
+                        />
+                      )
                     ) : (
                       <Avatar
                         profile={other}

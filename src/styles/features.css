@@ -3182,3 +3182,18 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   background: color-mix(in oklab, var(--accent) 24%, transparent);
   border-color: var(--accent);
 }
+
+/*
+ * La photo d'un groupe, dans la liste des conversations.
+ *
+ * Ronde et de la meme taille que l'empilement de visages qu'elle remplace :
+ * une image carree parmi des avatars ronds ferait lire la ligne differemment
+ * des autres, alors qu'elle designe la meme chose.
+ */
+.dm-item__photo {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}

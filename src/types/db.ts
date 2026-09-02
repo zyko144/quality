@@ -123,6 +123,16 @@ export interface Channel {
   topic: string | null;
   position: number;
   created_at: ISODate;
+  /**
+   * Photo et banniere d'un groupe.
+   *
+   * Nulles ailleurs : un salon d'espace herite de l'icone de son espace, et une
+   * conversation a deux porte le visage de l'autre. Seul un groupe n'avait
+   * rien — trois groupes avec les memes personnes ne se distinguaient que par
+   * leur nom, dans une liste ou tout le reste se reconnait a une image.
+   */
+  icon_url?: string | null;
+  banner_url?: string | null;
   /** Intervalle minimal entre deux messages d une meme personne, en secondes. */
   slowmode_seconds: number;
   /** Salon verrouille : seule l equipe de moderation peut encore ecrire. */
