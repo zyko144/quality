@@ -345,13 +345,29 @@
   color: var(--text-secondary);
 }
 
+/*
+ * Une mention est une pastille, pas un mot surligne.
+ *
+ * Elle etait collee au texte avec quatre pixels de marge et un coin a peine
+ * arrondi : sur une ligne dense, on ne voyait qu'une tache de couleur, et deux
+ * mentions cote a cote se confondaient en une seule. Une forme fermee — coins
+ * ronds, un peu d'air autour de l'arobase — se lit comme un objet, ce qu'une
+ * mention est.
+ */
 .rt-mention {
-  padding: 1px 4px;
-  border-radius: var(--radius-xs);
-  background: var(--accent-soft);
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
   color: var(--accent-text);
-  font-weight: var(--weight-medium);
-  transition: background-color var(--duration-fast) var(--ease-out);
+  font-weight: var(--weight-semibold);
+  /* Le texte reste sur la ligne : sans cela, la pastille grandit la ligne et
+     l'interligne du paragraphe saute a chaque mention. */
+  line-height: inherit;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
 .rt-mention:hover:not(:disabled) {
@@ -359,16 +375,29 @@
   color: var(--text-on-accent);
 }
 
+/*
+ * Etre mentionne soi-meme se voit sans etre lu.
+ *
+ * Le soulignement d'avant disait « ceci est un lien », pas « ceci vous
+ * concerne ». Un fond plein dans la couleur d'accent le dit du coin de l'oeil,
+ * ce qui est exactement l'usage : on parcourt une conversation en cherchant si
+ * quelque chose nous attend.
+ */
 .rt-mention--self {
-  background: var(--bg-active);
-  box-shadow: inset 0 -2px 0 var(--text-primary);
-  color: var(--text-primary);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+.rt-mention--self:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 86%, #000);
 }
 
 .rt-channel {
-  padding: 1px 4px;
-  border-radius: var(--radius-xs);
-  background: var(--accent-soft);
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--accent) 13%, transparent);
   color: var(--accent-text);
   font-weight: var(--weight-medium);
 }

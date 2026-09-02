@@ -957,9 +957,25 @@
   position: relative;
   padding: 2px 48px 2px 16px;
   transition: background-color var(--duration-fast) var(--ease-in-out);
-  content-visibility: auto;
-  contain-intrinsic-size: auto 44px;
 }
+
+/*
+ * `content-visibility: auto` a ete retire d'ici, et il faut dire pourquoi.
+ *
+ * Il evitait de peindre les messages hors ecran, ce qui est une bonne idee sur
+ * une longue liste. Mais il implique un CONFINEMENT DE PEINTURE : tout ce qui
+ * deborde de la ligne est rogne, sans exception et sans possibilite de le
+ * rouvrir — `overflow: visible` n'a aucune prise dessus.
+ *
+ * Or la barre d'actions deborde volontairement de huit pixels vers le haut,
+ * pour chevaucher la ligne precedente. Elle etait donc coupee net a chaque
+ * survol : le defaut rapporte, « l'encart est un peu coupe, pas beau ».
+ *
+ * Le confinement se paie en pixels manquants, l'absence de confinement en
+ * millisecondes de peinture. Sur des listes de quelques centaines de lignes —
+ * ce que charge une conversation — la seconde ne se mesure pas, la premiere se
+ * voit a chaque survol.
+ */
 
 .message:hover {
   background: var(--message-hover);
@@ -1228,17 +1244,28 @@
    disparait sous le curseur. */
 .message__actions {
   position: absolute;
-  top: -8px;
-  right: 16px;
+  top: -14px;
+  right: 12px;
   display: flex;
   align-items: center;
-  padding: 2px;
-  border-radius: var(--radius-sm);
+  gap: 1px;
+  padding: 3px;
+  /*
+   * Un contour, en plus de l'ombre.
+   *
+   * L'ombre seule suffit sur un fond clair ; sur le fond sombre elle disparait
+   * et la barre semblait posee a meme le texte, sans limite. Le contour la
+   * detache dans les deux themes.
+   */
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-lg);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--duration-fast) var(--ease-in-out);
+  transition:
+    opacity var(--duration-fast) var(--ease-in-out),
+    transform var(--duration-fast) var(--ease-out);
   z-index: 5;
 }
 
@@ -1251,8 +1278,8 @@
 .message__action {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: var(--text-base);

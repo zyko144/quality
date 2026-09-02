@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal } from '@/components/Modal';
 import { Icon } from '@/components/Icon';
 import { RolesPanel } from './RolesPanel';
 import { MembresPanel } from './MembresPanel';
@@ -196,58 +195,84 @@ export function SpaceSettings({
     await bootstrap();
   };
 
+  if (!open) return null;
+
+  /*
+   * Une page entiere, plus une boite.
+   *
+   * Sept onglets, des listes de membres, de salons et de roles : tout cela
+   * tenait dans six cent vingt pixels, ou chaque liste devait defiler dans son
+   * propre creux. On administrait un espace par une fente.
+   *
+   * La forme est celle des reglages de l'application — rail a gauche, contenu a
+   * droite — et ce n'est pas une coincidence : ce sont les memes gestes, et
+   * deux dispositions differentes pour la meme tache obligent a reapprendre a
+   * chaque fois.
+   */
   return (
-    <Modal
-      open={open}
-      title={`Parametres — ${space.name}`}
-      onClose={onClose}
-      width={620}
-      footer={
-        tab === 'general' ? (
-          <>
-            <div className="spacer" />
-            <button type="button" className="btn" onClick={onClose}>
-              Fermer
-            </button>
+    <div className="settings espace-reglages" role="dialog" aria-modal="true"
+      aria-label={`Parametres de ${space.name}`}>
+      <nav className="settings__nav" aria-label="Sections de l'espace">
+        <div className="settings__nav-inner">
+          <p className="settings__nav-title truncate">{space.name}</p>
+
+          <div className="settings__nav-group">
+            <p className="settings__nav-group-title">Espace</p>
+
+            {(
+              [
+                ['general', 'General', 'settings'],
+                ['membres', 'Membres', 'users'],
+                ['salons', 'Salons', 'hash'],
+                ['categories', 'Categories', 'folder'],
+                ['roles', 'Roles', 'shield'],
+              ] as const
+            ).map(([id, label, icon]) => (
+              <button
+                key={id}
+                type="button"
+                className={'settings__navitem' + (tab === id ? ' is-active' : '')}
+                aria-current={tab === id ? 'page' : undefined}
+                onClick={() => setTab(id)}
+              >
+                <Icon name={icon} size={16} />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="settings__nav-group">
+            <p className="settings__nav-group-title">Vous</p>
             <button
               type="button"
-              className="btn btn--primary"
-              disabled={!dirty || busy}
-              onClick={() => void save()}
+              className={'settings__navitem' + (tab === 'preferences' ? ' is-active' : '')}
+              aria-current={tab === 'preferences' ? 'page' : undefined}
+              onClick={() => setTab('preferences')}
             >
-              {busy ? <span className="spinner" /> : null}
-              Enregistrer
+              <Icon name="bell" size={16} />
+              Mes preferences
             </button>
-          </>
-        ) : undefined
-      }
-    >
-      <nav className="mod-tabs" role="tablist">
-        {(
-          [
-            ['general', 'General', 'settings'],
-            ['membres', 'Membres', 'users'],
-            ['salons', 'Salons', 'hash'],
-            ['categories', 'Categories', 'folder'],
-            ['roles', 'Roles', 'shield'],
-            ['preferences', 'Mes preferences', 'bell'],
-            ['danger', 'Zone sensible', 'trash'],
-          ] as const
-        ).map(([id, label, icon]) => (
+          </div>
+
+          <hr className="settings__nav-rule" />
+
           <button
-            key={id}
             type="button"
-            role="tab"
-            aria-selected={tab === id}
-            className={'mod-tab' + (tab === id ? ' is-active' : '')}
-            onClick={() => setTab(id)}
+            className={
+              'settings__navitem settings__navitem--danger' +
+              (tab === 'danger' ? ' is-active' : '')
+            }
+            aria-current={tab === 'danger' ? 'page' : undefined}
+            onClick={() => setTab('danger')}
           >
-            <Icon name={icon} size={15} />
-            {label}
+            <Icon name="trash" size={16} />
+            Zone sensible
           </button>
-        ))}
+        </div>
       </nav>
 
+      <div className="settings__main">
+        <div className="settings__scroll">
       {error ? (
         <p className="mod-error" role="alert">
           <Icon name="x" size={14} />
@@ -514,6 +539,38 @@ export function SpaceSettings({
           )}
         </div>
       ) : null}
-    </Modal>
+        </div>
+
+        {/*
+          L'enregistrement reste au bas de l'onglet general, la ou il y a
+          quelque chose a enregistrer. Les autres onglets agissent
+          immediatement — ajouter un role, retirer un membre — et un bouton
+          « Enregistrer » y laisserait croire qu'on peut encore revenir.
+        */}
+        {tab === 'general' ? (
+          <div className="espace-reglages__pied">
+            <button
+              type="button"
+              className="btn btn--primary"
+              disabled={!dirty || busy}
+              onClick={() => void save()}
+            >
+              {busy ? <span className="spinner" /> : null}
+              Enregistrer
+            </button>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          className="settings__close"
+          onClick={onClose}
+          aria-label="Fermer les parametres de l'espace"
+        >
+          <Icon name="x" size={18} />
+          <span className="settings__close-key">ECHAP</span>
+        </button>
+      </div>
+    </div>
   );
 }

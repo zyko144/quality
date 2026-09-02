@@ -1592,3 +1592,48 @@
     display: none;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Les reglages d'un espace, en page complete
+   -------------------------------------------------------------------------- */
+
+/*
+ * Ils reprennent la coquille des reglages de l'application.
+ *
+ * Ce sont les memes gestes — parcourir des sections, modifier, revenir — et
+ * deux dispositions differentes pour la meme tache obligent a reapprendre a
+ * chaque fois. Ce qui change ici est la place laissee au contenu : sept onglets
+ * tenaient dans une boite de six cent vingt pixels, ou chaque liste de membres
+ * ou de roles devait defiler dans son propre creux.
+ */
+.espace-reglages {
+  z-index: 210;
+}
+
+/*
+ * L'enregistrement reste en bas, hors du defilement.
+ *
+ * Pose au bout de la page, il serait sous mille pixels de formulaire : on
+ * modifierait un nom en haut sans jamais voir le bouton qui le garde.
+ */
+.espace-reglages__pied {
+  position: absolute;
+  right: var(--space-8);
+  bottom: var(--space-6);
+  z-index: 5;
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-floating);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 720px) {
+  .espace-reglages__pied {
+    left: var(--space-4);
+    right: var(--space-4);
+    justify-content: center;
+  }
+}
