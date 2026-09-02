@@ -1,4 +1,5 @@
 import React from 'react';
+import { dessinDe } from './dessinsBadges';
 
 export type BadgeCategory = 'pionnier' | 'premiere-heure' | 'equipe' | 'rapporteur' | 'espace' | 'messages' | 'vocal' | 'anciennete';
 
@@ -42,41 +43,62 @@ export function getBadgeTier(cle: string): { tier: 1 | 2 | 3 | 4 | 5; glowClass:
 export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, className = '', showGlow = true, allume = true }: BadgeVisualProps) {
   const { tier, glowClass, isMythic } = getBadgeTier(badgeCle);
 
+  /*
+   * Le dessin livre remplace le trace vectoriel, quand il existe.
+   *
+   * Il ne s'ajoute pas : une image deja ornee — cadre, lauriers, degrade — dans
+   * une tuile qui porte elle-meme un fond, une bordure et un halo, ce sont deux
+   * cadres l'un dans l'autre. La tuile s'efface donc (voir la classe
+   * `--dessin` dans `badges.css`) et l'eclat passe sur l'image elle-meme.
+   */
+  const dessin = dessinDe(badgeCle);
+
   // Choix de l'icone SVG en fonction de la famille ou de la cle
   const renderIcon = () => {
-    // 1. Top 100 Pionnier (Couronne d'or Royale)
+    // 1. Top 100 Pionnier (Boussole Quantique & Coeur d'Or Solaire)
     if (badgeCle === 'pionnier') {
       return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14v2H5z" fill="currentColor" fillOpacity="0.2" />
-          <circle cx="12" cy="11" r="1.5" fill="#fff" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          {/* Hexagone ciselé */}
+          <polygon points="12 2 21 7.2 21 16.8 12 22 3 16.8 3 7.2" fill="currentColor" fillOpacity="0.2" strokeWidth="2" />
+          {/* Boussole cardinale dorée */}
+          <polygon points="12 5 14.5 11 20 12 14.5 13 12 19 9.5 13 4 12 9.5 11" fill="currentColor" fillOpacity="0.5" stroke="#fff" strokeWidth="1.2" />
+          <circle cx="12" cy="12" r="2.5" fill="#fff" />
         </svg>
       );
     }
 
-    // 2. Premiere Heure / Jour 1 (Etoile Cosmique / Supernova)
+    // 2. Premiere Heure / Jour 1 (Fusee Spatiale en Decollage - "Day One Launch")
     if (badgeCle === 'premiere-heure') {
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m12 2 2.8 5.6 6.2.9-4.5 4.4 1.1 6.1L12 16l-5.6 3 1.1-6.1-4.5-4.4 6.2-.9L12 2z" fill="currentColor" fillOpacity="0.25" />
-          <circle cx="12" cy="11" r="2.5" fill="#fff" fillOpacity="0.8" />
-          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#fff" strokeWidth="1.5" />
+          {/* Corps de la fusee */}
+          <path d="M12 2.5c2.5 2 4.5 5.5 4.5 9.5 0 2-.5 4-1.5 5.5L12 16l-3 1.5c-1-1.5-1.5-3.5-1.5-5.5 0-4 2-7.5 4.5-9.5z" fill="currentColor" fillOpacity="0.3" strokeWidth="1.8" />
+          {/* Hublot lumineux */}
+          <circle cx="12" cy="9" r="1.8" fill="#fff" />
+          {/* Ailerons lateraux */}
+          <path d="M7.5 14l-3.5 2.5v2.5l3.5-1 M16.5 14l3.5 2.5v2.5l-3.5-1" stroke="currentColor" strokeWidth="1.6" />
+          {/* Flamme de propulsion neons */}
+          <path d="M10 17.5l2 4.5 2-4.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
     }
 
-    // 3. Equipe Echow (Bouclier Dev Officiel)
+    // 3. Equipe Echow (Marteau de Forge & Cle de Dev Croises)
     if (badgeCle === 'equipe') {
       return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" fill="currentColor" fillOpacity="0.2" />
-          <path d="M12 7v6 M9 10l3 3 3-3" stroke="#fff" strokeWidth="2" />
-          <circle cx="12" cy="17" r="1" fill="#fff" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {/* Marteau de forgeron staff */}
+          <path d="M15 4l5 5-2 2-5-5 2-2z" fill="currentColor" fillOpacity="0.4" strokeWidth="2" />
+          <line x1="14" y1="8" x2="4" y2="18" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+          {/* Cle mecanique croisee */}
+          <path d="M6 6l3 3 M4.5 7.5l3-3 M19 19l-7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="19" cy="19" r="1.5" fill="#fff" />
         </svg>
       );
     }
 
-    // 4. Chasseur de bogues (Scarabee Cybernetique)
+    // 4. Chasseur de bogues (Scarabee Cybernetique - GARDE TEL QUEL)
     if (badgeCle === 'rapporteur') {
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -86,18 +108,28 @@ export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, clas
       );
     }
 
-    // 5. Batisseur d'Espace (Tour / Chateau de Communaute)
+    // 5. Batisseur d'Espace (Systeme Planetaire & Sphere d'Energie Orbitale - GARDE TEL QUEL)
     if (badgeCle.startsWith('espace-')) {
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 21h16M5 21V7l3-3 3 3v14M13 21V7l3-3 3 3v14" fill="currentColor" fillOpacity="0.2" />
-          <path d="M9 10h.01M9 14h.01M15 10h.01M15 14h.01" strokeWidth="2.5" />
-          {tier >= 4 && <polygon points="12 2 15 5 9 5" fill="#fff" />}
+          {/* Anneau orbital principal */}
+          <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-25 12 12)" stroke="currentColor" strokeWidth={tier >= 3 ? "2" : "1.5"} />
+          {/* Sphere planetaire centrale */}
+          <circle cx="12" cy="12" r={tier >= 4 ? "6.5" : "5"} fill="currentColor" fillOpacity="0.25" strokeWidth="2" />
+          {/* Satellites et lueurs selon le palier */}
+          {tier >= 2 && <circle cx="19" cy="8" r="1.5" fill="#fff" />}
+          {tier >= 3 && <circle cx="5" cy="16" r="1.2" fill="#fff" />}
+          {tier >= 4 && (
+            <>
+              <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(35 12 12)" stroke="#fff" strokeWidth="1.5" strokeDasharray="2 2" />
+              <circle cx="12" cy="12" r="2.5" fill="#fff" />
+            </>
+          )}
         </svg>
       );
     }
 
-    // 6. Messagerie / Plume (Cyber Plume & Encre Digitale)
+    // 6. Messagerie / Plume (Cyber Plume & Encre Digitale - GARDE TEL QUEL)
     if (badgeCle.startsWith('messages-')) {
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -108,23 +140,45 @@ export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, clas
       );
     }
 
-    // 7. Salon Vocal (Casque & Gemme d'Ondes Sonores)
+    // 7. Salon Vocal (Microphone de Studio Professionnel & Ondes Vocales)
     if (badgeCle.startsWith('vocal-')) {
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 14v-2a9 9 0 0 1 18 0v2" />
-          <path d="M4 14a2 2 0 0 1 2-2h1v6H6a2 2 0 0 1-2-2zM17 12h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1z" fill="currentColor" fillOpacity="0.3" />
-          <path d="M10 10v4M12 8v8M14 11v2" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+          {/* Capsule de micro de studio */}
+          <rect x="8.5" y="2.5" width="7" height="11" rx="3.5" fill="currentColor" fillOpacity="0.3" strokeWidth="2" />
+          {/* Grille du micro */}
+          <line x1="8.5" y1="6" x2="15.5" y2="6" stroke="#fff" strokeWidth="1.2" />
+          <line x1="8.5" y1="9" x2="15.5" y2="9" stroke="#fff" strokeWidth="1.2" />
+          {/* Arceau et suspension */}
+          <path d="M5.5 9.5v1.5a6.5 6.5 0 0 0 13 0V9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <line x1="12" y1="17.5" x2="12" y2="21.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="8" y1="21.5" x2="16" y2="21.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          {/* Ondes de diffusion sonores laterales selon le tier */}
+          {tier >= 3 && (
+            <>
+              <path d="M2.5 10a10 10 0 0 1 0 3" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M21.5 10a10 10 0 0 0 0 3" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+            </>
+          )}
         </svg>
       );
     }
 
-    // 8. Anciennete (Bouclier Stellaire / Etoile de Veteran)
+    // 8. Anciennete (Medaille Militaire d'Honneur avec Ruban & Chevrons de Veteran)
     if (badgeCle.startsWith('anciennete-') || badgeCle === 'fidele') {
       return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="currentColor" fillOpacity="0.2" />
-          <circle cx="12" cy="12" r="2.5" fill="#fff" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {/* Ruban superieur militaire */}
+          <polygon points="6 2 18 2 16 9 8 9" fill="currentColor" fillOpacity="0.4" strokeWidth="1.8" />
+          <line x1="12" y1="2" x2="12" y2="9" stroke="#fff" strokeWidth="1.6" />
+          {/* Medaillon rond inferieur */}
+          <circle cx="12" cy="16" r="5.5" fill="currentColor" fillOpacity="0.25" strokeWidth="2" />
+          {/* Chevrons d'honneur de veteran au centre */}
+          <path d="M9.5 15l2.5 2.5 2.5-2.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          {tier >= 3 && (
+            <path d="M9.5 13l2.5 2.5 2.5-2.5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          )}
+          {tier >= 4 && <circle cx="12" cy="16" r="1.5" fill="#fff" />}
         </svg>
       );
     }
@@ -139,7 +193,7 @@ export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, clas
 
   return (
     <div
-      className={`echow-badge-icon ${showGlow ? glowClass : ''} ${isMythic ? 'is-mythic' : ''} ${allume ? '' : 'echow-badge-icon--eteint'} ${className}`}
+      className={`echow-badge-icon ${showGlow ? glowClass : ''} ${isMythic ? 'is-mythic' : ''} ${dessin ? 'echow-badge-icon--dessin' : ''} ${allume ? '' : 'echow-badge-icon--eteint'} ${className}`}
       style={{
         '--badge-color': teinte,
         width: `${size}px`,
@@ -149,10 +203,19 @@ export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, clas
       aria-label={nom}
     >
       <div className="echow-badge-icon__halo" aria-hidden="true" />
-      <div className="echow-badge-icon__svg-wrap">
-        {renderIcon()}
-      </div>
-      {isMythic && <div className="echow-badge-icon__shimmer" aria-hidden="true" />}
+
+      {dessin ? (
+        /*
+         * `alt` vide, et non le nom du badge : le conteneur porte deja
+         * `aria-label`, et le repeter ferait annoncer le badge deux fois de
+         * suite par un lecteur d'ecran.
+         */
+        <img className="echow-badge-icon__dessin" src={dessin} alt="" draggable={false} />
+      ) : (
+        <div className="echow-badge-icon__svg-wrap">{renderIcon()}</div>
+      )}
+
+      {isMythic && !dessin && <div className="echow-badge-icon__shimmer" aria-hidden="true" />}
     </div>
   );
 }

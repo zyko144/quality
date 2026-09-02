@@ -1,5 +1,15 @@
 ﻿/* ==========================================================================
-   Badges Discord-Style Echow - Effets Neons, Paliers et Raretés
+   Badges Echow - dessins, paliers de rarete et eclat
+
+   Les fonds etaient ecrits en dur : #111116, #0f0f14, #0d0d12, et un texte
+   #e2e8f0 sur la puce du profil. Choisis pour le theme sombre, ils faisaient de
+   chaque badge un carre noir sur une page claire, et rendaient le nom du badge
+   illisible dans la fiche de profil.
+
+   Ils passent par `--bg-sunken` et `--text-primary`, qui basculent deja avec le
+   theme. En sombre, la valeur du jeton (#0f0f12) est a un point des couleurs
+   qu'elle remplace : l'apparence ne change pas, elle cesse seulement d'etre
+   vraie pour un seul theme.
    ========================================================================== */
 
 .echow-badge-icon {
@@ -9,7 +19,7 @@
   justify-content: center;
   flex-shrink: 0;
   border-radius: 8px;
-  background: color-mix(in oklab, var(--badge-color, #6366f1) 18%, #111116);
+  background: color-mix(in oklab, var(--badge-color, #6366f1) 18%, var(--bg-sunken));
   border: 1px solid color-mix(in oklab, var(--badge-color, #6366f1) 45%, transparent);
   color: var(--badge-color, #6366f1);
   padding: 3px;
@@ -69,7 +79,7 @@
 
 /* Tier 3 - Épique / Électrique & Éclatant */
 .badge-glow--epic {
-  background: color-mix(in oklab, var(--badge-color) 25%, #0f0f14);
+  background: color-mix(in oklab, var(--badge-color) 25%, var(--bg-sunken));
   border-color: color-mix(in oklab, var(--badge-color) 85%, transparent);
   box-shadow: 0 0 12px color-mix(in oklab, var(--badge-color) 45%, transparent), inset 0 0 6px color-mix(in oklab, var(--badge-color) 30%, transparent);
 }
@@ -84,7 +94,7 @@
 
 /* Tier 4 - Légendaire / Laser Néon Incandescent */
 .badge-glow--legendary {
-  background: radial-gradient(circle at center, color-mix(in oklab, var(--badge-color) 40%, transparent) 0%, #0d0d12 100%);
+  background: radial-gradient(circle at center, color-mix(in oklab, var(--badge-color) 40%, transparent) 0%, var(--bg-sunken) 100%);
   border: 1.5px solid var(--badge-color);
   box-shadow: 0 0 15px color-mix(in oklab, var(--badge-color) 65%, transparent), 0 0 30px color-mix(in oklab, var(--badge-color) 25%, transparent);
   animation: pulse-legendary 3s ease-in-out infinite alternate;
@@ -105,8 +115,12 @@
 
 /* Tier 5 - Mythique / Prisme Chromatique & Aura Cosmique (Top 100, 1M msg, 5000h, 1M espace, 10 ans) */
 .badge-glow--mythic {
-  background: linear-gradient(135deg, rgba(244, 63, 94, 0.25), rgba(168, 85, 247, 0.25), rgba(59, 130, 246, 0.25), rgba(234, 179, 8, 0.25));
-  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  background:
+    linear-gradient(135deg, rgba(244, 63, 94, 0.25), rgba(168, 85, 247, 0.25), rgba(59, 130, 246, 0.25), rgba(234, 179, 8, 0.25)),
+    var(--bg-sunken);
+  /* Un liptique blanc disparait sur une page claire. On prend le contraire du
+     texte : clair sur sombre, sombre sur clair, sans avoir a le decliner. */
+  border: 1.5px solid color-mix(in oklab, var(--text-primary) 60%, transparent);
   box-shadow: 0 0 18px rgba(236, 72, 153, 0.7), 0 0 30px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3);
   animation: chromatic-shift 4s linear infinite;
 }
@@ -147,6 +161,84 @@
 }
 
 /* --------------------------------------------------------------------------
+   Le dessin livre
+
+   Quand un badge a son image, la tuile s'efface. Une illustration deja ornee —
+   cadre, lauriers, degrade, lueur — posee dans une tuile qui porte elle-meme un
+   fond, une bordure et un halo, ce sont deux cadres l'un dans l'autre : le
+   dessin y perd, et la tuile ne dit plus rien.
+
+   L'eclat ne disparait pas pour autant, il change de support : ce n'est plus la
+   boite qui rayonne mais l'image, par `drop-shadow`, qui suit sa silhouette au
+   lieu de son carre.
+   -------------------------------------------------------------------------- */
+
+.echow-badge-icon--dessin {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  animation: none;
+}
+
+.echow-badge-icon__dessin {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Le detourage laisse des bords en demi-teinte ; un rendu qui les durcit les
+     ferait crenele a la taille ou ces vignettes s'affichent vraiment. */
+  image-rendering: auto;
+  transition: filter 0.2s ease;
+}
+
+.echow-badge-icon--dessin .echow-badge-icon__dessin {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+.badge-glow--rare.echow-badge-icon--dessin .echow-badge-icon__dessin {
+  filter: drop-shadow(0 0 4px color-mix(in oklab, var(--badge-color) 55%, transparent));
+}
+
+.badge-glow--epic.echow-badge-icon--dessin .echow-badge-icon__dessin {
+  filter: drop-shadow(0 0 5px color-mix(in oklab, var(--badge-color) 70%, transparent));
+}
+
+.badge-glow--legendary.echow-badge-icon--dessin .echow-badge-icon__dessin {
+  filter: drop-shadow(0 0 6px var(--badge-color)) drop-shadow(0 0 12px color-mix(in oklab, var(--badge-color) 45%, transparent));
+}
+
+.badge-glow--mythic.echow-badge-icon--dessin .echow-badge-icon__dessin {
+  filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.75)) drop-shadow(0 0 14px rgba(59, 130, 246, 0.55));
+}
+
+/*
+ * Un dessin qu'on n'a pas encore : decolore, et non assombri.
+ *
+ * L'extinction par le fond marche pour une pastille teintee, qui n'est qu'une
+ * couleur ; elle ne marche pas pour une illustration, qui garderait toutes ses
+ * couleurs sur un fond devenu sombre et brillerait d'autant plus. La couleur
+ * est justement ce qu'il faut lui retirer — c'est aussi ce que le joueur lit
+ * depuis toujours comme « pas encore debloque ».
+ *
+ * Pas un gris total : il reste un souffle de teinte, assez pour reconnaitre le
+ * badge dans la serie sans le confondre avec ceux qu'on possede.
+ */
+.echow-badge-icon--dessin.echow-badge-icon--eteint .echow-badge-icon__dessin {
+  filter: grayscale(0.82) brightness(0.62) contrast(0.92);
+}
+
+.echow-badge-icon--dessin.echow-badge-icon--eteint:hover .echow-badge-icon__dessin {
+  filter: grayscale(0.15) brightness(0.94);
+}
+
+.echow-badge-icon--dessin.echow-badge-icon--eteint,
+.echow-badge-icon--dessin.echow-badge-icon--eteint:hover {
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
    Eteint : ce qu'on n'a pas encore
 
    Les paliers du haut brillaient pour tout le monde. « Voix - 1 000 h »
@@ -169,7 +261,7 @@
    -------------------------------------------------------------------------- */
 
 .echow-badge-icon--eteint {
-  background: color-mix(in oklab, var(--badge-color, #6366f1) 9%, #101015);
+  background: color-mix(in oklab, var(--badge-color, #6366f1) 9%, var(--bg-sunken));
   border: 1px solid color-mix(in oklab, var(--badge-color, #6366f1) 26%, transparent);
   box-shadow: none;
   color: color-mix(in oklab, var(--badge-color, #6366f1) 68%, #64748b);
@@ -188,7 +280,7 @@
 }
 
 .echow-badge-icon--eteint:hover {
-  background: color-mix(in oklab, var(--badge-color, #6366f1) 20%, #101015);
+  background: color-mix(in oklab, var(--badge-color, #6366f1) 20%, var(--bg-sunken));
   border-color: color-mix(in oklab, var(--badge-color, #6366f1) 72%, transparent);
   box-shadow: 0 0 12px color-mix(in oklab, var(--badge-color, #6366f1) 38%, transparent);
   color: var(--badge-color, #6366f1);
@@ -224,19 +316,19 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px 4px 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-subtle);
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--text-primary);
   backdrop-filter: blur(8px);
   transition: all 0.2s ease;
 }
 
 .profile-badge-item:hover {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: color-mix(in oklab, var(--text-primary) 8%, var(--bg-sunken));
+  border-color: var(--border-strong);
   transform: translateY(-1px);
 }
 
@@ -244,8 +336,8 @@
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: color-mix(in oklab, var(--badge-color, #6366f1) 30%, transparent);
+  color: var(--text-primary);
   font-weight: 700;
   letter-spacing: 0.02em;
 }

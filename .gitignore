@@ -46,3 +46,6 @@ src-tauri/quality.key.password
 
 # Ecrit par `vercel link` : identifiants de projet, propres a cette machine.
 siteweb/.env.local
+
+# Python (outils)
+__pycache__/
