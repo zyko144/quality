@@ -1568,14 +1568,30 @@
    fois pour atteindre deux champs.
    ========================================================================== */
 
+/*
+ * L'ecran de connexion defile dans ses propres bornes.
+ *
+ * `min-height: 100vh` avec `height: auto` le laissait grandir avec son contenu,
+ * dans un `#root` a hauteur fixe et un `body` en `overflow: hidden`. Le
+ * formulaire depassait donc sans que rien ne defile — le bouton « Entrer »
+ * sortait par le bas des que la fenetre etait un peu basse, ce qui est le cas
+ * ordinaire dans l'application de bureau.
+ *
+ * `align-content: safe center` et non `place-items: center` : centrer un contenu
+ * plus haut que son conteneur le fait deborder des DEUX cotes, et la moitie
+ * haute devient inatteignable meme en defilant. `safe` renonce au centrage des
+ * qu'il couperait quelque chose.
+ */
 .auth {
   display: grid;
   /* La colonne de presentation n'existe plus : sans cette remise a zero, la
      grille garde ses deux colonnes et la carte se pose dans la premiere. */
   grid-template-columns: minmax(0, 1fr);
-  place-items: center;
-  min-height: 100vh;
-  height: auto;
+  justify-items: center;
+  align-content: safe center;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-6);
 }
 

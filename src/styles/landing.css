@@ -6,8 +6,27 @@
    c'est le texte qui doit convaincre.
    ========================================================================== */
 
+/*
+ * La presentation defile dans ses propres bornes.
+ *
+ * `html` et `body` sont en `overflow: hidden` — voir `base.css` : l'application
+ * est une coquille a hauteur fixe, et ce sont ses panneaux qui defilent. Cette
+ * page-ci n'est pas une coquille, c'est une page longue, et elle n'avait aucun
+ * conteneur pour defiler : tout ce qui passait sous la fenetre etait simplement
+ * inatteignable.
+ *
+ * On le voit surtout dans l'application de bureau, ou la fenetre est plus basse
+ * qu'un navigateur : selon la hauteur, « Commencer » et « Se connecter » se
+ * retrouvaient sous le bord, et la page paraissait morte alors qu'elle allait
+ * bien — on ne pouvait simplement pas atteindre ses boutons.
+ *
+ * `height` et non `min-height` : un conteneur qui defile doit avoir une hauteur
+ * a lui, sinon il grandit avec son contenu et rien ne defile jamais.
+ */
 .landing {
-  min-height: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   color: var(--text-primary);
 }
 

@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.9.4
+
+### Corrections
+
+- **La page d'accueil et l'ecran de connexion defilent enfin.** Tout ce qui passait sous le bord de la fenetre etait inatteignable : selon la hauteur, « Commencer », « Se connecter » et « Entrer » se retrouvaient hors de portee, et la page paraissait morte alors qu'elle allait bien.
+
 ## 0.9.3
 
 ### Maintenance
