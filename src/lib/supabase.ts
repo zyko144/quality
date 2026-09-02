@@ -3,6 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 const url = import.meta.env['VITE_SUPABASE_URL'];
 const key = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
 
+/**
+ * L'adresse du projet et sa cle publiable.
+ *
+ * Exportees parce qu'un appel en DIFFUSION ne peut pas passer par le client :
+ * `functions.invoke` attend la reponse entiere avant de la rendre. Echow AI
+ * appelle donc la fonction avec `fetch`, et il lui faut ces deux valeurs.
+ *
+ * La cle est publiable : elle vit deja dans le navigateur, et ce qui protege
+ * les donnees ce sont les politiques RLS, pas son secret.
+ */
+export const SUPABASE_URL = url as string;
+export const SUPABASE_KEY = key as string;
+
 if (!url || !key) {
   throw new Error(
     'Configuration Supabase manquante. Copiez .env.example vers .env.local et ' +

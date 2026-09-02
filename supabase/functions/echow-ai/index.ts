@@ -261,7 +261,7 @@ Deno.serve(async (requete) => {
     /* ------------------------------------------------------------------ */
 
     const reponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODELE}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODELE}:streamGenerateContent?alt=sse`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cle },
@@ -333,45 +333,118 @@ Deno.serve(async (requete) => {
       );
     }
 
-    const resultat = await reponse.json();
-    const texte: string =
-      resultat?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ??
-      '';
-
-    if (!texte.trim()) {
-      return repondre(
-        {
-          erreur: 'reponse-vide',
-          message:
-            'Je n’ai pas su repondre a celle-ci. Le support humain pourra vous aider.' +
-            String.fromCharCode(10) +
-            '[[SUPPORT]]',
-        },
-        200,
-      );
-    }
-
     /* ------------------------------------------------------------------ */
-    /* 5. On compte, apres coup                                            */
+    /* 5. On relaie au fil de l'eau                                        */
     /* ------------------------------------------------------------------ */
 
     /*
-     * Le compteur monte APRES la reponse, pas avant.
+     * Le texte part par morceaux, des le premier mot.
      *
-     * Compter d'abord ferait payer les appels qui echouent — une coupure
-     * reseau, un service indisponible — et l'on perdrait son quota sans avoir
-     * rien obtenu. Le risque inverse, deux appels simultanes comptes pour un,
-     * coute une question sur trente.
+     * Attendre la reponse entiere avant de l'envoyer laissait la personne
+     * devant un ecran vide pendant toute l'ecriture — plusieurs secondes, et
+     * d'autant plus longtemps que la reponse etait bonne. La longueur devenait
+     * une punition.
+     *
+     * Tout ce qui peut echouer a deja ete verifie AVANT d'arriver ici : la
+     * session, le quota, la cle, et le refus de Gemini. C'est la condition pour
+     * pouvoir diffuser — une fois le flux ouvert, on ne peut plus revenir en
+     * arriere et repondre une erreur, le client a deja commence a afficher.
+     *
+     * Chaque morceau part en une ligne de JSON, terminee par un saut de ligne.
+     * Le client peut ainsi lire ligne par ligne sans assembler lui-meme les
+     * paquets, qui arrivent decoupes n'importe ou.
      */
-    const jetons = resultat?.usageMetadata?.totalTokenCount ?? 0;
+    let total = '';
+    let jetons = 0;
 
-    await supabase.rpc('ia_compter', { p_jetons: jetons });
+    const flux = new ReadableStream({
+      async start(controle) {
+        const sortie = new TextEncoder();
+        const lecteur = reponse.body!.getReader();
+        const decodeur = new TextDecoder();
+        let reste = '';
 
-    return repondre({
-      texte,
-      restant: Math.max(0, PAR_JOUR - deja - 1),
-      jetons,
-      modele: MODELE,
+        const envoyer = (objet: unknown) =>
+          controle.enqueue(sortie.encode(JSON.stringify(objet) + String.fromCharCode(10)));
+
+        try {
+          for (;;) {
+            const { done, value } = await lecteur.read();
+            if (done) break;
+
+            reste += decodeur.decode(value, { stream: true });
+
+            // Les evenements arrivent en lignes `data: {...}`. Le dernier
+            // fragment est souvent incomplet : on le garde pour le tour suivant.
+            const lignes = reste.split(String.fromCharCode(10));
+            reste = lignes.pop() ?? '';
+
+            for (const ligne of lignes) {
+              if (!ligne.startsWith('data:')) continue;
+
+              const charge = ligne.slice(5).trim();
+              if (!charge || charge === '[DONE]') continue;
+
+              try {
+                const bout = JSON.parse(charge);
+                const morceau: string =
+                  bout?.candidates?.[0]?.content?.parts
+                    ?.map((p: { text?: string }) => p.text ?? '')
+                    .join('') ?? '';
+
+                if (bout?.usageMetadata?.totalTokenCount) {
+                  jetons = bout.usageMetadata.totalTokenCount;
+                }
+
+                if (morceau) {
+                  total += morceau;
+                  envoyer({ morceau });
+                }
+              } catch {
+                // Un evenement illisible ne doit pas interrompre les suivants :
+                // le flux continue, et il en manquera au pire quelques mots.
+              }
+            }
+          }
+
+          /*
+           * Rien du tout : l'assistant n'a pas su repondre.
+           *
+           * Le meme cas qu'avant la diffusion, mais il ne peut plus etre une
+           * erreur — le flux est ouvert. Il devient donc le texte lui-meme.
+           */
+          if (!total.trim()) {
+            envoyer({
+              morceau:
+                'Je n’ai pas su repondre a celle-ci. Le support humain pourra vous aider.' +
+                String.fromCharCode(10) +
+                '[[SUPPORT]]',
+            });
+          }
+
+          // Le compteur monte apres coup, comme avant : une reponse qui n'est
+          // jamais arrivee ne doit pas etre payee.
+          await supabase.rpc('ia_compter', { p_jetons: jetons });
+
+          envoyer({ fin: true, restant: Math.max(0, PAR_JOUR - deja - 1), jetons, modele: MODELE });
+        } catch (cause) {
+          console.error('[echow-ai] Flux interrompu', String(cause).slice(0, 300));
+          envoyer({ fin: true, interrompu: true });
+        } finally {
+          controle.close();
+        }
+      },
+    });
+
+    return new Response(flux, {
+      status: 200,
+      headers: {
+        ...CORS,
+        // `x-ndjson` : une ligne de JSON par morceau. Pas `text/event-stream`,
+        // dont le format n'apporterait rien ici et qu'il faudrait re-analyser.
+        'Content-Type': 'application/x-ndjson; charset=utf-8',
+        'Cache-Control': 'no-cache',
+      },
     });
   } catch (cause) {
     console.error('[echow-ai] Echec inattendu', String(cause).slice(0, 400));

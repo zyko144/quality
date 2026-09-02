@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '@/lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_KEY } from '@/lib/supabase';
 import { journal } from '@/lib/journal';
 
 /**
@@ -19,8 +19,16 @@ import { journal } from '@/lib/journal';
 export interface Tour {
   role: 'user' | 'model';
   texte: string;
-  /** Vrai tant que la reponse n'est pas arrivee. */
+  /** Vrai tant que rien n'est arrive : c'est l'etat des points de reflexion. */
   enAttente?: boolean;
+  /**
+   * Vrai pendant que la reponse s'ecrit.
+   *
+   * Distinct de `enAttente` : les points ont deja cede la place au texte, mais
+   * la reponse n'est pas finie. Sans cette distinction, chaque morceau recu
+   * aurait remis les points a la place du texte deja affiche.
+   */
+  enCours?: boolean;
 }
 
 interface EtatIA {
@@ -67,17 +75,24 @@ export const useEchowAI = create<EtatIA>((set, get) => ({
       ],
     }));
 
-    /** Remplace la reponse en attente par ce qui est arrive. */
-    const poser = (contenu: string) =>
+    /**
+     * Ecrit dans la reponse en cours.
+     *
+     * `fini` distingue les deux usages : pendant la diffusion la ligne reste
+     * « occupee » — le champ de saisie attend, et les points de reflexion ont
+     * deja cede la place au texte qui arrive. Au dernier morceau seulement, la
+     * main revient.
+     */
+    const poser = (contenu: string, fini = true) =>
       set((etat) => {
         const suite = [...etat.echanges];
         for (let i = suite.length - 1; i >= 0; i -= 1) {
-          if (suite[i]?.enAttente) {
-            suite[i] = { role: 'model', texte: contenu };
+          if (suite[i]?.enAttente || suite[i]?.enCours) {
+            suite[i] = { role: 'model', texte: contenu, enCours: !fini };
             break;
           }
         }
-        return { echanges: suite, occupe: false };
+        return { echanges: suite, ...(fini ? { occupe: false } : null) };
       });
 
     try {
@@ -93,33 +108,49 @@ export const useEchowAI = create<EtatIA>((set, get) => ({
         .slice(-MEMOIRE - 1, -1)
         .map((tour) => ({ role: tour.role, texte: tour.texte }));
 
-      const { data, error } = await supabase.functions.invoke('echow-ai', {
-        body: { question: texte, historique },
+      /*
+       * On appelle la fonction directement, pas par `invoke`.
+       *
+       * `functions.invoke` attend la reponse ENTIERE avant de la rendre : il ne
+       * peut pas diffuser, et c'est justement ce qu'on veut ici. `fetch` donne
+       * acces au corps au fur et a mesure.
+       */
+      const { data: session } = await supabase.auth.getSession();
+      const jeton = session.session?.access_token;
+
+      if (!jeton) {
+        poser('');
+        set({ erreur: 'Votre session a expire. Reconnectez-vous.' });
+        return;
+      }
+
+      const reponse = await fetch(`${SUPABASE_URL}/functions/v1/echow-ai`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${jeton}`,
+          apikey: SUPABASE_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question: texte, historique }),
       });
 
-      if (error) {
-        /*
-         * Le corps de la reponse porte le vrai message.
-         *
-         * `invoke` rend une erreur generique des que le statut n'est pas 200 :
-         * « quota atteint » et « service en panne » y ressemblent, alors que
-         * l'un se resout en attendant demain et l'autre pas.
-         */
+      /*
+       * Une erreur arrive AVANT le flux, jamais pendant.
+       *
+       * La fonction verifie tout — session, quota, cle, refus de Gemini — avant
+       * d'ouvrir la diffusion. Un statut different de 200 porte donc toujours
+       * un corps JSON complet, comme avant.
+       */
+      if (!reponse.ok) {
         let message = 'L’assistant n’a pas repondu. Reessayez dans un instant.';
 
         try {
-          const corps = await (error as { context?: Response }).context?.json();
+          const corps = await reponse.json();
           if (corps?.message) message = corps.message;
           if (typeof corps?.restant === 'number') set({ restant: corps.restant });
 
           /*
            * La raison exacte part au journal.
-           *
-           * La fonction la renvoie dans `detail` — « cle refusee », « quota
-           * epuise », « modele inconnu » — et le client la jetait. Restait
-           * « L'assistant est momentanement indisponible », qui ne dit ni ce
-           * qui se passe ni quoi faire, ni a celui qui lit ni a celui qui
-           * repare.
            *
            * Elle ne s'affiche pas : elle vient d'un service tiers et peut
            * contenir n'importe quoi. Le journal la garde pour qui la cherche.
@@ -137,14 +168,63 @@ export const useEchowAI = create<EtatIA>((set, get) => ({
         poser('');
         set((etat) => ({
           erreur: message,
-          // La ligne en attente n'a plus lieu d'etre : l'erreur la remplace.
           echanges: etat.echanges.filter((tour) => tour.texte !== '' || tour.role === 'user'),
         }));
         return;
       }
 
-      poser(data?.texte ?? '');
-      if (typeof data?.restant === 'number') set({ restant: data.restant });
+      /*
+       * Le flux, ligne par ligne.
+       *
+       * Chaque ligne est un objet JSON complet — c'est la fonction qui garantit
+       * ce decoupage. Les paquets reseau, eux, arrivent coupes n'importe ou :
+       * le fragment de fin est donc garde pour le tour suivant.
+       */
+      const lecteur = reponse.body?.getReader();
+      if (!lecteur) {
+        poser('');
+        set({ erreur: 'L’assistant n’a rien renvoye.' });
+        return;
+      }
+
+      const decodeur = new TextDecoder();
+      let reste = '';
+      let recu = '';
+
+      for (;;) {
+        const { done, value } = await lecteur.read();
+        if (done) break;
+
+        reste += decodeur.decode(value, { stream: true });
+        const lignes = reste.split(String.fromCharCode(10));
+        reste = lignes.pop() ?? '';
+
+        for (const ligne of lignes) {
+          if (!ligne.trim()) continue;
+
+          try {
+            const bout = JSON.parse(ligne);
+
+            if (typeof bout.morceau === 'string') {
+              recu += bout.morceau;
+              poser(recu, false);
+            }
+
+            if (bout.fin) {
+              if (typeof bout.restant === 'number') set({ restant: bout.restant });
+              if (bout.interrompu && !recu) {
+                set({ erreur: 'La reponse a ete interrompue. Reessayez.' });
+              }
+            }
+          } catch {
+            // Une ligne illisible ne doit pas arreter les suivantes.
+          }
+        }
+      }
+
+      // La main revient, meme si rien n'est arrive : sans cela le champ de
+      // saisie resterait bloque sur une reponse qui ne viendra plus.
+      poser(recu);
     } catch (cause) {
       poser('');
       set((etat) => ({

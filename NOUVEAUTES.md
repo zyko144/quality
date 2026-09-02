@@ -12,6 +12,15 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.3
+
+### Echow AI
+
+- **La reponse s'ecrit sous vos yeux.** Elle n'apparaissait qu'une fois terminee : on attendait plusieurs secondes devant un ecran vide, et plus la reponse etait bonne, plus l'attente etait longue. Les mots paraissent maintenant des le premier.
+- Les reponses sont plus courtes : deux a quatre phrases, la reponse en premier.
+- **Le support s'ouvre d'un clic** depuis une reponse, au lieu d'un chemin ecrit a la main — qui designait d'ailleurs un endroit ou le support n'a jamais ete.
+- Une surcharge des serveurs ne se confond plus avec une panne.
+
 ## 9.5.2
 
 ### Profil
