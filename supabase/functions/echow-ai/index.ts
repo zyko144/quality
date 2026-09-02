@@ -87,7 +87,15 @@ const PAR_JOUR_TOTAL = Number(Deno.env.get('IA_LIMITE_GLOBALE') ?? '1400');
  * a expliquer un reglage, et forcent des reponses courtes — ce qu'on veut de
  * toute facon.
  */
-const REPONSE_MAX = 800;
+/**
+ * La longueur maximale d'une reponse.
+ *
+ * Six cents plutot que huit cents : une reponse de support qui depasse une
+ * dizaine de lignes n'est plus lue, et chaque jeton produit est du temps
+ * d'attente. Ce qui ne tient pas en six cents jetons releve du support humain,
+ * vers lequel la consigne sait deja renvoyer.
+ */
+const REPONSE_MAX = 600;
 
 /** Longueur maximale d'une question. Au-dela, c'est un texte colle. */
 const QUESTION_MAX = 2000;
@@ -240,6 +248,25 @@ Deno.serve(async (requete) => {
           generationConfig: {
             maxOutputTokens: REPONSE_MAX,
             temperature: 0.6,
+
+            /*
+             * On coupe la reflexion prealable.
+             *
+             * Les modeles Flash recents deliberent avant de repondre : ils
+             * produisent des jetons de raisonnement qui ne sont jamais montres,
+             * et qui s'ajoutent au delai avant le PREMIER MOT. Sur une question
+             * de support — « ou sont les raccourcis », « comment on cree un
+             * espace » — cette deliberation ne change pas la reponse, elle ne
+             * fait que la retarder.
+             *
+             * Un budget nul la desactive. C'est le seul reglage qui agisse sur
+             * l'attente ressentie sans rien retirer au contenu : la longueur
+             * maximale, elle, ne joue que sur la fin de la reponse.
+             *
+             * Un modele qui ne connait pas ce reglage l'ignore, ce qui rend le
+             * changement sans risque pour les anciens.
+             */
+            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
       },
