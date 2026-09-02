@@ -74,6 +74,36 @@ test.describe('Maintenance pour les autres', () => {
     await expect(page.locator('.workspace')).toHaveCount(0);
   });
 
+  /*
+   * Le defaut que ce cas retient.
+   *
+   * « Acces equipe » ne faisait rien dans l'application de bureau, et marchait
+   * dans un navigateur. La route etait lue dans l'adresse a chaque rendu :
+   * `pushState` echouant, le chemin ne changeait pas, React relisait la meme
+   * valeur, et l'ecran restait le meme. Aucune erreur, aucune trace — le bouton
+   * paraissait simplement mort.
+   *
+   * On reproduit ici la condition plutot que l'environnement : une vue web qui
+   * refuse d'ecrire l'adresse. C'est ce que fait le protocole a elle de
+   * l'application de bureau, et rien d'autre dans un navigateur ne le simule.
+   */
+  test('la connexion s ouvre meme si l adresse refuse d etre ecrite', async ({ page }) => {
+    await page.addInitScript(() => {
+      history.pushState = () => {
+        throw new DOMException('refuse', 'SecurityError');
+      };
+      history.replaceState = () => {
+        throw new DOMException('refuse', 'SecurityError');
+      };
+    });
+
+    await page.goto('/');
+    await page.locator('.maintenance-equipe').click();
+
+    await expect(page.locator('input[type="password"]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.maintenance-title')).toHaveCount(0);
+  });
+
   test('l acces equipe mene a la connexion, et nulle part ailleurs', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.maintenance-equipe')).toBeVisible({ timeout: 20_000 });

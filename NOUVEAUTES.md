@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.9.2
+
+### Corrections
+
+- **« Acces equipe » repond enfin dans l'application de bureau.** Le changement d'ecran dependait de l'adresse de la page ; la vue web du bureau sert les fichiers par un protocole a elle, qui refuse qu'on l'ecrive. Le bouton paraissait mort, sans la moindre erreur.
+
+### Telephone
+
+- **Les reglages tiennent enfin dans un ecran de telephone** : la liste des sections, puis la section choisie, au lieu de deux colonnes ecrasees ou le moindre titre passait a la ligne.
+- **Les amis, l'assistant, les badges, les suggestions et le support ont leur bouton de retour.** On y entrait, et plus rien n'en sortait.
+
 ## 0.9.1
 
 ### Corrections
