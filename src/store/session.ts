@@ -30,6 +30,18 @@ export interface Preferences {
   density: Density;
   /** Teinte de base ; toute la palette en derive. */
   accent: AccentName;
+  /**
+   * Le jeu d'emojis.
+   *
+   * `noto` : rond et colore, charge en ligne. `systeme` : celui de la machine —
+   * plat et gris sur Windows, celui d'Apple sur macOS.
+   *
+   * Le choix existe parce qu'une apparence imposee sans recours agace
+   * durablement : quelqu'un habitue aux emojis de Windows depuis dix ans peut
+   * ne pas vouloir en changer.
+   */
+  emojiStyle: 'noto' | 'systeme';
+
   /** Coupe toutes les animations, au-dela du reglage systeme. */
   reduceMotion: boolean;
   /** Envoi du message avec Entree seule, sinon Ctrl+Entree. */
@@ -123,6 +135,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   theme: 'system',
   density: 'cozy',
   accent: 'indigo',
+  emojiStyle: 'noto',
   reduceMotion: false,
   sendOnEnter: true,
   showTimestamps: true,
@@ -209,6 +222,7 @@ export function applyPreferences(preferences: Preferences): void {
 
   root.setAttribute('data-density', preferences.density);
   root.setAttribute('data-accent', preferences.accent);
+  root.setAttribute('data-emoji', preferences.emojiStyle);
   root.setAttribute('data-animate', preferences.animateAvatars);
 
   // `system` est resolu ici plutot qu'en CSS : la feuille de style n'a alors

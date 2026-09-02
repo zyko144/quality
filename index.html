@@ -18,6 +18,31 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
     />
 
+    <!--
+      Les emojis, en police plutot qu'en images.
+
+      Sur Windows, c'est « Segoe UI Emoji » qui repond : un dessin plat, gris et
+      anguleux que personne n'aime. Les emojis d'Apple sont sous licence et ne
+      peuvent pas etre redistribues — les embarquer reviendrait a diffuser leur
+      oeuvre. « Noto Color Emoji » est libre, rond et colore, et c'est le jeu le
+      plus proche de ce qu'on cherche.
+
+      Chargee en ligne, pas embarquee : c'est ce qui change tout par rapport au
+      raisonnement precedent, qui l'ecartait pour son poids. Google Fonts la
+      decoupe en dix morceaux par plage de caracteres, et le navigateur ne
+      telecharge que ceux des emojis reellement affiches — quelques centaines de
+      kilo-octets, mis en cache ensuite. L'installateur, lui, ne grossit pas
+      d'un octet.
+
+      `display=swap` : le texte parait tout de suite, les emojis se remplacent
+      quand la police arrive. Sans lui, une liste de messages resterait blanche
+      le temps du telechargement.
+    -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap"
+    />
+
     <link rel="icon" type="image/png" href="/app-icon.png" />
 
     <!--

@@ -1637,3 +1637,18 @@
     justify-content: center;
   }
 }
+
+/*
+ * L'apercu des deux jeux d'emojis.
+ *
+ * Rendu dans la pile de polices visee par la carte, et non dans celle en cours
+ * d'usage : sans cela les deux cartes montreraient le meme dessin, et l'on
+ * choisirait a l'aveugle entre deux options identiques.
+ */
+.settings__emoji-apercu {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: 4px;
+}

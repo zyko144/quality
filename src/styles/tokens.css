@@ -28,13 +28,24 @@
    * decide de l'apparence des emojis la ou cette police existe — c'est-a-dire
    * sur macOS et iOS.
    *
-   * Sur Windows, c'est « Segoe UI Emoji » qui repond, et il n'y a pas moyen
-   * d'obtenir les emojis d'Apple autrement qu'en embarquant leur police : elle
-   * est sous licence et ne peut pas etre redistribuee. « Noto Color Emoji »
-   * est le seul jeu libre proche ; il pese une dizaine de mega-octets, ce qui
-   * multiplierait par huit le poids de l'installateur.
+   * Sur Windows, c'etait « Segoe UI Emoji » qui repondait : un dessin plat,
+   * gris et anguleux. Les emojis d'Apple sont sous licence et ne peuvent pas
+   * etre redistribues — les embarquer reviendrait a diffuser leur oeuvre.
+   *
+   * « Noto Color Emoji » passe donc AVANT lui. Le poids qui la faisait ecarter
+   * etait celui de la police embarquee — une dizaine de mega-octets dans
+   * l'installateur. Chargee en ligne, Google Fonts la decoupe par plage de
+   * caracteres et le navigateur ne prend que ce qu'il affiche : quelques
+   * centaines de kilo-octets, mis en cache, et rien dans l'installateur.
+   *
+   * « Apple Color Emoji » reste en tete : sur macOS elle est deja installee, et
+   * s'en servir n'est pas la redistribuer. Ceux qui sont sur Mac gardent donc
+   * les emojis qu'ils connaissent.
+   *
+   * Segoe reste en dernier recours : sans reseau au premier lancement, mieux
+   * vaut des emojis plats que des rectangles vides.
    */
-  --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
+  --font-emoji: 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji',
     'Twemoji Mozilla', 'Segoe UI Symbol', sans-serif;
 
   --font-sans: 'gg sans', 'Noto Sans', -apple-system, BlinkMacSystemFont,
@@ -227,6 +238,22 @@
   --shell-main: rgba(255, 255, 255, 0.78);
   --shell-header: rgba(255, 255, 255, 0.6);
 }
+
+/*
+ * Le jeu du systeme, pour qui prefere le sien.
+ *
+ * Quelqu'un habitue aux emojis de Windows depuis dix ans peut ne pas vouloir
+ * en changer, et une apparence imposee sans recours est le genre de detail qui
+ * agace durablement. Le reglage d'apparence pose l'attribut sur la racine.
+ *
+ * Seule la pile des emojis change : le reste des polices est laisse tel quel,
+ * et `--font-sans` la reprend par sa variable.
+ */
+:root[data-emoji='systeme'] {
+  --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
+    'Twemoji Mozilla', 'Segoe UI Symbol', sans-serif;
+}
+
 
 /* ==================================================================
    Theme sombre

@@ -954,6 +954,65 @@ function AppearanceSection() {
       </section>
 
       <section className="settings__group">
+        <h2 className="settings__group-title">Emojis</h2>
+        <div className="settings__cards">
+          {(
+            [
+              {
+                value: 'noto' as const,
+                titre: 'Ronds et colores',
+                exemple: '😄 🎉 ❤️ 👍',
+                detail:
+                  'Le jeu libre le plus proche de celui des telephones. Charge en ligne au premier usage, puis garde en cache.',
+              },
+              {
+                value: 'systeme' as const,
+                titre: 'Ceux de votre systeme',
+                exemple: '😄 🎉 ❤️ 👍',
+                detail:
+                  'Plats et gris sur Windows, ceux d’Apple sur Mac. A choisir si vous preferez les votres, ou si vous etes souvent hors ligne.',
+              },
+            ]
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={
+                'settings__card' +
+                (preferences.emojiStyle === option.value ? ' is-active' : '')
+              }
+              aria-pressed={preferences.emojiStyle === option.value}
+              onClick={() => setPreference('emojiStyle', option.value)}
+            >
+              {/*
+                L'apercu est rendu dans la pile visee, pas dans celle en cours :
+                sans cela les deux cartes montreraient le meme dessin, et le
+                choix se ferait a l'aveugle.
+              */}
+              <span
+                className="settings__emoji-apercu"
+                style={{
+                  fontFamily:
+                    option.value === 'noto'
+                      ? "'Noto Color Emoji', 'Apple Color Emoji', sans-serif"
+                      : "'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+                }}
+              >
+                {option.exemple}
+              </span>
+              <span className="settings__card-label">{option.titre}</span>
+              <span className="settings__card-hint">{option.detail}</span>
+            </button>
+          ))}
+        </div>
+        <p className="settings__hint">
+          Les emojis d’Apple ne peuvent pas etre fournis : leur dessin est sous
+          licence, et le diffuser serait redistribuer leur oeuvre. Sur un Mac ils
+          sont deja installes et restent utilises.
+        </p>
+      </section>
+
+      <section className="settings__group">
         <h2 className="settings__group-title">Densite d’affichage</h2>
         <div className="settings__cards">
           {DENSITIES.map((option) => (
