@@ -93,8 +93,22 @@ export function VoiceStage({ channel }: { channel: Channel }) {
     .map((participant) => ({
       userId: participant.user_id,
       stream: remoteScreens[participant.user_id] as MediaStream | undefined,
-    }))
-    .filter((entry) => entry.stream !== undefined);
+    }));
+
+  /*
+   * Un partage demande mais pas encore arrive garde sa place.
+   *
+   * La liste ecartait ici tout ce dont le flux manquait encore — un
+   * `.filter((entry) => entry.stream !== undefined)` en fin de chaine.
+   * Demander a regarder quelqu'un dont le flux n'etait pas classe ne produisait
+   * donc RIEN : pas de vignette, pas d'attente, pas d'erreur. Le clic paraissait
+   * ignore, et rien ne permettait de savoir si l'on avait mal clique, si l'autre
+   * ne partageait plus, ou si le flux tardait.
+   *
+   * La vignette reste et dit qu'elle attend — voir le voile dans `ScreenTile`.
+   * Une attente visible se supporte ; une absence sans explication, non, et
+   * elle empeche jusqu'a decrire ce qui ne marche pas.
+   */
 
   /*
    * Son propre partage vient de chez soi, jamais de la presence.
@@ -642,6 +656,20 @@ function ScreenTile({
         aria-label={focused ? 'Reduire le partage' : 'Agrandir le partage'}
       >
         <video ref={ref} className="screen-tile__video" autoPlay playsInline muted />
+
+        {/*
+          Le flux n'est pas encore la.
+
+          Sans ce voile, la vignette etait une surface noire : impossible de
+          distinguer un partage qui arrive d'un partage noir, ou d'une panne. On
+          restait devant du vide sans savoir s'il fallait attendre ou reessayer.
+        */}
+        {!stream ? (
+          <div className="screen-tile__attente">
+            <span className="screen-tile__attente-rond" aria-hidden="true" />
+            Connexion au partage…
+          </div>
+        ) : null}
       </button>
 
       <figcaption className="screen-tile__label">

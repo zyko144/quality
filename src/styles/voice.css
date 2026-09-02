@@ -1886,3 +1886,47 @@ button.voice-tile__name:hover {
 .menu-partage__item--quitter:hover {
   background: var(--danger-soft);
 }
+
+/* --------------------------------------------------------------------------
+   Un partage demande, pas encore arrive
+
+   La vignette etait ecartee de la liste tant que son flux manquait : le clic
+   sur « Regarder » ne produisait donc rien du tout. Elle garde sa place et dit
+   qu'elle attend — une attente visible se supporte, une absence sans
+   explication ne se decrit meme pas.
+   -------------------------------------------------------------------------- */
+
+.screen-tile__attente {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: color-mix(in oklab, var(--bg-sunken) 82%, transparent);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
+.screen-tile__attente-rond {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in oklab, var(--accent) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: tourne-attente 0.8s linear infinite;
+}
+
+@keyframes tourne-attente {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-tile__attente-rond {
+    animation: none;
+    border-top-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+}
