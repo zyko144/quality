@@ -161,8 +161,13 @@
   transform: translateZ(24px);
 }
 
+/*
+ * `lg` et non `2xl` : en grand, un nom un peu long passait a deux lignes et
+ * poussait toute la fiche vers le bas. Plus petit, il laisse aussi les badges
+ * a sa droite tenir sur la meme ligne.
+ */
 .profile__name {
-  font-size: var(--text-2xl);
+  font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-display);
   line-height: 1.15;
@@ -181,14 +186,21 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
+  gap: var(--space-2) var(--space-4);
 }
 
+/*
+ * Les badges se detachent du nom.
+ *
+ * Colles a lui, ils se lisaient comme la suite du mot. Un ecart franc dit qu'il
+ * s'agit d'autre chose — et il faut qu'il soit plus large que l'espace entre
+ * deux badges, sinon c'est le nom qui parait faire partie de la serie.
+ */
 .profile__fanions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -196,6 +208,20 @@
 
 .profile__fanions li {
   display: flex;
+}
+
+/*
+ * Le centrage optique.
+ *
+ * `align-items: center` centre sur la BOITE de la ligne, qui descend sous les
+ * jambages. La masse visible d'un nom, elle, se tient au-dessus de sa ligne de
+ * base : centre sur la boite, un badge parait donc pose trop bas.
+ *
+ * Un pixel de remontee suffit a le corriger. Ce n'est pas une valeur calculee —
+ * c'est ce qu'il faut a cette taille de texte pour que l'oeil cesse de le voir.
+ */
+.profile__fanions .echow-badge-icon {
+  transform: translateY(-1px);
 }
 
 .profile__handle {
@@ -1479,14 +1505,18 @@
 }
 
 /*
- * Le nom, un cran plus bas.
+ * La taille du nom se decide en haut de ce fichier, et nulle part ailleurs.
  *
- * En `2xl` il occupait deux lignes des que quelqu'un choisissait un nom un peu
- * long, et poussait tout le reste de la fiche vers le bas.
+ * Elle etait posee ici une seconde fois, hors de toute requete media et huit
+ * cents lignes apres la premiere : c'est cette regle-ci qui gagnait, en
+ * silence. Changer la valeur en haut n'avait donc aucun effet, et rien ne le
+ * signalait — le fichier se lit du haut vers le bas, et une regle ecrite si
+ * loin ne se voit pas depuis celle qu'elle annule.
+ *
+ * La raison qui l'avait fait naitre reste vraie et a suivi la valeur : en `2xl`
+ * le nom passait a deux lignes des qu'il etait un peu long, et poussait toute
+ * la fiche vers le bas.
  */
-.profile__name {
-  font-size: var(--text-xl);
-}
 
 /*
  * Plus de bande sous la fiche.
