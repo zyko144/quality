@@ -2644,3 +2644,32 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   font-weight: var(--weight-semibold);
   letter-spacing: 0.02em;
 }
+
+/* La fenetre des nouveautes, quand elle porte plusieurs versions. */
+.maj__versions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/*
+ * Chaque version est separee de la suivante par un filet.
+ *
+ * Sans lui, quatre versions empilees se lisent comme une seule longue liste, et
+ * l'on ne sait plus ce qui vient d'ou. Le filet est en haut plutot qu'en bas :
+ * la premiere version n'a rien au-dessus d'elle, et un separateur avant le
+ * titre dit « nouvelle section » mieux qu'un separateur apres le contenu.
+ */
+.maj__version + .maj__version {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.maj__version-titre {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}

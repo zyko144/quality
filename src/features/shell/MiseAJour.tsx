@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { lireLesNotes } from './notes';
+import { notesManquees, resumerCumul, type Notes } from './cumul';
 import { journal } from '@/lib/journal';
 
 /**
@@ -79,6 +80,17 @@ export async function relancerApplication(): Promise<void> {
  */
 const CLE_VUE = 'quality:version-vue';
 
+/**
+ * Delai avant qu'une proposition repoussee revienne.
+ *
+ * Une heure. Assez espace pour ne pas harceler, assez rapproche pour qu'une
+ * version qui corrige ce qui gene soit installee le jour meme.
+ */
+const REPORT = 60 * 60 * 1000;
+
+/** Intervalle entre deux recherches de version, application ouverte. */
+const INTERVALLE_RECHERCHE = 15 * 60 * 1000;
+
 interface Disponible {
   version: string;
   notes: string;
@@ -101,10 +113,27 @@ export function MiseAJour() {
    */
   const [replie, setReplie] = useState(false);
   const [installation, setInstallation] = useState<'attente' | 'cours' | 'prete'>('attente');
-  const [nouveautes, setNouveautes] = useState<{ version: string; notes: string } | null>(null);
+  /*
+   * Les nouveautes portent maintenant PLUSIEURS versions.
+   *
+   * Le message n'annoncait que la version courante. Or le cas frequent n'est
+   * pas « je viens d'installer la suivante » : c'est « j'ai laisse passer
+   * trois versions ». Ces trois-la annoncaient chacune quelque chose, et deux
+   * disparaissaient sans avoir jamais ete lues.
+   */
+  const [nouveautes, setNouveautes] = useState<Notes[] | null>(null);
 
   /** Derniere version proposee, pour ne redeployer que sur du nouveau. */
   const disponibleRef = useRef<string | null>(null);
+
+  /**
+   * Quand la proposition a ete repoussee, s'il y a lieu.
+   *
+   * Une heure plus tard, elle revient. C'est assez espace pour ne pas
+   * harceler, assez rapproche pour qu'une version corrigeant ce qui gene soit
+   * installee le jour meme plutot que la semaine suivante.
+   */
+  const reporteRef = useRef<number | null>(null);
 
   /*
    * Ce qui a change depuis la derniere fois.
@@ -148,14 +177,24 @@ export function MiseAJour() {
         localStorage.setItem(CLE_VUE, __APP_VERSION__);
         if (!dejaVenu) return;
 
-        setNouveautes({ version: __APP_VERSION__, notes: __APP_NOTES__ });
+        setNouveautes(notesManquees(__APP_HISTORIQUE__, __APP_VERSION__, null));
         return;
       }
 
       if (vue === __APP_VERSION__) return;
 
-      setNouveautes({ version: __APP_VERSION__, notes: __APP_NOTES__ });
+      /*
+       * Tout ce qui separe la version vue de celle qui tourne.
+       *
+       * Voir `cumul.ts` : la comparaison porte sur les nombres, pas sur les
+       * chaines. « 0.10.0 » vient apres « 0.9.0 », et toute comparaison de
+       * texte dit le contraire — c'est le genre d'erreur qui ne se voit qu'a
+       * la dixieme version mineure, quand plus personne n'y pense.
+       */
+      const manquees = notesManquees(__APP_HISTORIQUE__, __APP_VERSION__, vue);
       localStorage.setItem(CLE_VUE, __APP_VERSION__);
+
+      if (manquees.length > 0) setNouveautes(manquees);
     } catch {
       // Stockage indisponible : on se passe du message plutot que d'echouer.
     }
@@ -199,9 +238,16 @@ export function MiseAJour() {
           proposee: mise.version,
         });
 
-        // Une version qu'on n'avait pas encore vue redeploie le bandeau : la
-        // pastille dit « il y a quelque chose », elle ne dit pas quoi.
-        setReplie((etait) => etait && disponibleRef.current === mise.version);
+        /*
+         * Le bandeau se redeploie dans deux cas : une version encore plus
+         * recente, ou l'heure de report ecoulee.
+         */
+        const nouvelle = disponibleRef.current !== mise.version;
+        const reportEcoule =
+          reporteRef.current !== null && Date.now() - reporteRef.current >= REPORT;
+
+        if (nouvelle || reportEcoule) reporteRef.current = null;
+        setReplie((etait) => etait && !nouvelle && !reportEcoule);
         disponibleRef.current = mise.version;
 
         setDisponible({
@@ -254,7 +300,7 @@ export function MiseAJour() {
       // Inutile d'interrompre une installation deja proposee.
       if (annule) return;
       void chercher();
-    }, 15 * 60 * 1000);
+    }, INTERVALLE_RECHERCHE);
 
     return () => {
       annule = true;
@@ -331,7 +377,21 @@ export function MiseAJour() {
                 type="button"
                 className="btn btn--sm"
                 disabled={installation === 'cours'}
-                onClick={() => setReplie(true)}
+                onClick={() => {
+                  /*
+                   * « Plus tard » veut dire plus tard, pas jamais.
+                   *
+                   * Le bandeau se repliait en une pastille et n'en ressortait
+                   * que si une version ENCORE plus recente paraissait. Qui
+                   * repoussait une fois pouvait donc rester des semaines sur
+                   * une version depassee sans plus rien voir — et c'est
+                   * exactement ce qui s'est passe : trois comptes bloques sur
+                   * la meme ancienne version, avec les correctifs qui les
+                   * concernaient publies depuis longtemps.
+                   */
+                  reporteRef.current = Date.now();
+                  setReplie(true);
+                }}
               >
                 Plus tard
               </button>
@@ -341,11 +401,15 @@ export function MiseAJour() {
       ) : null}
 
       <Modal
-        open={nouveautes !== null}
-        title={`Quoi de neuf en ${nouveautes?.version ?? ''}`}
-        description="Les changements notables depuis votre derniere version."
+        open={nouveautes !== null && nouveautes.length > 0}
+        title={resumerCumul(nouveautes ?? [])}
+        description={
+          (nouveautes?.length ?? 0) > 1
+            ? `${nouveautes?.length} versions sont passees depuis votre derniere ouverture.`
+            : 'Les changements notables depuis votre derniere version.'
+        }
         onClose={() => setNouveautes(null)}
-        width={520}
+        width={620}
         footer={
           <button type="button" className="btn btn--primary" onClick={() => setNouveautes(null)}>
             Compris
@@ -359,26 +423,41 @@ export function MiseAJour() {
           qu'on ne connaissait pas. La categorie repond avant la lecture, et sa
           couleur avant la categorie.
         */}
-        <div className="maj__categories">
-          {lireLesNotes(nouveautes?.notes ?? '').map((categorie) => (
-            <section
-              className="maj__categorie"
-              data-genre={categorie.genre}
-              key={categorie.titre}
-            >
-              <h3 className="maj__categorie-titre">
-                <span className="maj__categorie-pastille" aria-hidden="true">
-                  <Icon name={categorie.icone} size={13} />
-                </span>
-                {categorie.titre}
-              </h3>
+        <div className="maj__versions">
+          {(nouveautes ?? []).map((entree) => (
+            <article className="maj__version" key={entree.version}>
+              {/*
+                Le numero n'est rappele que s'il y en a plusieurs.
+                Au-dessus d'une seule version, il est deja dans le titre, et
+                le repeter ferait croire a un second bloc.
+              */}
+              {(nouveautes?.length ?? 0) > 1 ? (
+                <h3 className="maj__version-titre">{entree.version}</h3>
+              ) : null}
 
-              <ul className="maj__liste">
-                {categorie.lignes.slice(0, 8).map((ligne) => (
-                  <li key={ligne}>{ligne}</li>
+              <div className="maj__categories">
+                {lireLesNotes(entree.notes).map((categorie) => (
+                  <section
+                    className="maj__categorie"
+                    data-genre={categorie.genre}
+                    key={`${entree.version}-${categorie.titre}`}
+                  >
+                    <h4 className="maj__categorie-titre">
+                      <span className="maj__categorie-pastille" aria-hidden="true">
+                        <Icon name={categorie.icone} size={13} />
+                      </span>
+                      {categorie.titre}
+                    </h4>
+
+                    <ul className="maj__liste">
+                      {categorie.lignes.slice(0, 8).map((ligne) => (
+                        <li key={ligne}>{ligne}</li>
+                      ))}
+                    </ul>
+                  </section>
                 ))}
-              </ul>
-            </section>
+              </div>
+            </article>
           ))}
         </div>
       </Modal>
