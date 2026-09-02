@@ -96,6 +96,7 @@ Deno.serve(async (requete) => {
 
   try {
     const cle = Deno.env.get('GEMINI_API_KEY');
+    if (!cle) console.error('[echow-ai] GEMINI_API_KEY absente des secrets');
     if (!cle) {
       // Distinct d'une panne : l'assistant n'est pas configure, et le dire
       // evite de chercher un defaut la ou il n'y a qu'un secret manquant.
@@ -241,6 +242,23 @@ Deno.serve(async (requete) => {
        */
       const inconnu = reponse.status === 404 || detail.includes('not found');
 
+      /*
+       * La raison part aussi dans les journaux du serveur.
+       *
+       * Elle etait renvoyee dans la reponse, et seulement la. Quand l'assistant
+       * a cesse de repondre, les journaux de la fonction ne montraient que des
+       * demarrages et des arrets : elle echouait sans rien ecrire, et la seule
+       * trace vivait dans une reponse que personne ne gardait.
+       *
+       * Une fonction qui rate en silence n'est pas reparable. Celle-ci dit
+       * desormais qui l'a refusee et pourquoi.
+       */
+      console.error('[echow-ai] Gemini a refuse', {
+        statut: reponse.status,
+        modele: MODELE,
+        detail: detail.slice(0, 400),
+      });
+
       return repondre(
         {
           erreur: inconnu ? 'modele-inconnu' : 'service',
@@ -292,6 +310,8 @@ Deno.serve(async (requete) => {
       modele: MODELE,
     });
   } catch (cause) {
+    console.error('[echow-ai] Echec inattendu', String(cause).slice(0, 400));
+
     return repondre(
       { erreur: 'inattendu', message: 'L’assistant a rencontre un probleme.', detail: String(cause).slice(0, 300) },
       500,
