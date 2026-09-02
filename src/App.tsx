@@ -9,7 +9,7 @@ import { Workspace } from '@/features/shell/Workspace';
 import { MaintenanceScreen } from '@/features/maintenance/MaintenanceScreen';
 import { RetourScreen } from '@/features/maintenance/RetourScreen';
 import { EN_MAINTENANCE, traverseLaMaintenance } from '@/features/maintenance/acces';
-import { retourDejaVu, marquerRetourVu } from '@/features/maintenance/retour';
+import { doitAnnoncerLeRetour, marquerRetourVu } from '@/features/maintenance/retour';
 
 /**
  * Echow, et le verrou de maintenance.
@@ -37,7 +37,7 @@ export function App() {
   const { route } = useRoute();
 
   // Lu une seule fois : ce que l'on a deja vu ne change pas en cours de session.
-  const [retourVu, setRetourVu] = useState(retourDejaVu);
+  const [annoncerRetour, setAnnoncerRetour] = useState(doitAnnoncerLeRetour);
 
   useEffect(() => initialize(), [initialize]);
 
@@ -97,20 +97,22 @@ export function App() {
   /*
    * La levee de la maintenance s'annonce, une fois.
    *
-   * La derniere chose que ces gens ont vue est un ecran rouge disant que tout
-   * etait suspendu. Les ramener directement dans l'application les laisserait
-   * supposer que rien n'a change — ou pire, que ca n'avait pas ete coupe.
+   * A ceux qui ont vu l'ecran rouge, et a eux seuls. Les ramener directement
+   * dans l'application les laisserait supposer que rien n'a change — ou pire,
+   * que ca n'avait pas ete coupe. Mais l'annoncer a qui decouvre Echow ce
+   * jour-la serait absurde : on lui apprendrait la fin d'une absence qu'il n'a
+   * pas vecue, et il faudrait cliquer pour la passer.
    *
    * Avant la reprise du mot de passe et avant l'espace de travail : c'est le
    * premier ecran de la session qui suit la maintenance, sinon ce n'est plus un
    * retour, c'est une interruption.
    */
-  if (!EN_MAINTENANCE && !retourVu) {
+  if (!EN_MAINTENANCE && annoncerRetour) {
     return (
       <RetourScreen
         onEntrer={() => {
           marquerRetourVu();
-          setRetourVu(true);
+          setAnnoncerRetour(false);
         }}
       />
     );

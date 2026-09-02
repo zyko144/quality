@@ -40,5 +40,11 @@ export function traverseLaMaintenance(courriel: string | null | undefined): bool
   return AUTORISES.has(courriel.trim().toLowerCase());
 }
 
-/** Vrai tant que l'application est en maintenance. */
+/**
+ * Vrai tant que l'application est en maintenance.
+ *
+ * Toujours fermee : cette version-ci existe pour verifier a huis clos que tout
+ * marche, avec les seuls comptes de la liste ci-dessus. La levee sera un second
+ * deploiement, decide une fois la verification faite.
+ */
 export const EN_MAINTENANCE = true;

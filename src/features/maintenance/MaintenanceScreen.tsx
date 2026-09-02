@@ -2,10 +2,21 @@ import { useEffect } from 'react';
 import { WindowControls } from '@/components/WindowControls';
 import { MiseAJour } from '@/features/shell/MiseAJour';
 import { navigate } from '@/lib/router';
+import { marquerMaintenanceVue } from './retour';
 import '@/styles/maintenance.css';
 
 export function MaintenanceScreen() {
   useEffect(() => {
+    /*
+     * On retient qu'on a ferme la porte a cette personne.
+     *
+     * C'est la seule occasion de le savoir. A la levee, plus rien ne dira qui a
+     * ete refoule — ni la session, qui n'existait peut-etre pas, ni le compte,
+     * qui n'a pas ete ouvert. Sans cette marque, l'ecran de retour s'adresserait
+     * a tout le monde, y compris a qui decouvre Echow ce jour-la.
+     */
+    marquerMaintenanceVue();
+
     // Retirer le splash screen natif s'il est present
     const splash = document.getElementById('splash');
     if (splash) {

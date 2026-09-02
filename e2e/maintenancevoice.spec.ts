@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { openApp } from './session';
-import { traverseLaMaintenance } from '../src/features/maintenance/acces';
+import { traverseLaMaintenance, EN_MAINTENANCE } from '../src/features/maintenance/acces';
 
 /**
  * Le verrou de maintenance.
@@ -53,6 +53,19 @@ test.describe('Verrou de maintenance', () => {
 test.describe('Maintenance pour les autres', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
+  /*
+   * Ces deux cas decrivent une maintenance EN COURS.
+   *
+   * Une fois levee, ils echouent — et ils ont raison d'echouer : ils affirment
+   * qu'un visiteur sans session ne voit que l'ecran rouge, ce qui devient faux.
+   * Les supprimer perdrait la verification pour la prochaine maintenance ; les
+   * reecrire pour qu'ils passent dans les deux etats ne verifierait plus rien.
+   *
+   * On les saute donc quand le verrou est ouvert, et le cas inverse est couvert
+   * juste apres.
+   */
+  test.skip(!EN_MAINTENANCE, 'la maintenance est levee');
+
   test('sans session, on ne voit que la maintenance', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.maintenance-title')).toBeVisible({ timeout: 20_000 });
@@ -70,5 +83,65 @@ test.describe('Maintenance pour les autres', () => {
     // Le formulaire de connexion parait — c'est le seul chemin ouvert.
     await expect(page.locator('.maintenance-title')).toHaveCount(0);
     await expect(page.locator('input[type="password"]')).toBeVisible({ timeout: 10_000 });
+  });
+});
+
+/**
+ * Une fois la maintenance levee.
+ *
+ * Le miroir des cas precedents : l'un des deux groupes est toujours saute, et
+ * c'est voulu — ensemble ils decrivent le verrou dans ses deux positions, et le
+ * fichier reste vrai quel que soit l'etat du drapeau.
+ */
+test.describe('Apres la levee', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test.skip(EN_MAINTENANCE, 'la maintenance est encore en cours');
+
+  test('un visiteur sans session voit la presentation, pas l ecran rouge', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.locator('.maintenance-title')).toHaveCount(0);
+
+    // Le bouton de la presentation, et non un conteneur : `main` existe aussi
+    // sur l'ecran de maintenance, et le cas passerait sans rien prouver.
+    await expect(page.getByRole('button', { name: 'Creer un compte' }).first()).toBeVisible({
+      timeout: 20_000,
+    });
+  });
+
+  /*
+   * Le defaut que ce cas retient.
+   *
+   * L'ecran de retour s'adressait a tout le monde. Quelqu'un qui decouvrait
+   * Echow apprenait donc la fin d'une absence qu'il n'avait pas vecue, et
+   * devait cliquer pour passer une nouvelle qui ne le concernait pas. Le defaut
+   * n'existe QUE la maintenance levee, et c'est pour ca qu'il n'a pas ete vu en
+   * ecrivant l'ecran.
+   */
+  test('l ecran de retour ne s affiche pas a qui n a jamais vu la maintenance', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.locator('.maintenance-title')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Entrer dans Echow' })).toHaveCount(0);
+  });
+
+  test('il s affiche a qui l a vue, et une seule fois', async ({ page }) => {
+    // La marque que pose l'ecran de maintenance en s'affichant.
+    await page.addInitScript(() => {
+      localStorage.setItem('echow:maintenance-vue:2026-09-02', 'oui');
+    });
+
+    await page.goto('/');
+    const entrer = page.getByRole('button', { name: 'Entrer dans Echow' });
+    await expect(entrer).toBeVisible({ timeout: 20_000 });
+
+    await entrer.click();
+    await expect(entrer).toHaveCount(0);
+
+    // Une seule fois : le revoir a chaque ouverture en ferait un peage.
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Entrer dans Echow' })).toHaveCount(0);
   });
 });

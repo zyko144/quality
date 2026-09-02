@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.9.1
+
+### Corrections
+
+- **Les mises a jour repartent.** La 0.9.0 s'etait deposee sur la publication de la 0.8.0 au lieu de creer la sienne : les applications installees comparaient leur numero au meme, et ne voyaient donc rien a installer. Le numero de version n'est plus ecrit qu'a un seul endroit.
+
 ## 0.9.0
 
 ### Badges
