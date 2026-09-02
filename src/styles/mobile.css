@@ -316,3 +316,41 @@
     min-height: 44px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Installee sur un telephone : l'encoche et la barre de geste
+
+   `viewport-fit=cover` laisse le fond passer sous les bords arrondis et sous
+   l'encoche, ce qui est voulu — une bande noire en haut d'une application
+   installee la trahit immediatement. Mais le CONTENU, lui, doit rester en
+   dessous : sans ces marges, le titre du salon passe sous l'heure et le
+   composeur sous la barre de geste, ou le doigt ne l'atteint plus.
+
+   Les valeurs valent zero partout ailleurs : ces regles n'ont donc aucun effet
+   sur un ecran ordinaire, et il n'y a rien a conditionner.
+   -------------------------------------------------------------------------- */
+
+.workspace {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.channel-header,
+.workspace__nav {
+  padding-top: env(safe-area-inset-top);
+}
+
+.composer-wrap {
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+}
+
+/*
+ * Le bandeau des reglages remonte aussi.
+ *
+ * Il flotte au bas du panneau : pose sur la barre de geste, on le pousserait
+ * en voulant l'atteindre, et « enregistrer » deviendrait un geste de retour a
+ * l'accueil.
+ */
+.reglages-barre {
+  bottom: max(var(--space-5), env(safe-area-inset-bottom));
+}

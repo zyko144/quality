@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.5
+
+### Nouveau
+
+- **Echow s'installe sur un telephone, et c'est la meme application.** Il existait un second projet, ecrit a la main, qui offrait six ecrans la ou l'application en compte vingt et un : ni amis, ni moderation, ni recherche, ni parametres, ni fils de discussion. Il a ete supprime. Deux copies d'une meme application divergent toujours, et c'est la plus pauvre qui recoit les corrections en dernier — ou jamais. L'application de bureau etait deja faite pour les petits ecrans et eprouvee sur un telephone : il ne manquait que de quoi la poser sur l'ecran d'accueil. Elle s'y installe desormais, se met a jour toute seule, et donne tout ce que donne le bureau.
+- **L'encoche et la barre de geste sont respectees.** Le fond passe dessous, comme il se doit pour une application installee, mais le titre du salon ne glisse plus sous l'heure et le composeur reste atteignable au doigt.
+
 ## 0.7.4
 
 ### Nouveau

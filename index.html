@@ -19,6 +19,23 @@
     />
 
     <link rel="icon" type="image/png" href="/app-icon.png" />
+
+    <!--
+      Ce qu'iOS demande pour poser l'application sur l'ecran d'accueil.
+
+      Safari ignore le manifeste sur ces trois points : il lui faut son propre
+      lien d'icone, et sans `apple-mobile-web-app-capable` l'application
+      s'ouvre dans le navigateur, barre d'adresse comprise — ce qui donne une
+      page web posee sur l'ecran d'accueil, pas une application.
+
+      `viewport-fit=cover` est deja pose plus haut ; c'est lui qui laisse le
+      fond passer sous l'encoche, et les marges de securite sont reprises dans
+      la feuille de style.
+    -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Echow" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
     <!--
