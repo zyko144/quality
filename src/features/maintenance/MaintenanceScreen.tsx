@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { WindowControls } from '@/components/WindowControls';
 import { MiseAJour } from '@/features/shell/MiseAJour';
+import { navigate } from '@/lib/router';
 import '@/styles/maintenance.css';
 
 export function MaintenanceScreen() {
@@ -96,6 +97,23 @@ export function MaintenanceScreen() {
           <div className="maintenance-pulse-bar">
             <div className="maintenance-pulse-bar__indicator" />
           </div>
+
+          {/*
+            L'acces de l'equipe, discret mais present.
+
+            Sans lui, la maintenance se ferait a l'aveugle : on ne decouvrirait
+            qu'a sa levee que ce qu'on croyait repare ne l'est pas. Il ne donne
+            rien a personne d'autre — s'identifier avec un compte ordinaire
+            ramene ici, et ouvrir un compte pendant la maintenance ne donne
+            acces a rien.
+          */}
+          <button
+            type="button"
+            className="maintenance-equipe"
+            onClick={() => navigate('/connexion')}
+          >
+            Acces equipe
+          </button>
         </div>
       </main>
 

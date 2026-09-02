@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useFriends, matchProfile } from '@/store/friends';
+import { estEnLigne, etatReel } from '@/lib/presence';
 import { useSession } from '@/store/session';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
@@ -49,11 +50,18 @@ export function FriendsPage() {
     return subscribe(userId);
   }, [userId, load, subscribe]);
 
+  /*
+   * « En ligne » se mesure, il ne se declare pas.
+   *
+   * L'etat stocke reste « en ligne » apres une veille ou un plantage : la
+   * liste montrait donc des amis partis depuis des jours, et c'est le premier
+   * endroit ou cela se voit. Voir `lib/presence.ts`.
+   */
   const online = useMemo(
     () =>
       friends.filter((link) => {
-        const status = profiles[link.user_id]?.status;
-        return status !== undefined && status !== 'offline';
+        const profil = profiles[link.user_id];
+        return profil !== undefined && estEnLigne(profil.status, profil.derniere_presence);
       }),
     [friends, profiles],
   );
@@ -349,7 +357,9 @@ function FriendRow({ link, blocked }: { link: FriendLink; blocked: boolean }) {
           <span className="friends__meta">
             {blocked
               ? `@${profile.username}`
-              : (profile.custom_status ?? STATUS_LABEL[profile.status] ?? `@${profile.username}`)}
+              : (profile.custom_status ??
+                STATUS_LABEL[etatReel(profile.status, profile.derniere_presence)] ??
+                `@${profile.username}`)}
           </span>
         </span>
       </button>

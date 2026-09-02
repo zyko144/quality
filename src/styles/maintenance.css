@@ -386,3 +386,29 @@
     height: 40px;
   }
 }
+
+
+/*
+ * L'acces de l'equipe.
+ *
+ * Volontairement effacé : il ne doit pas ressembler a une porte ouverte. Assez
+ * lisible pour qui le cherche, assez discret pour que personne ne s'y attarde.
+ */
+.maintenance-equipe {
+  margin-top: 22px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.38);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.maintenance-equipe:hover {
+  color: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.28);
+}

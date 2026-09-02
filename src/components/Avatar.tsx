@@ -1,6 +1,7 @@
 import { hueFor, initialsFor } from '@/constants';
 import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
 import { useSession } from '@/store/session';
+import { etatReel } from '@/lib/presence';
 import type { PresenceStatus, Profile } from '@/types/db';
 
 const STATUS_LABEL: Record<PresenceStatus, string> = {
@@ -11,7 +12,18 @@ const STATUS_LABEL: Record<PresenceStatus, string> = {
 };
 
 interface AvatarProps {
-  profile: Pick<Profile, 'id' | 'display_name' | 'avatar_url'> | undefined;
+  /*
+   * Le profil porte aussi, quand on l'a, son dernier signe de vie.
+   *
+   * C'est ce qui permet de corriger la pastille ICI plutot qu'a la trentaine
+   * d'endroits qui affichent un avatar. Les deux champs sont optionnels : bien
+   * des appelants ne passent qu'un extrait du profil, et la pastille retombe
+   * alors sur ce qui lui est donne.
+   */
+  profile:
+    | (Pick<Profile, 'id' | 'display_name' | 'avatar_url'> &
+        Partial<Pick<Profile, 'status' | 'derniere_presence'>>)
+    | undefined;
   size?: number;
   status?: PresenceStatus;
   /** Affiche la pastille de presence. */
@@ -31,6 +43,16 @@ export function Avatar({ profile, size = 38, status, showStatus = false }: Avata
   // La teinte vient de l'identifiant et non du nom : renommer quelqu'un ne
   // change donc pas la nuance a laquelle on l'a associe.
   const seed = profile?.id ?? name;
+
+  /*
+   * La pastille dit ce qui est mesure, pas ce qui a ete declare.
+   *
+   * « En ligne » etait pose a la connexion et retire par une requete envoyee
+   * pendant que la page disparait : une veille, un plantage, une coupure, et
+   * l'on restait affiche en ligne indefiniment. La regle vit dans
+   * `lib/presence.ts`, et l'appliquer ici la fait valoir partout d'un coup.
+   */
+  const presence = etatReel(status ?? profile?.status, profile?.derniere_presence);
 
   return (
     /*
@@ -81,15 +103,15 @@ export function Avatar({ profile, size = 38, status, showStatus = false }: Avata
         </span>
       )}
 
-      {showStatus && status ? (
+      {showStatus && presence ? (
         <span
-          className={`avatar__status avatar__status--${status}`}
+          className={`avatar__status avatar__status--${presence}`}
           // Un quart plutot qu'un tiers : a trente pour cent, sur un grand
           // avatar, la pastille prenait plus de place que le visage n'en perd.
           style={{ width: Math.max(8, size * 0.24), height: Math.max(8, size * 0.24) }}
-          title={STATUS_LABEL[status]}
+          title={STATUS_LABEL[presence]}
         >
-          <span className="visually-hidden">{STATUS_LABEL[status]}</span>
+          <span className="visually-hidden">{STATUS_LABEL[presence]}</span>
         </span>
       ) : null}
     </span>

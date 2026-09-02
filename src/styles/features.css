@@ -2358,3 +2358,289 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
     animation: none;
   }
 }
+
+/* --------------------------------------------------------------------------
+   La visionneuse d'images
+   -------------------------------------------------------------------------- */
+
+/*
+ * Le bouton qui porte la vignette ne doit pas ressembler a un bouton.
+ *
+ * C'est l'image qu'on clique, pas un controle : tout ce qui trahirait un
+ * bouton — fond, bordure, marge interieure — ferait paraitre l'image encadree.
+ */
+.attachment-image__ouvrir {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  border-radius: inherit;
+  max-width: 100%;
+}
+
+.attachment-image__ouvrir img {
+  display: block;
+  border-radius: inherit;
+}
+
+.attachment-image__ouvrir:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/*
+ * Le fond est opaque, pas voile.
+ *
+ * Une image claire posee sur un voile transparent laisse lire la conversation
+ * derriere, et l'oeil ne sait plus ou se poser. Ici on regarde une image, et
+ * une seule.
+ */
+.visionneuse {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  background: rgba(6, 6, 8, 0.94);
+  animation: fade-in var(--duration-fast) var(--ease-out);
+  cursor: zoom-out;
+}
+
+.visionneuse__barre {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  padding-top: max(var(--space-3), env(safe-area-inset-top));
+  color: #f2f3f5;
+  cursor: default;
+}
+
+.visionneuse__nom {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  opacity: 0.9;
+}
+
+.visionneuse__echelle {
+  min-width: 4.5ch;
+  text-align: right;
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+.visionneuse__barre .icon-btn {
+  color: #f2f3f5;
+}
+
+.visionneuse__scene {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.visionneuse__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: default;
+  /* L'agrandissement part du centre : depuis un coin, l'image fuirait hors
+     de l'ecran des le premier cran. */
+  transform-origin: center;
+  transition: transform var(--duration-fast) var(--ease-out);
+  user-select: none;
+}
+
+.visionneuse__aide {
+  margin: 0;
+  padding: 0 var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: var(--text-2xs);
+  color: rgba(242, 243, 245, 0.42);
+  cursor: default;
+}
+
+@media (max-width: 860px) {
+  /* Au doigt, ni molette ni double-clic : l'aide mentirait. */
+  .visionneuse__aide {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Les badges
+   -------------------------------------------------------------------------- */
+
+.badges-page {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-8) var(--space-8) var(--space-10);
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.badges-page__tete {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+.badges-page__marque {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(140deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #eb459e));
+  color: var(--text-on-accent);
+}
+
+.badges-page__titre {
+  margin: 0 0 4px;
+  font-size: var(--text-xl);
+  letter-spacing: -0.02em;
+}
+
+.badges-page__sous-titre {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.badges-section__titre {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  font-size: 12px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.badges-section__compte {
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.badges-mien,
+.badges-famille {
+  margin-bottom: var(--space-8);
+}
+
+.badges-famille__detail {
+  margin: 0 0 var(--space-4);
+  max-width: 68ch;
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.badges-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badges-vide {
+  margin: 0 0 var(--space-6);
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+}
+
+/*
+ * La vignette.
+ *
+ * Volontairement sobre : le dessin des badges viendra plus tard, et une
+ * decoration provisoire serait plus difficile a remplacer qu'a ajouter. Ce qui
+ * compte deja est la — ce que le badge veut dire, et s'il reste des places.
+ */
+.badge-vignette {
+  display: flex;
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+}
+
+.badge-vignette.is-obtenu {
+  border-color: color-mix(in oklab, var(--teinte) 55%, transparent);
+  background: linear-gradient(
+    140deg,
+    color-mix(in oklab, var(--teinte) 12%, transparent),
+    var(--bg-raised) 65%
+  );
+}
+
+/* Une course close ne s'eteint pas : elle se retire. Un badge grise ressemble
+   a un defaut ; un badge en retrait se lit comme « ce n'est plus pour vous ». */
+.badge-vignette.is-close {
+  opacity: 0.52;
+}
+
+.badge-vignette__pastille {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--teinte) 22%, transparent);
+  color: var(--teinte);
+}
+
+.badge-vignette__corps {
+  min-width: 0;
+}
+
+.badge-vignette__nom {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 3px;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.badge-vignette__rang {
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--teinte) 26%, transparent);
+  color: var(--teinte);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge-vignette__description {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.badge-vignette__places {
+  margin: 6px 0 0;
+  color: var(--teinte);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+}

@@ -80,9 +80,15 @@ function WavesEntry() {
       onClick={showWaves}
       aria-current={wavesOpen ? 'page' : undefined}
     >
-      <Icon name="sparkles" size={19} />
-      <span className="dm-waves__nom">Echow +</span>
-      <span className="dm-waves__etat">Maintenance</span>
+      {/*
+        Les badges remplacent l'abonnement.
+
+        La cle du magasin garde son nom d'origine — `waves` — pour la meme
+        raison qui la lui laissait deja : un nom affiche se rechoisit, un nom
+        de symbole se lit dans des dizaines d'endroits et se renomme mal.
+      */}
+      <Icon name="shield" size={19} />
+      <span className="dm-waves__nom">Badges</span>
     </button>
   );
 }

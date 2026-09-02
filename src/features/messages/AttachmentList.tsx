@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useVisionneuse } from '@/store/visionneuse';
 import { signedUrl } from '@/lib/upload';
 import { formatBytes } from '@/lib/time';
 import { Icon } from '@/components/Icon';
@@ -61,7 +62,28 @@ function ImageAttachment({ attachment }: { attachment: Attachment }) {
   return (
     <figure className="attachment-image">
       {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer">
+        /*
+          Un bouton, pas un lien.
+
+          L'image s'ouvre desormais dans l'application — voir `Visionneuse` :
+          un lien vers un onglet n'a nulle part ou aller dans l'application de
+          bureau, et faisait quitter la conversation dans un navigateur.
+          L'ouverture dans le navigateur reste offerte depuis la visionneuse,
+          pour qui veut enregistrer.
+        */
+        <button
+          type="button"
+          className="attachment-image__ouvrir"
+          onClick={() =>
+            useVisionneuse.getState().ouvrir({
+              url,
+              nom: attachment.filename,
+              largeur: attachment.width,
+              hauteur: attachment.height,
+            })
+          }
+          aria-label={`Agrandir ${attachment.filename}`}
+        >
           <img
             src={url}
             alt={attachment.filename}
@@ -70,7 +92,7 @@ function ImageAttachment({ attachment }: { attachment: Attachment }) {
             width={attachment.width ?? undefined}
             height={attachment.height ?? undefined}
           />
-        </a>
+        </button>
       ) : (
         <span className="attachment-image__placeholder" style={{ aspectRatio: ratio }} />
       )}

@@ -36,6 +36,14 @@ export interface Profile {
   /** Teinte choisie, appliquee a la carte de profil. `null` = teinte derivee. */
   theme_hue: number | null;
   status: PresenceStatus;
+  /**
+   * Dernier signe de vie, ou `null` si le compte n'a jamais battu.
+   *
+   * C'est ce qui rend `status` fiable : un etat declare peut rester « en
+   * ligne » indefiniment apres une veille ou un plantage, une date ne le peut
+   * pas. Voir `lib/presence.ts`.
+   */
+  derniere_presence: string | null;
   custom_status: string | null;
   /** Faux tant que le pseudo a ete deduit de l'adresse plutot que choisi. */
   username_chosen: boolean;
