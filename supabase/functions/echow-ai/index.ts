@@ -107,12 +107,18 @@ const PAR_JOUR_TOTAL = Number(Deno.env.get('IA_LIMITE_GLOBALE') ?? '1400');
 /**
  * La longueur maximale d'une reponse.
  *
- * Six cents plutot que huit cents : une reponse de support qui depasse une
- * dizaine de lignes n'est plus lue, et chaque jeton produit est du temps
- * d'attente. Ce qui ne tient pas en six cents jetons releve du support humain,
- * vers lequel la consigne sait deja renvoyer.
+ * Trois cent cinquante. La reponse n'apparait qu'une fois ECRITE EN ENTIER :
+ * chaque jeton produit est donc du temps passe devant un ecran vide. Une reponse
+ * de support tient en deux a quatre phrases, et la consigne le demande aussi.
+ *
+ * Le plafond est une securite, pas une cible : il coupe les reponses qui
+ * derapent, il ne raccourcit pas celles qui sont deja breves. C'est la consigne
+ * qui fait le travail ; ceci evite qu'un debordement coute trente secondes.
+ *
+ * Ce qui ne tient pas dans ce format releve du support humain, vers lequel la
+ * consigne sait renvoyer.
  */
-const REPONSE_MAX = 600;
+const REPONSE_MAX = 350;
 
 /** Longueur maximale d'une question. Au-dela, c'est un texte colle. */
 const QUESTION_MAX = 2000;
@@ -337,8 +343,9 @@ Deno.serve(async (requete) => {
         {
           erreur: 'reponse-vide',
           message:
-            'Je n’ai pas su repondre a celle-ci. Le support humain pourra vous aider.
-[[SUPPORT]]',
+            'Je n’ai pas su repondre a celle-ci. Le support humain pourra vous aider.' +
+            String.fromCharCode(10) +
+            '[[SUPPORT]]',
         },
         200,
       );
