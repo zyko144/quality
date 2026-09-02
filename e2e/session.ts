@@ -62,10 +62,34 @@ export const withoutCredentials = !email || !password;
 
 export const skipReason = 'Definissez E2E_EMAIL et E2E_PASSWORD pour executer ces tests.';
 
-export async function signIn(page: Page): Promise<void> {
+/**
+ * Un second compte, pour ce qui se passe ENTRE deux personnes.
+ *
+ * Un salon vocal n'existe que pour cela, et rien ne le verifiait : tous les cas
+ * vocaux regardent un seul cote. Deux pages du meme compte ne suffisent pas ici
+ * — les participants sont indexes par utilisateur, et deux sessions d'une meme
+ * personne n'en font qu'une, a dessein. Il faut donc reellement deux comptes.
+ *
+ *   E2E_EMAIL_2=autre@exemple.fr E2E_PASSWORD_2=... npx playwright test
+ *
+ * Sans eux, les cas concernes se declarent ignores. Un test qui ne peut pas
+ * conclure doit le dire, jamais passer.
+ */
+export const email2 = process.env['E2E_EMAIL_2'];
+export const password2 = process.env['E2E_PASSWORD_2'];
+
+export const withoutSecondAccount = !email2 || !password2;
+
+export const secondAccountReason =
+  'Definissez E2E_EMAIL_2 et E2E_PASSWORD_2 : deux comptes distincts sont necessaires.';
+
+export async function signIn(page: Page, qui: 'premier' | 'second' = 'premier'): Promise<void> {
+  const adresse = qui === 'second' ? email2! : email!;
+  const secret = qui === 'second' ? password2! : password!;
+
   await page.goto('/connexion');
-  await page.getByLabel('Adresse e-mail').fill(email!);
-  await page.getByLabel('Mot de passe').fill(password!);
+  await page.getByLabel('Adresse e-mail').fill(adresse);
+  await page.getByLabel('Mot de passe').fill(secret);
   await page.getByRole('button', { name: 'Entrer' }).click();
 
   await passOnboarding(page);

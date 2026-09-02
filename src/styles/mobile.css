@@ -206,10 +206,30 @@
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
+  /*
+   * La barre repasse dans le flux, et doit alors se centrer autrement.
+   *
+   * La regle de base la place en `absolute`, centree par `left: 50%` et un
+   * `translateX(-50%)` qui la ramene de sa demi-largeur. Ici elle devient
+   * `sticky` — donc de retour dans le flux, ou `left` n'est plus une position
+   * mais un seuil d'accroche. Le `translateX` restait, lui, et decalait la barre
+   * de 166 px vers la gauche depuis sa place naturelle : elle sortait de l'ecran
+   * par la gauche, et le micro comme le casque devenaient inatteignables. On ne
+   * pouvait plus se couper le micro depuis un telephone.
+   *
+   * Changer `position` sans defaire ce qui l'accompagnait ne se voit pas en
+   * lisant la regle : les deux declarations qui posent probleme sont dans un
+   * autre fichier, et rien ici ne les rappelle.
+   */
   .voice-controls {
     position: sticky;
+    left: auto;
     bottom: var(--space-3);
+    transform: none;
+    margin-inline: auto;
+    justify-content: center;
     flex-wrap: wrap;
+    max-width: calc(100vw - 2 * var(--space-3));
   }
 
   /* --------------------------------------------------------------- Profil */

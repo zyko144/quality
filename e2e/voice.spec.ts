@@ -360,3 +360,80 @@ test.describe('Salon vocal', () => {
     expect(erreurs, 'aucune exception ne doit remonter').toEqual([]);
   });
 });
+
+/**
+ * La barre de commandes, sur un ecran de telephone.
+ *
+ * Elle en sortait entierement par la gauche : le micro et le casque etaient
+ * hors champ, et l'on ne pouvait donc plus se couper le micro depuis un
+ * telephone. Rien ne le signalait — la barre restait visible, amputee de sa
+ * moitie gauche, et il fallait savoir que ces boutons existaient pour remarquer
+ * qu'ils manquaient.
+ *
+ * La cause tenait a deux fichiers : la regle de base place la barre en
+ * `absolute` et la centre par `left: 50%` plus un `translateX(-50%)` ; la regle
+ * des petits ecrans la repassait en `sticky` sans defaire ni l'un ni l'autre. En
+ * `sticky` l'element revient dans le flux, `left` n'est plus qu'un seuil, et le
+ * `translateX` le decalait de sa demi-largeur depuis sa place naturelle.
+ *
+ * Le cas mesure la POSITION plutot que l'apparence : c'est ce qui distingue une
+ * barre centree d'une barre qui commence a moins cent vingt-huit pixels, et
+ * aucune capture d'ecran ne le dirait aussi surement.
+ */
+test.describe('Commandes vocales sur telephone', () => {
+  test.skip(withoutCredentials, skipReason);
+
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test('la barre tient dans l ecran, et le micro y est atteignable', async ({ page }) => {
+    test.setTimeout(90_000);
+
+    await openApp(page);
+
+    // Sur telephone la navigation est un tiroir : sans l'ouvrir, aucun salon
+    // n'est atteignable.
+    const tiroir = page.locator('.channel-header__toggle');
+    if (await tiroir.count()) await tiroir.click();
+
+    const salon = page.locator('.channel[data-kind="voice"]').first();
+    if ((await salon.count()) === 0) {
+      test.skip(true, 'Aucun salon vocal sur ce compte.');
+      return;
+    }
+    await salon.click();
+
+    const rejoindre = page.getByRole('button', { name: 'Rejoindre le salon vocal' });
+    await expect(rejoindre).toBeEnabled({ timeout: 20_000 });
+    await rejoindre.click();
+
+    const micro = page.locator('.voice-controls__mic');
+    await expect(micro).toBeVisible({ timeout: 25_000 });
+
+    const mesures = await page.evaluate(() => {
+      const barre = document.querySelector('.voice-controls')!.getBoundingClientRect();
+      const bouton = document.querySelector('.voice-controls__mic')!.getBoundingClientRect();
+      const dessus = document.elementFromPoint(
+        bouton.x + bouton.width / 2,
+        bouton.y + bouton.height / 2,
+      );
+      return {
+        fenetre: window.innerWidth,
+        barreGauche: barre.left,
+        barreDroite: barre.right,
+        microGauche: bouton.left,
+        microDroite: bouton.right,
+        microRecoitLeClic:
+          dessus === document.querySelector('.voice-controls__mic') ||
+          !!document.querySelector('.voice-controls__mic')?.contains(dessus),
+      };
+    });
+
+    expect(mesures.barreGauche, 'la barre ne doit pas sortir par la gauche').toBeGreaterThanOrEqual(0);
+    expect(mesures.barreDroite, 'ni par la droite').toBeLessThanOrEqual(mesures.fenetre);
+    expect(mesures.microGauche, 'le micro doit etre dans l ecran').toBeGreaterThanOrEqual(0);
+    expect(mesures.microDroite).toBeLessThanOrEqual(mesures.fenetre);
+
+    // Etre dans l'ecran ne suffit pas : encore faut-il que le clic l'atteigne.
+    expect(mesures.microRecoitLeClic, 'le micro doit recevoir le clic').toBe(true);
+  });
+});
