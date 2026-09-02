@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.8.0
+
+### Maintenance
+
+- **Fix cache WebView2.** Le cache du Service Worker est supprime au demarrage par le code natif (Rust), avant que le WebView ne charge. Tous les utilisateurs verront la page de maintenance sans intervention manuelle.
+
 ## 0.7.9
 
 ### Maintenance

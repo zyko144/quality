@@ -180,6 +180,31 @@ pub fn run() {
         // tiers sans barre d'adresse — on ne saurait plus ou l'on est.
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // ---------------------------------------------------------
+            // Nettoyage du cache WebView2 (Service Worker + HTTP cache).
+            //
+            // L'ancienne version utilisait un Service Worker (VitePWA)
+            // qui met en cache tout le frontend. Quand Tauri remplace le
+            // binaire, le WebView continue de servir l'ancien frontend
+            // depuis le cache du SW — la nouvelle interface n'apparait
+            // jamais. Supprimer ce dossier avant le premier chargement
+            // force le WebView a relire les ressources embarquees.
+            // ---------------------------------------------------------
+            if let Some(data_dir) = app.path().app_local_data_dir().ok() {
+                let webview_dir = data_dir.join("EBWebView").join("Default");
+                let dirs_to_clear = [
+                    "Service Worker",
+                    "Cache",
+                    "Code Cache",
+                ];
+                for dir_name in &dirs_to_clear {
+                    let path = webview_dir.join(dir_name);
+                    if path.exists() {
+                        let _ = std::fs::remove_dir_all(&path);
+                    }
+                }
+            }
+
             // Le greffon a deja cree sa fenetre a ce stade : la masquer plus
             // tot ne trouverait rien.
             hide_single_instance_window(&app.config().identifier);
