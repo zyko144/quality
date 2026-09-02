@@ -12,6 +12,16 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.8
+
+### Mises a jour
+
+- **Le message d'apres mise a jour va droit au but.** Il reprenait les notes entieres, cause du defaut et raisonnement compris : jusqu'a trois cents caracteres par ligne, dans une fenetre qui s'ouvre par surprise. Seule la premiere phrase reste.
+
+### Profil
+
+- **On ajoute quelqu'un en ami depuis sa fiche.** Il fallait passer par le clic droit ailleurs, alors que la fiche est l'endroit ou l'on decide si l'on veut connaitre la personne.
+
 ## 9.5.7
 
 ### Profil

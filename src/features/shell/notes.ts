@@ -60,6 +60,43 @@ export function nettoyer(ligne: string): string {
 }
 
 /**
+ * Garde la premiere phrase, et laisse tomber l'explication.
+ *
+ * Ces notes servent deux publics avec le meme texte : la page de publication,
+ * ou l'on vient chercher le detail, et le message affiche au premier
+ * lancement, ou l'on veut savoir en trois secondes ce qui a change. Certaines
+ * puces font pres de trois cents caracteres — un paragraphe entier, avec la
+ * cause du defaut et le raisonnement de la correction.
+ *
+ * Personne ne lit un paragraphe dans une fenetre qui s'ouvre par surprise. La
+ * premiere phrase porte toujours ce qui a change ; ce qui suit dit POURQUOI, et
+ * cela n'interesse que celui qui va lire la publication.
+ *
+ * Couper ici plutot que d'ecrire court : cela vaut pour les versions deja
+ * publiees, dont les notes viennent du serveur et ne se reecrivent plus.
+ *
+ * A part de `nettoyer`, qui ne fait que nettoyer. Y glisser l'abregement a
+ * casse un cas qui verifiait le retrait du gras : une fonction qui en fait
+ * deux surprend celui qui lit son nom, et le cas l'a dit avant l'usage.
+ */
+export function abreger(texte: string): string {
+  // On coupe au premier point suivi d'une espace : ni un nombre a virgule, ni
+  // « 9.5.7 », ni une abreviation collee au mot suivant.
+  const fin = texte.search(/\.\s/);
+  if (fin === -1 || fin > 160) return raccourcir(texte);
+
+  return texte.slice(0, fin + 1);
+}
+
+/** Repli quand il n'y a pas de phrase a couper : on tronque proprement. */
+function raccourcir(texte: string): string {
+  if (texte.length <= 160) return texte;
+
+  const coupe = texte.lastIndexOf(' ', 160);
+  return texte.slice(0, coupe > 80 ? coupe : 160).trimEnd() + '…';
+}
+
+/**
  * Decoupe les notes en categories.
  *
  * Sans sous-titre — le cas des versions anterieures, dont les notes viennent
@@ -90,7 +127,7 @@ export function lireLesNotes(brut: string): Categorie[] {
       continue;
     }
 
-    const texte = nettoyer(ligne);
+    const texte = abreger(nettoyer(ligne));
     if (!texte) continue;
 
     if (!courante) {

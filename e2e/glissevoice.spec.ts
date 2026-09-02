@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { commencer, progression, conclure, BORD, SEUIL, DECISION } from '../src/features/shell/glisse';
-import { nettoyer } from '../src/features/shell/notes';
+import { nettoyer, abreger } from '../src/features/shell/notes';
 
 /**
  * Le geste du tiroir, et le nettoyage des notes de version.
@@ -129,5 +129,40 @@ test.describe('Notes de version', () => {
     // « 3 * 4 » ne doit pas perdre son signe : une puce est un caractere en
     // tete de ligne suivi d'une espace, pas un asterisque n'importe ou.
     expect(nettoyer('- Trois * quatre')).toBe('Trois * quatre');
+  });
+});
+
+/**
+ * L'abregement des notes.
+ *
+ * Le meme texte sert deux publics : la page de publication, ou l'on vient
+ * chercher le detail, et la fenetre qui s'ouvre apres une mise a jour, ou l'on
+ * veut savoir en trois secondes ce qui a change. Certaines puces font pres de
+ * trois cents caracteres, cause du defaut et raisonnement compris.
+ *
+ * Personne ne lit un paragraphe dans une fenetre qui s'ouvre par surprise.
+ */
+test.describe('Abregement des notes', () => {
+  test('la premiere phrase suffit', () => {
+    expect(abreger('Ce qui change. Et voici pourquoi, longuement.')).toBe('Ce qui change.');
+  });
+
+  test('une phrase unique passe intacte', () => {
+    expect(abreger('Rien a couper ici')).toBe('Rien a couper ici');
+  });
+
+  test('un point sans espace ne coupe pas', () => {
+    // « 9.5.7 » et « 1.5 » ne sont pas des fins de phrase.
+    expect(abreger('La version 9.5.7 corrige le defaut')).toBe('La version 9.5.7 corrige le defaut');
+  });
+
+  test('sans phrase, on tronque sur un mot entier', () => {
+    const long = 'mot '.repeat(60).trim();
+    const court = abreger(long);
+
+    expect(court.length).toBeLessThan(long.length);
+    expect(court.endsWith('…')).toBe(true);
+    // Jamais au milieu d'un mot : la coupe tombe sur une espace.
+    expect(court.slice(0, -1).trimEnd().endsWith('mot')).toBe(true);
   });
 });
