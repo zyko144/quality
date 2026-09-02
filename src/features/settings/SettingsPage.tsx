@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSession, type AccentName, type Density, type Theme } from '@/store/session';
 import { useUI, type SettingsSection } from '@/store/ui';
+import { useIsMobile } from '@/lib/useMediaQuery';
 import { useBrouillon } from '@/store/brouillonReglages';
 import { BarreEnregistrement } from './BarreEnregistrement';
 import { useFriends } from '@/store/friends';
@@ -68,6 +69,7 @@ const GROUPES: { titre: string; entrees: { value: SettingsSection; label: string
 
 export function SettingsPage() {
   const section = useUI((state) => state.settings);
+  const isMobile = useIsMobile();
   const ouvrirBrouillon = useBrouillon((etat) => etat.ouvrir);
   const fermerBrouillon = useBrouillon((etat) => etat.fermer);
   const openSettings = useUI((state) => state.openSettings);
@@ -194,10 +196,13 @@ export function SettingsPage() {
             if (useBrouillon.getState().retientLaFermeture()) return;
             closeSettings();
           }}
-          aria-label="Fermer les parametres"
+          aria-label={isMobile ? 'Revenir' : 'Fermer les parametres'}
         >
-          <Icon name="x" size={18} />
-          <span className="settings__close-key">ECHAP</span>
+          {/* « ECHAP » ne veut rien dire sur un telephone, et la croix y est
+              moins claire qu'une fleche : le panneau recouvre tout, en sortir
+              est un retour. */}
+          <Icon name={isMobile ? 'arrow-left' : 'x'} size={18} />
+          {isMobile ? null : <span className="settings__close-key">ECHAP</span>}
         </button>
       </div>
     </div>

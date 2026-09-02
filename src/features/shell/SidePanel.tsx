@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useChat, viewKeyFor } from '@/store/chat';
 import { useUI } from '@/store/ui';
+import { useIsMobile } from '@/lib/useMediaQuery';
 import { useSession } from '@/store/session';
 import { supabase } from '@/lib/supabase';
 import { MessageList } from '@/features/messages/MessageList';
@@ -17,6 +18,7 @@ import type { Message, Profile, SpaceRole } from '@/types/db';
 export function SidePanel() {
   const panel = useUI((state) => state.panel);
   const setPanel = useUI((state) => state.setPanel);
+  const isMobile = useIsMobile();
 
   if (panel === 'none') return null;
 
@@ -30,15 +32,34 @@ export function SidePanel() {
   return (
     <aside className="side-panel">
       <header className="side-panel__header">
+        {/*
+          Sur telephone, le panneau recouvre la conversation : le quitter est un
+          retour, pas une fermeture, et la fleche le dit mieux que la croix.
+          Elle passe donc devant le titre, la ou le pouce la cherche.
+        */}
+        {isMobile ? (
+          <button
+            type="button"
+            className="icon-btn side-panel__retour"
+            onClick={() => setPanel('none')}
+            aria-label="Revenir a la conversation"
+          >
+            <Icon name="arrow-left" size={18} />
+          </button>
+        ) : null}
+
         <h2 className="side-panel__title">{titles[panel] ?? ''}</h2>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => setPanel('none')}
-          aria-label="Fermer le panneau"
-        >
-          <Icon name="x" size={16} />
-        </button>
+
+        {isMobile ? null : (
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setPanel('none')}
+            aria-label="Fermer le panneau"
+          >
+            <Icon name="x" size={16} />
+          </button>
+        )}
       </header>
 
       {panel === 'thread' ? <ThreadPanel /> : null}

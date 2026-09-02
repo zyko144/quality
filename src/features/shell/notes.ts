@@ -35,12 +35,27 @@ const GENRES: { motif: RegExp; genre: Genre; titre: string; icone: IconName }[] 
   { motif: /amelior|change|mieux/i, genre: 'ameliore', titre: 'Ameliore', icone: 'arrow-down' },
 ];
 
-/** Retire les marqueurs de liste et le gras, que l'affichage ne rend pas. */
-function nettoyer(ligne: string): string {
+/**
+ * Retire les marqueurs de liste et le gras, que l'affichage ne rend pas.
+ *
+ * L'ORDRE COMPTE, et l'inverser laissait une trace visible dans la fenetre que
+ * tout le monde voit a chaque mise a jour.
+ *
+ * La puce etait retiree en premier, par une expression qui mangeait aussi les
+ * asterisques : sur `- **Ce qui change.** Le reste`, elle emportait la puce ET
+ * les deux asterisques ouvrants. Le gras n'avait donc plus de paire a
+ * reconnaitre, et les deux asterisques fermants restaient au milieu de la
+ * phrase — « Ce qui change.** Le reste ».
+ *
+ * On retire donc l'emphase d'abord, la puce ensuite, et la puce n'est plus
+ * qu'un seul caractere suivi d'une espace : c'est ce qu'est une puce, et non
+ * une suite quelconque de tirets et d'asterisques.
+ */
+export function nettoyer(ligne: string): string {
   return ligne
-    .replace(/^[-*\s]+/, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/`(.+?)`/g, '$1')
+    .replace(/^\s*[-*]\s+/, '')
     .trim();
 }
 

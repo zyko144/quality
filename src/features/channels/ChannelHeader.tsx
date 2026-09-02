@@ -51,9 +51,17 @@ export function ChannelHeader({ channel }: { channel: Channel }) {
         type="button"
         className="icon-btn channel-header__toggle"
         onClick={isMobile ? openNav : toggleSidebar}
-        aria-label={isMobile ? 'Ouvrir la navigation' : 'Afficher ou masquer la barre laterale'}
+        aria-label={isMobile ? 'Revenir aux salons' : 'Afficher ou masquer la barre laterale'}
       >
-        <Icon name={isMobile ? 'chevron-right' : 'inbox'} size={18} />
+        {/*
+          Une fleche de retour sur telephone, pas un chevron vers la droite.
+
+          Le chevron disait la direction du TIROIR, qui s'ouvre vers la droite.
+          Mais ce n'est pas ce qu'on cherche en le regardant : on cherche a
+          revenir a la liste des salons, et sur telephone c'est un retour. La
+          fleche dit ou l'on va, le chevron disait comment ca bouge.
+        */}
+        <Icon name={isMobile ? 'arrow-left' : 'inbox'} size={18} />
       </button>
 
       {isDirect ? (

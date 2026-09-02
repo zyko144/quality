@@ -12,6 +12,21 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.7
+
+### Corrige
+
+- **On entrait dans un salon vocal sans y etre : personne ne vous voyait, et vous ne voyiez personne.** La cause est nommee mot pour mot dans les traces : « cannot add presence callbacks after subscribe() ». Le canal d'un salon peut deja exister — c'est celui qui sert a montrer qui discute dans un salon ou l'on n'est pas — et le demander une seconde fois rend CE canal-la plutot que d'en creer un neuf. Poser un ecouteur dessus leve une exception, qui echappait a la protection : celle-ci n'entourait que la creation, pas les ecouteurs poses juste apres. Toute la suite de la jonction etait emportee, et l'on se retrouvait « connecte » sans jamais publier sa presence ni recevoir celle des autres. Le sujet est desormais libere juste avant d'ouvrir, et l'installation entiere est protegee.
+
+### Nouveau
+
+- **Le tiroir de navigation suit le doigt.** Un glissement depuis le bord gauche ouvre les serveurs et les salons ; un glissement vers la gauche les referme. Le tiroir accompagne le doigt pendant le geste au lieu de surgir apres coup, ce qui permet de changer d'avis a mi-chemin.
+- **Des fleches de retour la ou l'on revient.** Dans un salon sur telephone, dans les panneaux qui recouvrent la conversation, dans les reglages : « Echap » ne veut rien dire sur un telephone, et la croix y est moins claire qu'une fleche.
+
+### Ameliore
+
+- **Les messages sont plus denses sur telephone.** Avatar, interligne et barre d'actions resserres : on voit pres de moitie plus de messages sans que rien descende sous quinze pixels, qui est le plancher confortable a bout de bras.
+
 ## 0.7.6
 
 ### Corrige

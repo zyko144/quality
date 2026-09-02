@@ -354,3 +354,77 @@
 .reglages-barre {
   bottom: max(var(--space-5), env(safe-area-inset-bottom));
 }
+
+/* --------------------------------------------------------------------------
+   Messages resserres sur telephone
+
+   Sur 375 px de large et 700 de haut, la mise en page du bureau ne laisse voir
+   que cinq ou six messages : l'avatar de quarante pixels, l'interligne genereux
+   et les marges y sont pour autant que le texte. On y gagne pres de la moitie
+   d'un ecran sans rien rendre illisible — la taille du corps ne descend pas
+   sous quinze pixels, qui est le plancher confortable sur un telephone tenu a
+   bout de bras.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .message {
+    --avatar-size: 32px;
+    --row-gap: var(--space-3);
+    padding-top: 1px;
+    padding-bottom: 1px;
+  }
+
+  .message__text,
+  .message__body {
+    font-size: 15px;
+    line-height: 1.42;
+  }
+
+  /* L'auteur et l'heure n'ont pas besoin d'etre lus, seulement reconnus. */
+  .message__author {
+    font-size: 14px;
+  }
+
+  .message__time,
+  .message__gutter-time {
+    font-size: 11px;
+  }
+
+  /*
+   * La barre d'actions est plus discrete.
+   *
+   * Elle reste visible — au doigt, rien ne se survole — mais elle occupait
+   * une ligne entiere sous chaque message, soit autant que le message
+   * lui-meme sur les courts. Reduite et rapprochee, elle en occupe le tiers.
+   */
+  .message__actions {
+    margin-top: 0;
+    gap: 2px;
+  }
+
+  .message__action {
+    width: 28px;
+    height: 28px;
+  }
+
+  .message__action svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Les separateurs de jour prennent moins de place entre deux journees. */
+  .day-divider,
+  .unread-divider {
+    margin-top: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Le retour du panneau lateral
+   -------------------------------------------------------------------------- */
+
+.side-panel__retour {
+  flex-shrink: 0;
+  margin-right: var(--space-1);
+}

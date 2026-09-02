@@ -24,6 +24,7 @@ import { FriendsPage } from '@/features/friends/FriendsPage';
 import { Waves } from '@/features/abonnement/Waves';
 import { Suggestions } from '@/features/suggestions/Suggestions';
 import { RaccourcisVocaux } from '@/features/voice/RaccourcisVocaux';
+import { TiroirGlissant } from '@/features/shell/TiroirGlissant';
 import { Support } from '@/features/support/Support';
 import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
@@ -412,6 +413,10 @@ export function Workspace() {
       <Sonnerie />
       <EcouteVocale />
       <RaccourcisVocaux />
+
+      {/* Le tiroir suit le doigt depuis le bord gauche. Voir `glisse.ts` pour
+          les seuils, qui sont ce qui rend le geste agreable ou penible. */}
+      <TiroirGlissant actif={isMobile} />
 
       {/* Sur petit ecran, la navigation recouvre la conversation : il faut un
           voile pour la refermer, et l'ecarter des lecteurs d'ecran quand elle

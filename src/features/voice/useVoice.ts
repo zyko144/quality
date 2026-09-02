@@ -1758,36 +1758,57 @@ let cadenceCapture = 0;
    * signal d'arrivee pour un canal a remplacer serait une coupure audible, la
    * ou seul le canal est en cause.
    */
-  function ouvrirCanal(channelId: UUID, userId: UUID): boolean {
-    /*
-     * L'installation du canal ne doit jamais emporter l'interface.
-     *
-     * `supabase.channel(sujet)` rend un canal DEJA EXISTANT quand il en trouve
-     * un sur ce sujet, et poser un ecouteur sur un canal souscrit leve une
-     * exception. Elle partait d'ici, remontait jusqu'a React, et emportait tout
-     * l'arbre : ecran noir, application inutilisable, et rien qui dise pourquoi.
-     */
-    try {
-      room = supabase.channel(`orbit:voice:${channelId}`, {
-        config: { presence: { key: userId }, broadcast: { self: false } },
-      });
-    } catch (cause) {
-      journal.erreur('vocal', 'Canal du salon inutilisable', {
-        salon: channelId,
-        cause: String(cause),
-      });
+  async function ouvrirCanal(channelId: UUID, userId: UUID): Promise<boolean> {
+    const sujet = `orbit:voice:${channelId}`;
 
-      room = null;
-      set({
-        connecting: false,
-        error: 'Le salon vocal n’a pas pu s’ouvrir. Reessayez dans un instant.',
+    /*
+     * LE SUJET EST LIBERE ICI, juste avant d'ouvrir, et c'est la correction la
+     * plus importante de ce fichier.
+     *
+     * `supabase.channel(sujet)` ne cree pas toujours : il rend le canal DEJA
+     * EXISTANT quand il en trouve un sur ce sujet. Or un canal d'observation —
+     * celui qui montre qui discute dans un salon ou l'on n'est pas — peut avoir
+     * repris ce sujet pendant les attentes de la jonction : ouvrir le micro et
+     * interroger les serveurs de decouverte prennent quelques centaines de
+     * millisecondes, et la reconciliation des observateurs tourne pendant ce
+     * temps.
+     *
+     * On recevait alors ce canal-la, deja souscrit, et poser un ecouteur dessus
+     * leve « cannot add presence callbacks after subscribe() ». L'exception
+     * echappait a la protection — qui n'entourait que la creation — et
+     * emportait toute la suite de la jonction. On se retrouvait « dans » le
+     * salon sans jamais publier sa presence ni recevoir celle des autres :
+     * personne ne nous voyait, on ne voyait personne. C'est le defaut rapporte,
+     * et la trace le nomme mot pour mot.
+     *
+     * Le nettoyage est fait au dernier moment possible, et attendu : le faire
+     * plus tot laisse la course ouverte, ne pas l'attendre revient a ne pas le
+     * faire.
+     */
+    const occupants = supabase.getChannels().filter((canal) => canal.topic.endsWith(sujet));
+    if (occupants.length > 0) {
+      observateurs.delete(channelId);
+      journal.alerte('vocal', 'Sujet du salon libere avant ouverture', {
+        salon: channelId,
+        canaux: occupants.length,
       });
-      void get().leave();
-      return false;
+      await Promise.all(occupants.map((canal) => supabase.removeChannel(canal)));
     }
 
-    room
-      .on('broadcast', { event: 'voice-signal' }, ({ payload }) => {
+    /*
+     * Toute l'installation est protegee, pas seulement la creation.
+     *
+     * C'etait l'autre moitie du defaut : `supabase.channel` ne levait rien, et
+     * l'exception venait du `.on()` qui suivait — hors de la protection. Elle
+     * remontait jusqu'a React, emportait l'arbre, et rien ne disait pourquoi.
+     */
+    try {
+      room = supabase.channel(sujet, {
+        config: { presence: { key: userId }, broadcast: { self: false } },
+      });
+
+      room
+        .on('broadcast', { event: 'voice-signal' }, ({ payload }) => {
         const message = payload as VoiceMessage;
         if (message.to !== userId) return;
 
@@ -1874,6 +1895,20 @@ let cadenceCapture = 0;
           journal.alerte('vocal', 'Canal du salon perdu', { salon: channelId, etat: status });
         }
       });
+    } catch (cause) {
+      journal.erreur('vocal', 'Canal du salon inutilisable', {
+        salon: channelId,
+        cause: String(cause),
+      });
+
+      room = null;
+      set({
+        connecting: false,
+        error: 'Le salon vocal n’a pas pu s’ouvrir. Reessayez dans un instant.',
+      });
+      void get().leave();
+      return false;
+    }
 
     return true;
   }
@@ -1889,6 +1924,10 @@ let cadenceCapture = 0;
   async function reconstruireCanal(channelId: UUID, userId: UUID): Promise<void> {
     if (reconstructionEnCours) return;
     reconstructionEnCours = true;
+
+    // Le meme garde-fou que pendant une jonction : sans lui, la reconciliation
+    // des observateurs reprendrait le sujet a l'instant ou on le libere.
+    salonEnJonction = channelId;
 
     journal.alerte('vocal', 'Canal du salon rebati', {
       salon: channelId,
@@ -1911,8 +1950,9 @@ let cadenceCapture = 0;
       // rebatirait aussitot un canal qui n'a pas encore eu le temps de repondre.
       derniereFoisVu = Date.now();
       etatEnAttente = true;
-      ouvrirCanal(channelId, userId);
+      await ouvrirCanal(channelId, userId);
     } finally {
+      salonEnJonction = null;
       reconstructionEnCours = false;
     }
   }
@@ -2172,7 +2212,7 @@ let cadenceCapture = 0;
 
       // Le canal, ses ecouteurs et sa reprise vivent dans `ouvrirCanal` : il
       // faut pouvoir le refaire sans refaire le micro ni les connexions.
-      if (!ouvrirCanal(channelId, userId)) return;
+      if (!(await ouvrirCanal(channelId, userId))) return;
 
       startSpeechDetection();
       salonEnJonction = null;
