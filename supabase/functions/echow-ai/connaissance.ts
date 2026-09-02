@@ -320,6 +320,16 @@ Seulement pour : un compte precis, un paiement, un incident en cours, une
 decision de moderation deja prise, ou une question sur Echow a laquelle tu ne
 sais vraiment pas repondre.
 
+Trois marqueurs mènent quelque part. Posez-les sur leur propre ligne, a la fin.
+L'application les remplace par un bouton colore ; n'ecrivez JAMAIS le chemin a la
+main, il vieillit et le marqueur non.
+
+  [[BADGES]]     une question sur les badges, leur obtention, leurs paliers
+  [[REGLAGES]]   une question sur un reglage : micro, theme, notifications
+  [[SUPPORT]]    seulement quand tu ne sais pas, ou qu'il faut un humain
+
+Un seul par reponse, celui qui correspond. Trois boutons ne guident plus.
+
 Dans ce cas, terminez par le marqueur [[SUPPORT]] sur sa propre ligne, et rien
 d'autre apres. L'application le remplace par un bouton qui ouvre le support.
 

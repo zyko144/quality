@@ -751,6 +751,37 @@
   border-color: var(--bg-app);
 }
 
+/*
+ * La pastille de presence, dans la liste des messages prives.
+ *
+ * Elle y est calculee sur la taille de l'avatar — un quart — puis cerclee de
+ * trois pixels de fond. Sur les petits avatars de cette liste, il ne restait
+ * qu'un point de couleur de deux ou trois pixels : la presence etait affichee
+ * sans etre lisible, ce qui revient a ne pas l'afficher.
+ *
+ * L'anneau descend a deux pixels et la pastille gagne un tiers. C'est la liste
+ * ou l'on regarde le plus souvent qui est en ligne, et souvent d'un seul coup
+ * d'oeil en passant.
+ */
+.dm-item .avatar__status {
+  border-width: 2px;
+  transform: scale(1.35);
+  transform-origin: bottom right;
+}
+
+/*
+ * Et sur la fiche de profil, l'inverse.
+ *
+ * L'avatar y fait quatre-vingt-seize pixels : un quart de cela donne une
+ * pastille de vingt-quatre, plus grosse que les icones qui l'entourent. Elle
+ * prenait le pas sur le nom, alors qu'elle n'est qu'un detail parmi d'autres.
+ */
+.profile__avatar .avatar__status,
+.profile__identity .avatar__status {
+  transform: scale(0.68);
+  transform-origin: bottom right;
+}
+
 .avatar-stack {
   display: inline-flex;
   align-items: center;

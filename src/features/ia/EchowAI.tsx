@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@/components/Icon';
+import { Icon, type IconName } from '@/components/Icon';
 import { useEchowAI, AMORCES } from '@/store/echowAI';
 import { RetourMobile } from '@/components/RetourMobile';
 import { useUI } from '@/store/ui';
@@ -210,6 +210,32 @@ export function EchowAI() {
  */
 function TexteIA({ texte }: { texte: string }) {
   const montrerSupport = useUI((state) => state.showSupport);
+  const montrerBadges = useUI((state) => state.showWaves);
+  const ouvrirReglages = useUI((state) => state.openSettings);
+
+  const ACCES: Record<
+    string,
+    { label: string; icone: IconName; teinte: string; ouvrir: () => () => void }
+  > = {
+    '[[SUPPORT]]': {
+      label: 'Contacter le support',
+      icone: 'mail',
+      teinte: 'rouge',
+      ouvrir: () => montrerSupport,
+    },
+    '[[BADGES]]': {
+      label: 'Voir les badges',
+      icone: 'shield',
+      teinte: 'or',
+      ouvrir: () => montrerBadges,
+    },
+    '[[REGLAGES]]': {
+      label: 'Ouvrir les reglages',
+      icone: 'settings',
+      teinte: 'accent',
+      ouvrir: () => () => ouvrirReglages('compte'),
+    },
+  };
 
   /*
    * Un seul decoupage pour tout ce qui n'est pas du texte ordinaire.
@@ -220,17 +246,34 @@ function TexteIA({ texte }: { texte: string }) {
    * demanderait de reassembler, et c'est en reassemblant qu'on perd l'ordre.
    */
   const morceaux = texte.split(
-    /(\[\[SUPPORT\]\]|https?:\/\/[^\s<>"')]+|\*\*[^*]+\*\*|`[^`]+`)/g,
+    /(\[\[(?:SUPPORT|BADGES|REGLAGES)\]\]|https?:\/\/[^\s<>"')]+|\*\*[^*]+\*\*|`[^`]+`)/g,
   );
 
   return (
     <>
       {morceaux.map((morceau, i) => {
-        if (morceau === '[[SUPPORT]]') {
+        /*
+         * Les marqueurs deviennent des boutons qui MENENT quelque part.
+         *
+         * L'assistant ne peut ecrire qu'un chemin, et un chemin vieillit — il en
+         * donnait un vers les reglages ou le support n'a jamais ete. Un marqueur
+         * pointe vers le code, qui suit tout seul quand une page demenage.
+         *
+         * Trois couleurs, trois destinations : le support est rouge parce qu'il
+         * passe la main a un humain, les badges portent leur or, les reglages
+         * l'accent ordinaire de l'application.
+         */
+        const raccourci = ACCES[morceau];
+        if (raccourci) {
           return (
-            <button key={i} type="button" className="ia__support" onClick={montrerSupport}>
-              <Icon name="mail" size={14} />
-              Contacter le support
+            <button
+              key={i}
+              type="button"
+              className={`ia__acces ia__acces--${raccourci.teinte}`}
+              onClick={raccourci.ouvrir()}
+            >
+              <Icon name={raccourci.icone} size={14} />
+              {raccourci.label}
             </button>
           );
         }

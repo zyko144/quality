@@ -8,6 +8,7 @@ import { useSession } from '@/store/session';
 import { Icon } from '@/components/Icon';
 import { Avatar, AvatarStack } from '@/components/Avatar';
 import type { Channel, Profile, UUID } from '@/types/db';
+import { UserContextMenu } from '@/features/profile/UserContextMenu';
 
 /**
  * Nom lisible d'une conversation privee.
@@ -138,6 +139,18 @@ function SuggestionsEntry() {
 }
 
 export function DirectMessageList() {
+  /*
+   * Le menu d'une personne, ouvert au clic droit sur sa conversation.
+   *
+   * La liste des messages prives est l'endroit ou l'on croise le plus de monde,
+   * et c'etait le seul ou l'on ne pouvait rien faire d'eux : ni voir leur fiche,
+   * ni les ajouter, ni les couper. Il fallait ouvrir la conversation, puis
+   * trouver leur nom dedans.
+   *
+   * `UserContextMenu` sait deja tout faire — fiche, ajout en ami, blocage,
+   * volume. Il n'y avait qu'a le brancher.
+   */
+  const [menuAmi, setMenuAmi] = useState<{ userId: string; x: number; y: number } | null>(null);
   const channels = useChat((state) => state.channels);
   const dmParticipants = useChat((state) => state.dmParticipants);
   const profiles = useChat((state) => state.profiles);
@@ -184,6 +197,14 @@ export function DirectMessageList() {
 
   return (
     <>
+      {menuAmi ? (
+        <UserContextMenu
+          userId={menuAmi.userId}
+          position={{ x: menuAmi.x, y: menuAmi.y }}
+          onClose={() => setMenuAmi(null)}
+        />
+      ) : null}
+
       <header className="sidebar__header">
         <h2 className="sidebar__heading">Messages prives</h2>
         <button
@@ -259,6 +280,13 @@ export function DirectMessageList() {
                       (unread > 0 && !isActive ? ' is-unread' : '')
                     }
                     onClick={() => selectChannel(channel.id)}
+                    onContextMenu={(event) => {
+                      // Seulement pour une conversation a deux : un groupe n'a
+                      // pas « une » personne dont on ouvrirait la fiche.
+                      if (!other?.id || others.length !== 1) return;
+                      event.preventDefault();
+                      setMenuAmi({ userId: other.id, x: event.clientX, y: event.clientY });
+                    }}
                     aria-current={isActive ? 'true' : undefined}
                   >
                     {channel.kind === 'group' ? (

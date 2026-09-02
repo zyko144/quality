@@ -12,6 +12,21 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.5
+
+### Echow AI
+
+- **Ses reponses menent quelque part.** Une question sur les badges finit par un bouton dore vers les badges, une question de reglage par un bouton vers les reglages, et le support garde le sien en rouge. Trois destinations, trois couleurs.
+
+### Messages prives
+
+- **Le clic droit sur une conversation ouvre le menu de la personne** : voir sa fiche, l'ajouter en ami, la bloquer. C'etait l'endroit ou l'on croise le plus de monde, et le seul ou l'on ne pouvait rien en faire.
+- **On voit enfin qui est en ligne.** La pastille de presence y etait calculee sur la taille de l'avatar, puis cerclee de trois pixels : il n'en restait qu'un point de deux pixels.
+
+### Profil
+
+- Les pastilles de presence y sont plus discretes : elles prenaient le pas sur le nom.
+
 ## 9.5.4
 
 ### Echow AI
