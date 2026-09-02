@@ -1904,3 +1904,34 @@
 .conditions__bouton:not(:disabled):hover {
   background: color-mix(in oklab, var(--success, #3ba55d) 85%, #000);
 }
+
+/*
+ * L'ajout en ami, sous « Envoyer un message ».
+ *
+ * En retrait de lui : ecrire a quelqu'un est ce qu'on vient faire le plus
+ * souvent, l'ajouter arrive une fois. Deux boutons de meme poids obligeraient a
+ * choisir a chaque ouverture de fiche.
+ *
+ * Il garde sa place une fois la demande envoyee, en disant qu'elle l'est. Le
+ * faire disparaitre laisserait douter du clic — et c'est le moment ou l'on
+ * doute le plus, puisque rien d'autre ne change a l'ecran.
+ */
+.profile__ajouter {
+  margin-top: var(--space-2);
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.profile__ajouter:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.profile__ajouter:disabled {
+  opacity: 0.7;
+  cursor: default;
+  color: var(--success);
+  border-color: color-mix(in oklab, var(--success) 45%, transparent);
+}

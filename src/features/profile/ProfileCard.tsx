@@ -15,6 +15,7 @@ import { ROLE_LABEL, type Profile, type ProfileStats, type SpaceRole, type UUID 
 import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
 import { BadgeVisual } from '@/components/BadgeVisual';
 import { MemberRoles } from './MemberRoles';
+import { useFriends } from '@/store/friends';
 
 /**
  * Carte de profil.
@@ -48,6 +49,14 @@ export function ProfileCard({ userId }: { userId: UUID }) {
 
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [onglet, setOnglet] = useState<'apropos' | 'espaces' | 'amis'>('apropos');
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+
+  const mesAmis = useFriends((etat) => etat.friends);
+  const mesDemandes = useFriends((etat) => etat.outgoing);
+  const sendRequest = useFriends((etat) => etat.sendRequest);
+
+  const dejaAmi = mesAmis.some((lien) => lien.user_id === userId);
+  const demandeEnvoyee = mesDemandes.some((lien) => lien.user_id === userId);
 
   /*
    * Badges, comptes lies et activite du moment.
@@ -377,6 +386,38 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                 Envoyer un message
               </button>
             )}
+
+            {/*
+              L'ajout en ami, depuis la fiche.
+              
+              Il n'existait qu'au clic droit — dans la liste des salons, dans le
+              vocal. Or la fiche est justement l'endroit ou l'on decide si l'on
+              veut connaitre quelqu'un : on vient d'y lire sa bio, ses liens, ses
+              espaces en commun. Devoir la fermer pour aller le chercher ailleurs
+              defaisait le geste au moment ou il etait le plus naturel.
+              
+              Trois etats, et aucun n'est cache : ajouter, attendre, ou rien
+              parce que c'est deja fait. Un bouton qui disparait sans explication
+              laisse chercher ce qu'on a mal fait.
+            */}
+            {!isMe && !dejaAmi ? (
+              <button
+                type="button"
+                className="btn profile__action profile__ajouter"
+                disabled={demandeEnvoyee || envoiEnCours}
+                onClick={() => {
+                  setEnvoiEnCours(true);
+                  void sendRequest(profile.username).finally(() => setEnvoiEnCours(false));
+                }}
+              >
+                {envoiEnCours ? (
+                  <span className="spinner" />
+                ) : (
+                  <Icon name={demandeEnvoyee ? 'check' : 'user-plus'} size={15} />
+                )}
+                {demandeEnvoyee ? 'Demande envoyee' : 'Ajouter en ami'}
+              </button>
+            ) : null}
 
             <p className="profile__since">
               {stats
