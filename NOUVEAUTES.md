@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.4
+
+### Echow AI
+
+- **Les reponses ont du relief.** Le gras porte la reponse, en couleur ; ce qu'il faut retrouver mot pour mot — un nom de reglage, un raccourci — se detache. Avant, `**gras**` et les accents graves s'affichaient tels quels et il fallait tout lire pour trouver la partie qui repondait.
+- Les sauts de ligne sont conserves : une marche a suivre ne se retrouve plus collee en un seul paragraphe.
+
 ## 9.5.3
 
 ### Echow AI

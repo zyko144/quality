@@ -211,7 +211,17 @@ export function EchowAI() {
 function TexteIA({ texte }: { texte: string }) {
   const montrerSupport = useUI((state) => state.showSupport);
 
-  const morceaux = texte.split(/(\[\[SUPPORT\]\]|https?:\/\/[^\s<>"')]+)/g);
+  /*
+   * Un seul decoupage pour tout ce qui n'est pas du texte ordinaire.
+   *
+   * Les groupes de capture font que `split` RETOURNE les separateurs : chaque
+   * morceau est donc soit du texte, soit une partie active, dans l'ordre. Un
+   * second passage par partie eviterait de croiser les regles — mais il
+   * demanderait de reassembler, et c'est en reassemblant qu'on perd l'ordre.
+   */
+  const morceaux = texte.split(
+    /(\[\[SUPPORT\]\]|https?:\/\/[^\s<>"')]+|\*\*[^*]+\*\*|`[^`]+`)/g,
+  );
 
   return (
     <>
@@ -230,6 +240,26 @@ function TexteIA({ texte }: { texte: string }) {
             <a key={i} href={morceau} target="_blank" rel="noreferrer noopener">
               {morceau}
             </a>
+          );
+        }
+
+        // Le gras porte la couleur d'accent : dans une reponse de quatre
+        // phrases, c'est ce qui permet de trouver la reponse sans tout lire.
+        if (morceau.startsWith('**') && morceau.endsWith('**') && morceau.length > 4) {
+          return (
+            <strong key={i} className="ia__fort">
+              {morceau.slice(2, -2)}
+            </strong>
+          );
+        }
+
+        // Ce que l'on doit taper ou trouver mot pour mot : un nom de reglage,
+        // un raccourci. Le detacher evite d'avoir a deviner ou il commence.
+        if (morceau.startsWith('`') && morceau.endsWith('`') && morceau.length > 2) {
+          return (
+            <code key={i} className="ia__code">
+              {morceau.slice(1, -1)}
+            </code>
           );
         }
 

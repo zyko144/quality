@@ -3101,3 +3101,42 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   text-underline-offset: 2px;
   overflow-wrap: anywhere;
 }
+
+/*
+ * Le relief dans une reponse de l'assistant.
+ *
+ * Une reponse arrivait en un bloc de texte uniforme : `**gras**` et les accents
+ * graves s'y affichaient tels quels, et il fallait tout lire pour trouver la
+ * partie qui repondait. Sur quatre phrases c'est supportable ; sur une marche a
+ * suivre, non.
+ *
+ * Deux reliefs seulement, et chacun dit une chose precise. Le gras porte la
+ * reponse. Le monospace porte ce qu'il faut retrouver mot pour mot — un nom de
+ * reglage, un raccourci. En ajouter un troisieme reviendrait a n'en avoir
+ * aucun : trois emphases dans un paragraphe ne mettent plus rien en avant.
+ */
+.ia__fort {
+  color: var(--accent);
+  font-weight: var(--weight-bold);
+}
+
+.ia__code {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Les sauts de ligne de l'assistant sont conserves.
+ *
+ * Il ecrit des marches a suivre sur plusieurs lignes ; sans cela elles
+ * arrivaient collees en un seul paragraphe, ce qui defait justement ce qu'une
+ * suite d'etapes veut dire.
+ */
+.ia__bulle {
+  white-space: pre-wrap;
+}
