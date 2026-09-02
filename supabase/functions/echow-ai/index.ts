@@ -87,6 +87,23 @@ const PAR_JOUR_TOTAL = Number(Deno.env.get('IA_LIMITE_GLOBALE') ?? '1400');
  * a expliquer un reglage, et forcent des reponses courtes — ce qu'on veut de
  * toute facon.
  */
+/*
+ * Ce qui a ete essaye, et retire
+ * ------------------------------
+ * `thinkingConfig: { thinkingBudget: 0 }` dans `generationConfig`, pour couper
+ * la deliberation prealable des modeles Flash et gagner sur le delai avant le
+ * premier mot.
+ *
+ * L'API a repondu `400 INVALID_ARGUMENT` et l'assistant a cesse de repondre.
+ * J'avais suppose qu'un modele ne connaissant pas ce champ l'ignorerait : Gemini
+ * rejette la requete ENTIERE sur un champ inconnu. Une supposition sur le
+ * comportement d'un service tiers ne vaut rien tant qu'elle n'a pas ete
+ * essayee contre lui.
+ *
+ * A ne pas remettre sans avoir verifie que le modele configure l'accepte — et
+ * le seul moyen de le verifier est de l'appeler.
+ */
+
 /**
  * La longueur maximale d'une reponse.
  *
@@ -248,25 +265,6 @@ Deno.serve(async (requete) => {
           generationConfig: {
             maxOutputTokens: REPONSE_MAX,
             temperature: 0.6,
-
-            /*
-             * On coupe la reflexion prealable.
-             *
-             * Les modeles Flash recents deliberent avant de repondre : ils
-             * produisent des jetons de raisonnement qui ne sont jamais montres,
-             * et qui s'ajoutent au delai avant le PREMIER MOT. Sur une question
-             * de support — « ou sont les raccourcis », « comment on cree un
-             * espace » — cette deliberation ne change pas la reponse, elle ne
-             * fait que la retarder.
-             *
-             * Un budget nul la desactive. C'est le seul reglage qui agisse sur
-             * l'attente ressentie sans rien retirer au contenu : la longueur
-             * maximale, elle, ne joue que sur la fin de la reponse.
-             *
-             * Un modele qui ne connait pas ce reglage l'ignore, ce qui rend le
-             * changement sans risque pour les anciens.
-             */
-            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
       },

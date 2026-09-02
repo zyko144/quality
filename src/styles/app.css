@@ -928,32 +928,11 @@
 }
 
 /*
- * Rangee a droite plutot qu'au centre.
- *
- * La fiche de profil s'ouvre depuis la liste des membres, qui est a droite. Une
- * fiche qui saute au centre fait perdre l'endroit d'ou on l'a demandee : on
- * regarde une liste, on clique un nom, et tout se deplace. Contre le bord, elle
- * reste a cote de son origine.
- *
- * Verticalement centree : `margin-block` reste `auto`.
+ * La fiche de profil a ete rangee a droite un moment, pour rester a cote de la
+ * liste des membres d'ou on l'ouvre. Elle revient au centre : c'est la place
+ * ordinaire d'une fenetre, et une exception par surface finit par ne plus se
+ * justifier qu'a une seule.
  */
-.modal--droite {
-  margin-left: auto;
-  margin-right: var(--space-6);
-}
-
-/*
- * Sauf sur petit ecran, ou il n'y a pas de « droite ».
- *
- * La liste des membres y est un tiroir, pas une colonne : la fiche n'a plus
- * d'origine a cotoyer, et la coller au bord ne ferait que la decentrer.
- */
-@media (max-width: 860px) {
-  .modal--droite {
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
 
 .modal::backdrop {
   background: var(--bg-scrim);

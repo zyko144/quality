@@ -98,7 +98,7 @@ export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, clas
       );
     }
 
-    // 4. Chasseur de bogues (Scarabee Cybernetique - GARDE TEL QUEL)
+    // 4. Bug Hunter (scarabee de circuits)
     if (badgeCle === 'rapporteur') {
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

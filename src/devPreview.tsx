@@ -54,10 +54,10 @@ export function devPreview(name: string): ReactNode | null {
      * cote a cote ce qu'on a et ce qu'on n'a pas.
      */
     const echantillon: Badge[] = [
-      ['pionnier', 'Pionnier', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
+      ['pionnier', '100 premiers soutiens', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
       ['premiere-heure', 'Premiere heure', 'Present le jour de l’ouverture. Ne pourra plus jamais etre obtenu.', 'soutien', '#ec4899', null, 2],
       ['equipe', 'Equipe Echow', 'Membre de l’equipe qui construit Echow.', 'equipe', '#6366f1', null, 3],
-      ['rapporteur', 'Chasseur de bogues', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
+      ['rapporteur', 'Bug Hunter', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
       ['espace-100', 'Batisseur — 100', 'A cree un espace qui compte au moins cent membres.', 'succes', '#22c55e', null, 10],
       ['espace-1m', 'Batisseur — 1M', 'A cree un espace qui compte au moins un million de membres.', 'succes', '#f43f5e', null, 13],
       ['messages-10k', 'Plume — 10 000', 'A ecrit dix mille messages.', 'succes', '#38bdf8', null, 20],
@@ -132,9 +132,9 @@ export function devPreview(name: string): ReactNode | null {
      */
     useBadges.setState({
       catalogue: [
-        ['pionnier', 'Pionnier', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
+        ['pionnier', '100 premiers soutiens', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
         ['premiere-heure', 'Premiere heure', 'Present le jour de l’ouverture.', 'soutien', '#ec4899', null, 2],
-        ['rapporteur', 'Chasseur de bogues', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
+        ['rapporteur', 'Bug Hunter', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
         ['messages-100k', 'Plume — 100 000', 'A ecrit cent mille messages.', 'succes', '#a855f7', null, 22],
         ['anciennete-3ans', 'Veteran — 3 ans', 'Compte ouvert depuis plus de trois ans.', 'anciennete', '#f59e0b', null, 41],
       ].map(([cle, nom, description, famille, teinte, limite, rang]) => ({

@@ -322,47 +322,9 @@
  * Le nom est passe dans l'infobulle, ou il ne coute aucune place.
  */
 
-/* --------------------------------------------------------------------------
-   La liste nommee, sous les roles
-
-   Les dessins a cote du nom disent qu'on a des badges ; ils ne disent pas
-   lesquels. A vingt-deux pixels deux plumes de la meme famille se ressemblent,
-   et les distinguer demanderait de viser l'infobulle — donc de savoir qu'elle
-   existe. La liste les nomme une fois, en toutes lettres.
-
-   Chaque puce porte la teinte de son badge : c'est ce qui la distingue d'un
-   role sans qu'il faille lire. Les deux se ressemblent a l'ecran et n'ont rien
-   a voir — un role dit ce qu'on peut faire, un badge ce qu'on a fait.
-   -------------------------------------------------------------------------- */
-
-.profile__badges--obtenus {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.profile-badge-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px 3px 5px;
-  border: 1px solid color-mix(in oklab, var(--teinte) 40%, transparent);
-  border-radius: var(--radius-full);
-  background: color-mix(in oklab, var(--teinte) 12%, transparent);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.profile-badge-item__rang {
-  padding: 0 5px;
-  border-radius: var(--radius-full);
-  background: color-mix(in oklab, var(--teinte) 26%, transparent);
-  color: var(--teinte);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-}
+/*
+ * La liste nommee a existe ici, sous les roles : chaque badge en toutes lettres,
+ * teinte de sa couleur. Elle est retiree — les dessins a cote du nom disent
+ * l'essentiel, et leur infobulle nomme celui qu'on survole. Deux presentations
+ * du meme fait demandaient de regarder deux fois pour n'apprendre qu'une chose.
+ */
