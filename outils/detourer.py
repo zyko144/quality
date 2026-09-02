@@ -6,7 +6,9 @@ Options
     --taille N    cote du carre produit (256 par defaut)
     --marge N     pixels de vide autour du dessin, en pourcentage du cote (6)
     --fond R,G,B  couleur du fond, si l'estimation se trompe
-    --seuil A,B   distances de bascule, sur 255 (14,140 par defaut)
+    --seuil A,B   distances de bascule, sur 255 (14,140 par defaut ; la borne
+                  basse est remontee toute seule si le fond est bruite)
+    --principal   ne garde que le dessin, et jette ce qui flotte a cote
     --apercu F    ecrit en plus une planche avant/apres, sur damier
 
 Pourquoi pas un simple seuil
@@ -57,20 +59,113 @@ from PIL import Image
 from scipy import ndimage
 
 
+def _anneau(rgb: np.ndarray) -> np.ndarray:
+    """Les pixels du bord, qu'on tient pour du fond."""
+    bande = max(2, min(rgb.shape[0], rgb.shape[1]) // 25)
+    return np.concatenate([
+        rgb[:bande].reshape(-1, 3),
+        rgb[-bande:].reshape(-1, 3),
+        rgb[:, :bande].reshape(-1, 3),
+        rgb[:, -bande:].reshape(-1, 3),
+    ])
+
+
 def estimer_fond(rgb: np.ndarray) -> np.ndarray:
     """La couleur dominante sur l'anneau exterieur.
 
     La mediane, et non la moyenne : si un morceau de dessin touche le bord, la
     moyenne se decale vers lui alors que la mediane l'ignore.
     """
-    bande = max(2, min(rgb.shape[0], rgb.shape[1]) // 40)
-    anneau = np.concatenate([
-        rgb[:bande].reshape(-1, 3),
-        rgb[-bande:].reshape(-1, 3),
-        rgb[:, :bande].reshape(-1, 3),
-        rgb[:, -bande:].reshape(-1, 3),
-    ])
-    return np.median(anneau, axis=0)
+    return np.median(_anneau(rgb), axis=0)
+
+
+def plancher_du_bruit(rgb: np.ndarray, fond: np.ndarray, demande: float) -> float:
+    """A partir de quel ecart un pixel cesse d'etre du fond.
+
+    Une valeur fixe suppose un fond uni. Plusieurs de ces dessins arrivent sur un
+    degrade, ou une vignette eclairee dans un coin : la moitie du fond s'ecarte
+    alors de sa propre mediane de plus que le seuil, survit au detourage, et le
+    badge garde un rectangle de fond autour de lui — bien visible des que la page
+    n'est plus sombre.
+
+    On mesure donc l'ecart REEL du bord a sa mediane et on place le plancher
+    au-dessus. Le quatre-vingt-dixieme centile, et non le maximum : si un bout de
+    dessin mord sur le bord, le maximum monterait jusqu'a lui et effacerait le
+    badge entier.
+
+    Le plafond a 45 est le garde-fou de ce garde-fou : au-dela, ce n'est plus un
+    fond bruite qu'on mesure, c'est qu'il n'y a pas de fond a retirer.
+    """
+    ecarts = np.linalg.norm(_anneau(rgb) - fond, axis=1)
+    return float(min(45.0, max(demande, np.percentile(ecarts, 90) * 1.6)))
+
+
+def _indices(forme: tuple[int, int]) -> tuple[np.ndarray, np.ndarray]:
+    y, x = np.mgrid[0:forme[0], 0:forme[1]]
+    return y / max(forme[0] - 1, 1), x / max(forme[1] - 1, 1)
+
+
+def fond_modelise(rgb: np.ndarray, plat: np.ndarray) -> np.ndarray:
+    """Le fond, decrit par une surface plutot que par une couleur.
+
+    Une couleur unique suppose un fond uniforme. Ces dessins arrivent sur autre
+    chose : un degrade franc pour les uns, une lueur d'angle pour les autres. La
+    moitie du fond s'ecarte alors de la mediane plus que n'importe quel seuil
+    raisonnable, survit au detourage, et le badge ressort avec un rectangle de
+    fond colle autour de lui — invisible sur page sombre, criant sur page claire.
+
+    Trois modeles sont essayes, du plus simple au moins simple :
+
+        aplat       une couleur
+        plan        a + b.x + c.y            un degrade
+        quadrique   + d.x2 + e.y2 + f.xy     une lueur, un coin eclaire
+
+    Le plus complexe n'est retenu que s'il decrit le bord SENSIBLEMENT mieux
+    (10 %) que celui d'avant. Sans cette condition on prendrait toujours le
+    dernier, qui a plus de liberte et gagnerait toujours d'un cheveu — en
+    epousant le bruit plutot que le fond.
+
+    Ce qui rend l'exercice sur : les coefficients sont ajustes sur le BORD seul,
+    et aucune de ces surfaces n'a assez de liberte pour epouser un dessin. Meme
+    ajustee sur une image ou un morceau de dessin mord sur le bord, une
+    quadrique reste une nappe lisse : elle ne peut pas creuser la forme du
+    badge, donc elle ne peut pas l'effacer.
+    """
+    h, w = rgb.shape[:2]
+    gy, gx = np.mgrid[0:h, 0:w]
+    gy = gy / max(h - 1, 1)
+    gx = gx / max(w - 1, 1)
+
+    bande = max(2, min(h, w) // 25)
+    bord = np.zeros((h, w), dtype=bool)
+    bord[:bande], bord[-bande:] = True, True
+    bord[:, :bande], bord[:, -bande:] = True, True
+
+    # On ecarte le quart le plus eloigne de la mediane : c'est la que se trouve
+    # un eventuel bout de dessin, et un moindre carre le suivrait.
+    ecart = np.linalg.norm(rgb - plat, axis=2)[bord]
+    garde = ecart <= np.percentile(ecart, 75)
+
+    un = np.ones(h * w)
+    termes = [un, gx.ravel(), gy.ravel(), gx.ravel() ** 2, gy.ravel() ** 2, gx.ravel() * gy.ravel()]
+
+    retenu = np.broadcast_to(plat, rgb.shape).copy()
+    reste = np.abs(retenu[bord][garde] - rgb[bord][garde]).mean()
+
+    for combien in (3, 6):
+        base = np.stack(termes[:combien], axis=1)
+        surface = np.empty((h, w, 3))
+        for c in range(3):
+            coeffs, *_ = np.linalg.lstsq(
+                base.reshape(h, w, combien)[bord][garde], rgb[..., c][bord][garde], rcond=None
+            )
+            surface[..., c] = (base @ coeffs).reshape(h, w)
+
+        propose = np.abs(surface[bord][garde] - rgb[bord][garde]).mean()
+        if propose < reste * 0.9:
+            retenu, reste = surface, propose
+
+    return retenu
 
 
 def detourer(
@@ -79,8 +174,11 @@ def detourer(
     seuil: tuple[float, float] = (14.0, 140.0),
 ) -> Image.Image:
     rgb = np.asarray(image.convert('RGB'), dtype=np.float64)
-    if fond is None:
-        fond = estimer_fond(rgb)
+    plat = estimer_fond(rgb) if fond is None else fond
+
+    # Une couleur, un plan ou une quadrique selon ce que le fond demande. Voir
+    # la fonction : le choix se fait sur ce qui decrit le mieux le BORD.
+    fond = np.broadcast_to(plat, rgb.shape) if fond is not None else fond_modelise(rgb, plat)
 
     # Distance au fond, par pixel.
     ecart = np.linalg.norm(rgb - fond, axis=2)
@@ -88,6 +186,9 @@ def detourer(
     bas, haut = seuil
     if haut <= bas:
         raise SystemExit('--seuil veut deux valeurs croissantes, par exemple 14,140')
+
+    # Le plancher suit le bruit du fond de CETTE image. Voir la fonction.
+    bas = plancher_du_bruit(rgb, plat, bas)
 
     # Opacite continue entre les deux seuils : c'est ce qui garde la lueur.
     alpha = np.clip((ecart - bas) / (haut - bas), 0.0, 1.0)
@@ -110,6 +211,39 @@ def detourer(
 
     sortie = np.concatenate([np.clip(couleur, 0, 255), alpha[..., None] * 255], axis=2)
     return Image.fromarray(sortie.astype(np.uint8), 'RGBA')
+
+
+def garder_le_principal(image: Image.Image, part: float = 0.06) -> Image.Image:
+    """Ne garde que le dessin, et jette ce qui flotte a cote.
+
+    Une lueur d'angle assez vive ne se distingue d'un dessin par aucun ecart de
+    couleur : elle est aussi loin du fond que lui. Aucun reglage de seuil ne la
+    retire — mais elle est SEPAREE du dessin, et c'est par la qu'on la prend.
+
+    Les taches qui font moins d'une fraction de la principale s'en vont ; ce qui
+    en approche reste. Un badge peut avoir des morceaux detaches qui comptent —
+    etincelles, particules, satellites — et les effacer au motif qu'ils ne
+    touchent pas le corps abimerait le dessin.
+
+    Volontairement laisse en option : sur un dessin fait de plusieurs morceaux
+    d'egale importance, ce nettoyage a tort.
+    """
+    alpha = np.asarray(image.getchannel('A'))
+    taches, combien = ndimage.label(alpha > 40)
+    if combien <= 1:
+        return image
+
+    aires = ndimage.sum(np.ones_like(taches), taches, range(1, combien + 1))
+    gardees = {i + 1 for i, aire in enumerate(aires) if aire >= aires.max() * part}
+
+    garde = np.isin(taches, list(gardees))
+    # Le voisinage des taches gardees compte aussi : leur pourtour translucide
+    # est sous le seuil de 40 et ne porte donc aucune etiquette.
+    garde = ndimage.binary_dilation(garde, iterations=2) | (alpha <= 40) & ndimage.binary_dilation(garde, iterations=3)
+
+    sortie = np.asarray(image).copy()
+    sortie[..., 3] = np.where(garde, sortie[..., 3], 0)
+    return Image.fromarray(sortie, 'RGBA')
 
 
 def cadrer(image: Image.Image, taille: int, marge: float) -> Image.Image:
@@ -142,7 +276,10 @@ def main(argv: list[str]) -> int:
 
     i = 0
     while i < len(argv):
-        if argv[i].startswith('--'):
+        if argv[i] == '--principal':
+            options['principal'] = 'oui'
+            i += 1
+        elif argv[i].startswith('--'):
             if i + 1 >= len(argv):
                 raise SystemExit(f'{argv[i]} attend une valeur')
             options[argv[i][2:]] = argv[i + 1]
@@ -166,7 +303,10 @@ def main(argv: list[str]) -> int:
         seuil = (float(bas), float(haut))
 
     source = Image.open(entree)
-    decoupe = cadrer(detourer(source, fond, seuil), taille, marge)
+    detoure = detourer(source, fond, seuil)
+    if 'principal' in options:
+        detoure = garder_le_principal(detoure)
+    decoupe = cadrer(detoure, taille, marge)
 
     sortie.parent.mkdir(parents=True, exist_ok=True)
     decoupe.save(sortie)

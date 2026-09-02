@@ -34,6 +34,24 @@ Pour detourer une image qui arrive sur fond sombre :
 L'outil estime le fond, garde la lueur en semi-transparence, recadre au dessin
 et sort un carre de 256 px. Voir son en-tete pour les options.
 
+## Ce qui est en place
+
+Les dessins livres le 2 septembre 2026 sont poses et detoures. Leurs originaux
+sont conserves dans `sources/`, pour pouvoir refaire le detourage sans les
+redemander.
+
+Deux series sont arrivees en quatre paliers pour cinq badges. Le dessin du haut
+couvre donc deux marches, plutot que de laisser un badge en trace vectoriel au
+milieu d'illustrations — un trou se voit davantage qu'une repetition :
+
+    plumes-tier3      -> messages-100k ET messages-500k
+    veteran-8ans-et+  -> anciennete-7ans ET anciennete-10ans
+
+Deposer `messages-500k.png` et `anciennete-7ans.png` suffira a les separer.
+
+**Manquent encore** : les neuf paliers de `vocal-*` et le badge `equipe`. Ils
+gardent leur trace vectoriel en attendant, ce qui est le comportement prevu.
+
 ## Taille
 
 256 x 256 suffit : la plus grande vignette de l'application fait 52 px, et un

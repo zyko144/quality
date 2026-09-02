@@ -220,11 +220,18 @@
  * est justement ce qu'il faut lui retirer — c'est aussi ce que le joueur lit
  * depuis toujours comme « pas encore debloque ».
  *
- * Pas un gris total : il reste un souffle de teinte, assez pour reconnaitre le
- * badge dans la serie sans le confondre avec ceux qu'on possede.
+ * Le dosage a ete regle a l'oeil, sur la page, contre un badge possede :
+ *
+ *   0.82 / 0.62   gris et sombre — la plume arc-en-ciel et le diamant perdent
+ *                 toute identite a 36 px, et la serie devient illisible
+ *   0.60 / 0.78   nettement en retrait, mais chaque dessin reste reconnaissable
+ *   0.30 / 0.92   trop proche du possede : la distinction ne se lit plus
+ *
+ * C'est un compromis entre deux echecs opposes, et non un reglage a maximiser.
+ * Trop fort, la serie ne se lit plus ; trop faible, posseder ne se voit plus.
  */
 .echow-badge-icon--dessin.echow-badge-icon--eteint .echow-badge-icon__dessin {
-  filter: grayscale(0.82) brightness(0.62) contrast(0.92);
+  filter: grayscale(0.6) brightness(0.78);
 }
 
 .echow-badge-icon--dessin.echow-badge-icon--eteint:hover .echow-badge-icon__dessin {
