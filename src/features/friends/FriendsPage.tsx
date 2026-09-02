@@ -7,6 +7,7 @@ import { useUI } from '@/store/ui';
 import { Icon } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
 import type { FriendLink } from '@/types/db';
+import { RetourMobile } from '@/components/RetourMobile';
 
 /**
  * Page des amis.
@@ -94,6 +95,7 @@ export function FriendsPage() {
         le glissement que si la cible est l'element lui-meme.
       */}
       <header className="friends__bar" data-tauri-drag-region>
+        <RetourMobile label="Revenir aux conversations" />
         <span className="friends__brand">
           <Icon name="users" size={20} />
           Amis

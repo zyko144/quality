@@ -12,7 +12,7 @@
   inset: 0;
   z-index: 200;
   display: grid;
-  grid-template-columns: minmax(218px, 1fr) minmax(0, 3fr);
+  grid-template-columns: minmax(248px, 1fr) minmax(0, 3.4fr);
   /* Ligne declaree explicitement : sans elle, la ligne implicite se dimensionne
      sur son contenu et depasse la fenetre. Les colonnes debordent alors au lieu
      de defiler, et tout ce qui suit le premier ecran devient inatteignable. */
@@ -45,9 +45,9 @@
 .settings__nav-inner {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   width: 100%;
-  max-width: 218px;
+  max-width: 248px;
 }
 
 .settings__nav-title {
@@ -970,10 +970,12 @@
 
 /* En bandeau horizontal, les intitules de groupe couperaient la ligne en
    trois : sur petit ecran la liste redevient continue. */
-@media (max-width: 860px) {
-  .settings__nav-group-title { display: none; }
-  .settings__nav-group + .settings__nav-group { margin-top: 0; }
-}
+/*
+ * La liste des sections tenait dans un bandeau horizontal, ou les titres de
+ * groupe ne rentraient pas. Elle occupe maintenant l'ecran entier — voir
+ * `mobile.css` — et les titres y reviennent : ce sont eux qui evitent de
+ * parcourir onze entrees a la file.
+ */
 
 /* ==========================================================================
    Empilement de cases a cocher
@@ -1182,14 +1184,20 @@
 
 /* -------------------------------------------------------------- Navigation */
 
-.settings {
-  grid-template-columns: minmax(248px, 1fr) minmax(0, 3.4fr);
-}
-
-.settings__nav-inner {
-  max-width: 248px;
-  gap: 3px;
-}
+/*
+ * Ces deux regles vivaient ici, hors de toute requete media, et APRES le bloc
+ * des petits ecrans. Elles y retablissaient donc les deux colonnes et la
+ * largeur de la barre sur un telephone, defaisant en silence tout ce que le
+ * bloc mobile venait de poser : la navigation reprenait 248 px sur 390, la
+ * section heritait du reste, et le moindre titre passait a la ligne.
+ *
+ * Rien ne le signalait — le fichier se lit du haut vers le bas, et une regle
+ * ecrite huit cents lignes plus loin ne se voit pas depuis celle qu'elle annule.
+ *
+ * Leurs valeurs sont remontees dans les regles de base, en haut du fichier. Il
+ * n'y a plus qu'un endroit ou la mise en page des reglages est decidee, et les
+ * requetes media redeviennent capables de la changer.
+ */
 
 /* Le titre d'un groupe porte sa couleur d'accent : c'est ce qui permet de
    retrouver « Application » d'un coup d'oeil au lieu de le lire. */

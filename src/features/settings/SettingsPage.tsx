@@ -79,6 +79,29 @@ export function SettingsPage() {
   const signOut = useSession((state) => state.signOut);
   const activeRef = useRef<HTMLButtonElement>(null);
 
+  /*
+   * Sur telephone, une colonne a la fois.
+   *
+   * La mise en page tient en deux colonnes — la liste des sections, puis la
+   * section. Sur 390 px de large, la premiere en prenait 218 et la seconde
+   * heritait du reste : le titre « Mon compte » passait a la ligne, « @zyko682 »
+   * se coupait en deux, et les boutons sortaient de l'ecran. Une mise en page
+   * pour grand ecran, retrecie, n'est pas une mise en page pour telephone.
+   *
+   * On montre donc la liste, puis la section choisie, et la fleche fait le
+   * chemin inverse. Deux colonnes ne tiennent pas dans une main.
+   *
+   * On arrive toujours sur la liste, meme si une section etait deja choisie :
+   * c'est elle qu'on vient chercher en ouvrant les reglages. La recherche, elle,
+   * mene droit au resultat — sinon elle ne servirait a rien.
+   */
+  const [surLaListe, setSurLaListe] = useState(true);
+
+  const allerA = (cible: SettingsSection) => {
+    openSettings(cible);
+    setSurLaListe(false);
+  };
+
   // Sur petit ecran la navigation devient un bandeau horizontal, plus large que
   // l'ecran : sans cela, la section ouverte reste hors champ et on ne sait pas
   // ou l'on se trouve.
@@ -127,10 +150,43 @@ export function SettingsPage() {
   if (!section) return null;
 
   return (
-    <div className="settings" role="dialog" aria-modal="true" aria-label="Parametres">
+    <div
+      className="settings"
+      data-vue={surLaListe ? 'liste' : 'section'}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Parametres"
+    >
       <nav className="settings__nav" aria-label="Sections des parametres">
         <div className="settings__nav-inner">
-          <p className="settings__nav-title">Parametres</p>
+          {/*
+            La liste a besoin de sa propre sortie : le bouton de fermeture vit
+            dans la colonne de droite, qui est masquee tant qu'on est ici.
+          */}
+          <div className="settings__nav-tete">
+            {/*
+              Seulement sur telephone.
+
+              Sur grand ecran la croix de la colonne de droite est toujours la,
+              et ce bouton en serait un second portant le meme nom : deux
+              controles identiques a l'ecran, et un nom accessible qui ne
+              designe plus personne — ce que les tests ont dit avant moi.
+            */}
+            {isMobile ? (
+              <button
+                type="button"
+                className="icon-btn settings__nav-fermer"
+                onClick={() => {
+                  if (useBrouillon.getState().retientLaFermeture()) return;
+                  closeSettings();
+                }}
+                aria-label="Fermer les parametres"
+              >
+                <Icon name="arrow-left" size={18} />
+              </button>
+            ) : null}
+            <p className="settings__nav-title">Parametres</p>
+          </div>
 
           {/*
             Chercher plutot que parcourir.
@@ -140,7 +196,7 @@ export function SettingsPage() {
             range. Personne ne cherche « Voix et video », on cherche « le truc
             qui enleve le bruit du clavier ».
           */}
-          <RechercheReglages onChoisir={(cible) => openSettings(cible)} />
+          <RechercheReglages onChoisir={allerA} />
 
           {GROUPES.map((groupe) => (
             <div className="settings__nav-group" key={groupe.titre}>
@@ -153,7 +209,7 @@ export function SettingsPage() {
                   type="button"
                   className={'settings__navitem' + (section === entry.value ? ' is-active' : '')}
                   aria-current={section === entry.value ? 'page' : undefined}
-                  onClick={() => openSettings(entry.value)}
+                  onClick={() => allerA(entry.value)}
                 >
                   <Icon name={entry.icon} size={16} />
                   {entry.label}
@@ -197,9 +253,13 @@ export function SettingsPage() {
           className="settings__close"
           onClick={() => {
             if (useBrouillon.getState().retientLaFermeture()) return;
-            closeSettings();
+            // Sur telephone la fleche remonte d'un cran, vers la liste ; elle ne
+            // quitte les reglages que depuis la liste. Sauter les deux d'un coup
+            // ferait perdre sa place a qui voulait juste changer de section.
+            if (isMobile) setSurLaListe(true);
+            else closeSettings();
           }}
-          aria-label={isMobile ? 'Revenir' : 'Fermer les parametres'}
+          aria-label={isMobile ? 'Revenir a la liste des reglages' : 'Fermer les parametres'}
         >
           {/* « ECHAP » ne veut rien dire sur un telephone, et la croix y est
               moins claire qu'une fleche : le panneau recouvre tout, en sortir

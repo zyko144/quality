@@ -11,6 +11,7 @@ import { useUI } from '@/store/ui';
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
 import { formatRelative } from '@/lib/time';
+import { RetourMobile } from '@/components/RetourMobile';
 
 /**
  * Ce qui manque a Quality, dit par ceux qui s'en servent.
@@ -119,6 +120,7 @@ export function Suggestions() {
     <div className="suggestions">
       <div className="suggestions__fil scroll">
       <header className="suggestions__entete" data-tauri-drag-region>
+        <RetourMobile label="Revenir aux conversations" />
         <h1 className="suggestions__titre">
           <span className="suggestions__marque" aria-hidden="true">
             <Icon name="sparkles" size={18} />

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { useEchowAI, AMORCES } from '@/store/echowAI';
+import { RetourMobile } from '@/components/RetourMobile';
 
 /**
  * Echow AI.
@@ -62,6 +63,7 @@ export function EchowAI() {
   return (
     <div className="ia" role="dialog" aria-modal="true" aria-label="Echow AI">
       <header className="ia__tete">
+        <RetourMobile label="Revenir aux conversations" />
         <MarqueIA taille={26} />
 
         <span className="ia__titre">

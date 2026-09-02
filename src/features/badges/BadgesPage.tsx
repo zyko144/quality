@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Icon } from '@/components/Icon';
 import { BadgeVisual } from '@/components/BadgeVisual';
 import { useSession } from '@/store/session';
+import { RetourMobile } from '@/components/RetourMobile';
 import {
   useBadges,
   FAMILLES,
@@ -62,6 +63,7 @@ export function BadgesPage() {
   return (
     <div className="badges-page">
       <header className="badges-page__tete">
+        <RetourMobile label="Revenir aux conversations" />
         <div className="badges-page__marque" aria-hidden="true">
           <Icon name="shield" size={26} />
         </div>

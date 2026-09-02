@@ -428,3 +428,144 @@
   flex-shrink: 0;
   margin-right: var(--space-1);
 }
+
+/* ==========================================================================
+   Les reglages, sur telephone
+
+   La mise en page tient en deux colonnes : la liste des sections, puis la
+   section. Sur 390 px de large la premiere en prenait 218 et la seconde
+   heritait du reste — le titre passait a la ligne, « @zyko682 » se coupait en
+   deux, et les boutons sortaient de l'ecran.
+
+   Une mise en page pour grand ecran, retrecie, n'est pas une mise en page pour
+   telephone. On en montre donc une a la fois, et `data-vue` dit laquelle. Le
+   composant garde une seule structure : c'est l'affichage qui change, pas
+   l'arbre, et rien ne se demonte en changeant de vue.
+   ========================================================================== */
+
+@media (max-width: 860px) {
+  .settings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings[data-vue='liste'] .settings__main {
+    display: none;
+  }
+
+  .settings[data-vue='section'] .settings__nav {
+    display: none;
+  }
+
+  /* La barre etait un bandeau horizontal qui defilait. En pleine largeur, une
+     liste verticale se parcourt d'un pouce au lieu de se faire glisser de
+     cote. */
+  .settings__nav {
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: var(--space-4);
+  }
+
+  .settings__nav-inner {
+    flex-direction: column;
+    max-width: none;
+    width: 100%;
+    padding-bottom: var(--space-6);
+  }
+
+  .settings__nav-title {
+    display: block;
+  }
+
+  .settings__nav-rule {
+    width: auto;
+    height: 1px;
+    margin: var(--space-3) 0;
+  }
+
+  /* Les titres de groupe reviennent : ils etaient masques quand la liste etait
+     un bandeau horizontal ou ils ne tenaient pas. En pleine largeur, ce sont
+     eux qui evitent de parcourir onze entrees a la file. */
+  .settings__nav-group-title {
+    display: block;
+  }
+
+  .settings__nav-group + .settings__nav-group {
+    margin-top: var(--space-4);
+  }
+
+  /* `align-self` : le conteneur est une colonne flex, ou un enfant se reduit a
+     son contenu. Sans cela l'en-tete faisait 44 px — la largeur du bouton — et
+     le titre s'y ecrasait. */
+  .settings__nav-tete {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+
+  .settings__nav-fermer {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Une cible de 44 px : c'est la taille d'un doigt, et une entree de liste
+     qu'on rate deux fois sur trois est pire qu'une liste plus longue. */
+  .settings__navitem {
+    min-height: 44px;
+    height: auto;
+    justify-content: flex-start;
+    font-size: var(--text-base);
+    white-space: normal;
+  }
+
+  .settings__page {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
+  /* Le bouton de retour flottait au-dessus du contenu, ou il recouvrait le
+     titre de la section des que celui-ci passait sous lui. */
+  .settings__close {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
+  /*
+   * Les selecteurs a segments passent a la ligne.
+   *
+   * « Clair | Sombre | Noir | Systeme » tient sur un ecran de bureau et deborde
+   * sur 390 px : le dernier choix sortait du cadre, a moitie visible et jamais
+   * atteignable. Les faire defiler de cote aurait cache le meme choix derriere
+   * un geste que rien n'annonce.
+   *
+   * Ils s'enroulent donc, et chaque segment prend au moins la moitie de la
+   * ligne : deux par rangee plutot que quatre serrees ou une invisible.
+   */
+  .settings__segmented,
+  .settings__segmented--wide {
+    flex-wrap: wrap;
+  }
+
+  .settings__seg {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+}
+
+/* Sur grand ecran, la liste et la section cohabitent : `data-vue` ne doit rien
+   masquer. Rien a ecrire — les regles ci-dessus vivent dans la requete media,
+   et l'attribut y est simplement sans effet. */
+
+/* --------------------------------------------------------------------------
+   Le retour vers la navigation
+
+   Chaque page qui occupe tout l'ecran le porte. Sans lui, on y entre et plus
+   rien n'en sort : la barre laterale est hors champ sur telephone.
+   -------------------------------------------------------------------------- */
+
+.retour-mobile {
+  flex-shrink: 0;
+  margin-right: var(--space-1);
+}

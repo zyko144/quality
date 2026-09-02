@@ -12,6 +12,7 @@ import {
 } from '@/store/support';
 import { Icon } from '@/components/Icon';
 import { formatRelative } from '@/lib/time';
+import { RetourMobile } from '@/components/RetourMobile';
 
 /**
  * Demander de l'aide a l'equipe.
@@ -98,6 +99,7 @@ export function Support() {
   return (
     <div className="support">
       <header className="support__entete" data-tauri-drag-region>
+        <RetourMobile label="Revenir aux conversations" />
         <h1 className="support__titre">
           <span className="support__marque" aria-hidden="true">
             <Icon name="mail" size={18} />
