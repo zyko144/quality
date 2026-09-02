@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession } from '@/store/session';
 import { useRoute, navigate } from '@/lib/router';
 import { AuthScreen } from '@/features/auth/AuthScreen';
@@ -7,7 +7,9 @@ import { ChooseUsername } from '@/features/auth/ChooseUsername';
 import { Landing } from '@/features/landing/Landing';
 import { Workspace } from '@/features/shell/Workspace';
 import { MaintenanceScreen } from '@/features/maintenance/MaintenanceScreen';
+import { RetourScreen } from '@/features/maintenance/RetourScreen';
 import { EN_MAINTENANCE, traverseLaMaintenance } from '@/features/maintenance/acces';
+import { retourDejaVu, marquerRetourVu } from '@/features/maintenance/retour';
 
 /**
  * Echow, et le verrou de maintenance.
@@ -33,6 +35,9 @@ export function App() {
   const initialize = useSession((state) => state.initialize);
 
   const { route } = useRoute();
+
+  // Lu une seule fois : ce que l'on a deja vu ne change pas en cours de session.
+  const [retourVu, setRetourVu] = useState(retourDejaVu);
 
   useEffect(() => initialize(), [initialize]);
 
@@ -87,6 +92,28 @@ export function App() {
 
   if (EN_MAINTENANCE && !autorise && route !== '/connexion') {
     return <MaintenanceScreen />;
+  }
+
+  /*
+   * La levee de la maintenance s'annonce, une fois.
+   *
+   * La derniere chose que ces gens ont vue est un ecran rouge disant que tout
+   * etait suspendu. Les ramener directement dans l'application les laisserait
+   * supposer que rien n'a change — ou pire, que ca n'avait pas ete coupe.
+   *
+   * Avant la reprise du mot de passe et avant l'espace de travail : c'est le
+   * premier ecran de la session qui suit la maintenance, sinon ce n'est plus un
+   * retour, c'est une interruption.
+   */
+  if (!EN_MAINTENANCE && !retourVu) {
+    return (
+      <RetourScreen
+        onEntrer={() => {
+          marquerRetourVu();
+          setRetourVu(true);
+        }}
+      />
+    );
   }
 
   // Le retour depuis un lien de recuperation passe avant tout le reste : une

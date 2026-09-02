@@ -3,6 +3,40 @@
    Fond avec flou rouge atmospherique, carte glassmorphic et badge d'outils
    ========================================================================== */
 
+/*
+ * La teinte de l'ecran, en un seul endroit.
+ *
+ * Cette feuille sert deux ecrans opposes : la maintenance, en rouge, et sa
+ * levee, en vert. Ils partagent tout le reste — la carte, les halos, la grille,
+ * les encadres, l'animation — et ne different que par cinq couleurs.
+ *
+ * Les ecrire en dur dans deux feuilles aurait fait deux copies a maintenir, et
+ * la seconde aurait cesse de suivre la premiere des la premiere retouche. Un
+ * ecran de retour qui ne ressemble plus a celui qu'il remplace ne se lit plus
+ * comme sa suite.
+ *
+ * Les composantes sont separees des parentheses pour que `rgba(var(--x), 0.3)`
+ * reste possible : une couleur complete ne se laisse pas doser.
+ */
+.maintenance-page {
+  --mnt-vif: 239, 68, 68;
+  --mnt-clair: 248, 113, 113;
+  --mnt-fonce: 220, 38, 38;
+  --mnt-profond: 185, 28, 28;
+  --mnt-nuit: 153, 27, 27;
+  --mnt-pale: 252, 165, 165;
+}
+
+/* La levee : les memes formes, l'autre bout du spectre. */
+.maintenance-page--retour {
+  --mnt-vif: 34, 197, 94;
+  --mnt-clair: 74, 222, 128;
+  --mnt-fonce: 22, 163, 74;
+  --mnt-profond: 21, 128, 61;
+  --mnt-nuit: 22, 101, 52;
+  --mnt-pale: 187, 247, 208;
+}
+
 .maintenance-page {
   position: fixed;
   inset: 0;
@@ -30,7 +64,7 @@
   justify-content: space-between;
   height: 48px;
   padding: 0 16px;
-  border-bottom: 1px solid rgba(239, 68, 68, 0.12);
+  border-bottom: 1px solid rgba(var(--mnt-vif), 0.12);
   background: rgba(10, 11, 15, 0.6);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -53,8 +87,8 @@
 .maintenance-header__logo-icon {
   width: 22px;
   height: 22px;
-  color: #ef4444;
-  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+  color: rgb(var(--mnt-vif));
+  filter: drop-shadow(0 0 8px rgba(var(--mnt-vif), 0.6));
 }
 
 .maintenance-header__brand-name {
@@ -69,9 +103,9 @@
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 9999px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  background: rgba(var(--mnt-vif), 0.15);
+  border: 1px solid rgba(var(--mnt-vif), 0.3);
+  color: rgb(var(--mnt-clair));
 }
 
 /* --------------------------------------------------------------------------
@@ -99,7 +133,7 @@
   left: -5%;
   width: 550px;
   height: 550px;
-  background: radial-gradient(circle, rgba(239, 68, 68, 0.45) 0%, rgba(220, 38, 38, 0.2) 50%, transparent 75%);
+  background: radial-gradient(circle, rgba(var(--mnt-vif), 0.45) 0%, rgba(var(--mnt-fonce), 0.2) 50%, transparent 75%);
   animation: maintenance-float-1 12s ease-in-out infinite alternate;
 }
 
@@ -108,7 +142,7 @@
   right: -5%;
   width: 650px;
   height: 650px;
-  background: radial-gradient(circle, rgba(220, 38, 38, 0.5) 0%, rgba(185, 28, 28, 0.25) 50%, transparent 75%);
+  background: radial-gradient(circle, rgba(var(--mnt-fonce), 0.5) 0%, rgba(var(--mnt-profond), 0.25) 50%, transparent 75%);
   animation: maintenance-float-2 14s ease-in-out infinite alternate;
 }
 
@@ -117,7 +151,7 @@
   left: 60%;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(248, 113, 113, 0.35) 0%, rgba(220, 38, 38, 0.15) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--mnt-clair), 0.35) 0%, rgba(var(--mnt-fonce), 0.15) 50%, transparent 70%);
   animation: maintenance-float-3 10s ease-in-out infinite alternate;
 }
 
@@ -127,7 +161,7 @@
   transform: translate(-50%, -50%);
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(153, 27, 27, 0.08) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--mnt-vif), 0.2) 0%, rgba(var(--mnt-nuit), 0.08) 50%, transparent 70%);
   animation: maintenance-pulse 6s ease-in-out infinite;
 }
 
@@ -162,12 +196,12 @@
   max-width: 580px;
   width: 100%;
   background: rgba(15, 17, 23, 0.75);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(var(--mnt-vif), 0.3);
   border-radius: 24px;
   padding: 40px 36px;
   text-align: center;
   box-shadow: 
-    0 0 60px -15px rgba(239, 68, 68, 0.3),
+    0 0 60px -15px rgba(var(--mnt-vif), 0.3),
     0 25px 50px -12px rgba(0, 0, 0, 0.8),
     inset 0 1px 1px rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(28px);
@@ -183,23 +217,23 @@
   width: 96px;
   height: 96px;
   border-radius: 28px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.1) 100%);
-  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: linear-gradient(135deg, rgba(var(--mnt-vif), 0.2) 0%, rgba(var(--mnt-profond), 0.1) 100%);
+  border: 1px solid rgba(var(--mnt-vif), 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
   box-shadow: 
-    0 0 35px rgba(239, 68, 68, 0.4),
-    inset 0 0 20px rgba(239, 68, 68, 0.2);
+    0 0 35px rgba(var(--mnt-vif), 0.4),
+    inset 0 0 20px rgba(var(--mnt-vif), 0.2);
   animation: maintenance-glow-breathe 4s ease-in-out infinite;
 }
 
 .maintenance-icon-svg {
   width: 50px;
   height: 50px;
-  color: #ef4444;
-  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
+  color: rgb(var(--mnt-vif));
+  filter: drop-shadow(0 0 10px rgba(var(--mnt-vif), 0.8));
 }
 
 /* Pastille statut */
@@ -209,9 +243,9 @@
   gap: 8px;
   padding: 6px 14px;
   border-radius: 9999px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #fca5a5;
+  background: rgba(var(--mnt-vif), 0.12);
+  border: 1px solid rgba(var(--mnt-vif), 0.35);
+  color: rgb(var(--mnt-pale));
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -223,8 +257,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #ef4444;
-  box-shadow: 0 0 10px #ef4444;
+  background-color: rgb(var(--mnt-vif));
+  box-shadow: 0 0 10px rgb(var(--mnt-vif));
   animation: maintenance-dot-pulse 1.8s ease-in-out infinite;
 }
 
@@ -269,7 +303,7 @@
 }
 
 .maintenance-stat-box:hover {
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(var(--mnt-vif), 0.3);
 }
 
 .maintenance-stat-box__label {
@@ -283,7 +317,7 @@
 .maintenance-stat-box__value {
   font-size: 12.5px;
   font-weight: 700;
-  color: #f87171;
+  color: rgb(var(--mnt-clair));
 }
 
 /* Ligne de progression / activite */
@@ -302,7 +336,7 @@
   top: 0;
   bottom: 0;
   width: 40%;
-  background: linear-gradient(90deg, transparent, #ef4444, #f87171, transparent);
+  background: linear-gradient(90deg, transparent, rgb(var(--mnt-vif)), rgb(var(--mnt-clair)), transparent);
   border-radius: 9999px;
   animation: maintenance-scan 2.4s ease-in-out infinite;
 }
@@ -333,12 +367,12 @@
 
 @keyframes maintenance-glow-breathe {
   0%, 100% {
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.35), inset 0 0 15px rgba(239, 68, 68, 0.15);
-    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 30px rgba(var(--mnt-vif), 0.35), inset 0 0 15px rgba(var(--mnt-vif), 0.15);
+    border-color: rgba(var(--mnt-vif), 0.4);
   }
   50% {
-    box-shadow: 0 0 50px rgba(239, 68, 68, 0.6), inset 0 0 25px rgba(239, 68, 68, 0.3);
-    border-color: rgba(239, 68, 68, 0.7);
+    box-shadow: 0 0 50px rgba(var(--mnt-vif), 0.6), inset 0 0 25px rgba(var(--mnt-vif), 0.3);
+    border-color: rgba(var(--mnt-vif), 0.7);
   }
 }
 
@@ -411,4 +445,100 @@
 .maintenance-equipe:hover {
   color: rgba(255, 255, 255, 0.72);
   border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* --------------------------------------------------------------------------
+   L'ecran de retour : ce qu'il ajoute a celui de la maintenance
+   -------------------------------------------------------------------------- */
+
+/*
+ * Ce qui a change, en six lignes.
+ *
+ * Une puce dessinee plutot qu'une puce de liste : le rond gris par defaut ne
+ * porte rien, la coche dit « c'est fait » et repete a six reprises le sens de
+ * l'ecran.
+ */
+.retour-liste {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  margin: 4px 0 22px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.retour-liste li {
+  position: relative;
+  padding-left: 26px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #d4d7dd;
+}
+
+.retour-liste li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 11px;
+  height: 6px;
+  border-left: 2px solid rgb(var(--mnt-clair));
+  border-bottom: 2px solid rgb(var(--mnt-clair));
+  transform: rotate(-45deg);
+}
+
+/*
+ * Le bouton d'entree.
+ *
+ * L'ecran de maintenance avait un acces d'equipe volontairement discret : il ne
+ * s'adressait pas a ceux qui le lisaient. Ici c'est l'inverse — le bouton EST
+ * la raison de l'ecran, et tout le monde y a droit. Il occupe donc la largeur
+ * et porte la teinte pleine.
+ */
+.retour-entrer {
+  width: 100%;
+  padding: 13px 20px;
+  border: 1px solid rgba(var(--mnt-clair), 0.55);
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--mnt-vif), 0.9) 0%,
+    rgba(var(--mnt-fonce), 0.9) 100%
+  );
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 0 24px rgba(var(--mnt-vif), 0.35);
+}
+
+.retour-entrer:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 38px rgba(var(--mnt-vif), 0.55);
+}
+
+.retour-entrer:active {
+  transform: translateY(1px);
+}
+
+.retour-entrer:focus-visible {
+  outline: 2px solid rgb(var(--mnt-clair));
+  outline-offset: 3px;
+}
+
+/*
+ * La barre de balayage disait « ca travaille ». Il n'y a plus rien en cours :
+ * la laisser tourner ferait douter que ce soit fini.
+ */
+.maintenance-page--retour .maintenance-pulse-bar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .retour-entrer {
+    transition: none;
+  }
 }

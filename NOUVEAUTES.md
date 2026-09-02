@@ -12,6 +12,43 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.9.0
+
+### Badges
+
+- **Vingt-sept badges a gagner**, ranges par famille et par palier : les heures en vocal, les messages ecrits, la taille des espaces fondes, l'anciennete du compte. Ils s'attribuent tout seuls des que la condition est remplie.
+- **Dix-sept portent leur dessin.** Un badge qu'on possede rayonne ; un badge qu'on n'a pas encore reste en retrait, sans jamais disparaitre de sa serie.
+- **Certains peuvent se fermer.** « Pionnier » n'a que cent places : une fois la centieme prise, plus personne ne pourra l'obtenir. Le nombre de places restantes est affiche.
+- Les badges obtenus s'affichent a droite du nom, dans la fiche de profil.
+
+### Echow AI
+
+- **Un assistant qui repond dans l'application.** Il connait Echow et repond lui-meme au lieu de renvoyer au support.
+
+### Profil
+
+- **Fiche refaite**, en vertical : banniere, bio, liens, comptes lies, espaces en commun et activite en cours.
+- Les comptes lies affichent le logo du service.
+
+### Salons vocaux
+
+- **On ne voit plus les autres separement.** Le salon se reconstruit tout seul quand la liaison se tait, et les raccourcis marchent depuis un jeu, en plein ecran.
+- Un indicateur montre qui parle.
+
+### Messages
+
+- Mentions en pastilles, edition d'un message deja envoye, indicateur de saisie, images en plein ecran.
+- **Les emojis ne sont plus ceux de Windows** : ceux d'Apple les remplacent, partout.
+
+### Reglages
+
+- **Reorganises**, et les reglages d'un espace passent en page complete.
+- Les signalements aboutissent vraiment.
+
+### Theme clair
+
+- Les badges, leurs vignettes et la fiche de profil cessent d'etre illisibles hors du theme sombre.
+
 ## 0.8.0
 
 ### Maintenance

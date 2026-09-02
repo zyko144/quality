@@ -6,6 +6,8 @@ import { ProfileEditor } from '@/features/profile/ProfileEditor';
 import { useSession } from '@/store/session';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { useUI, type SettingsSection } from '@/store/ui';
+import { RetourScreen } from '@/features/maintenance/RetourScreen';
+import { MaintenanceScreen } from '@/features/maintenance/MaintenanceScreen';
 import { BadgesPage } from '@/features/badges/BadgesPage';
 import { useBadges, type Badge } from '@/store/badges';
 
@@ -24,6 +26,18 @@ import { useBadges, type Badge } from '@/store/badges';
  */
 export function devPreview(name: string): ReactNode | null {
   if (name === 'amis') return <FriendsPage />;
+
+  /*
+   * L'ecran de retour ne s'atteint qu'une fois : a la levee de la maintenance,
+   * et seulement pour qui ne l'a pas deja vu. Le verifier en vrai demanderait
+   * de basculer le drapeau, de publier, puis de vider son stockage a chaque
+   * retouche.
+   */
+  if (name === 'retour') return <RetourScreen onEntrer={() => {}} />;
+
+  // L'ecran rouge, pour verifier que la mise en variables de sa palette ne l'a
+  // pas abime : c'est la meme feuille qui sert aux deux.
+  if (name === 'maintenance') return <MaintenanceScreen />;
 
   if (name === 'badges') {
     /*
