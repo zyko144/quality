@@ -144,9 +144,81 @@ fn desactiver_selecteur_webview() {
 #[cfg(not(windows))]
 fn desactiver_selecteur_webview() {}
 
+/// Le dossier de donnees de l'application, sans passer par Tauri.
+///
+/// Tauri le donne aussi, mais seulement une fois construit — c'est-a-dire trop
+/// tard pour ce dont il sert ici. La regle qui le compose est stable et tient en
+/// une ligne : `%LOCALAPPDATA%\<identifiant>`.
+#[cfg(windows)]
+fn dossier_donnees() -> Option<std::path::PathBuf> {
+    std::env::var_os("LOCALAPPDATA").map(|base| std::path::PathBuf::from(base).join(IDENTIFIANT))
+}
+
+#[cfg(windows)]
+const IDENTIFIANT: &str = "app.echow.desktop";
+
+/// Efface une fois pour toutes le cache de l'ancien Service Worker.
+///
+/// Une version passee servait son interface par un Service Worker (VitePWA).
+/// Quand Tauri remplace le binaire, le WebView continue de servir l'ancienne
+/// interface depuis ce cache, et la nouvelle n'apparait jamais. Il faut donc
+/// l'effacer une fois, au passage a une version qui n'en pose plus.
+///
+/// Pourquoi AVANT le constructeur
+/// ------------------------------
+/// Ce nettoyage vivait dans `setup`, et le commentaire d'a cote disait
+/// pourtant l'inverse de ce qu'il supposait : « le greffon a deja cree sa
+/// fenetre a ce stade ». Le WebView2 etait donc DEJA en train de demarrer quand
+/// on supprimait `Cache`, `Code Cache` et `Service Worker` sous ses pieds.
+///
+/// Le processus hote survivait, son moteur de rendu non : la fenetre s'ouvrait
+/// et restait vide. Et comme tout depend de qui gagne la course, cela marchait
+/// une fois sur deux — le pire des defauts, celui qu'on croit corrige parce
+/// qu'il vient de ne pas se produire.
+///
+/// Ici, aucune fenetre n'existe encore : il n'y a personne a qui arracher quoi
+/// que ce soit.
+///
+/// Une seule fois
+/// --------------
+/// Un temoin marque le nettoyage fait. Sans lui, on vide le cache HTTP a chaque
+/// lancement — l'application redemarre plus lentement pour toujours, afin de
+/// resoudre un probleme qui ne peut se poser qu'une fois.
+#[cfg(windows)]
+fn effacer_ancien_cache_webview() {
+    let Some(donnees) = dossier_donnees() else {
+        return;
+    };
+
+    let temoin = donnees.join(".cache-webview-efface");
+    if temoin.exists() {
+        return;
+    }
+
+    let profil = donnees.join("EBWebView").join("Default");
+    for nom in ["Service Worker", "Cache", "Code Cache"] {
+        let chemin = profil.join(nom);
+        if chemin.exists() {
+            let _ = std::fs::remove_dir_all(&chemin);
+        }
+    }
+
+    // Le temoin est pose meme si le profil n'existait pas : une installation
+    // neuve n'a rien a nettoyer, ni maintenant ni plus tard.
+    let _ = std::fs::create_dir_all(&donnees);
+    let _ = std::fs::write(&temoin, b"fait");
+}
+
+#[cfg(not(windows))]
+fn effacer_ancien_cache_webview() {}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     desactiver_selecteur_webview();
+
+    // Avant toute chose : plus rien ne doit toucher au profil du WebView une
+    // fois qu'il a commence a demarrer. Voir la fonction.
+    effacer_ancien_cache_webview();
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -180,31 +252,6 @@ pub fn run() {
         // tiers sans barre d'adresse — on ne saurait plus ou l'on est.
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            // ---------------------------------------------------------
-            // Nettoyage du cache WebView2 (Service Worker + HTTP cache).
-            //
-            // L'ancienne version utilisait un Service Worker (VitePWA)
-            // qui met en cache tout le frontend. Quand Tauri remplace le
-            // binaire, le WebView continue de servir l'ancien frontend
-            // depuis le cache du SW — la nouvelle interface n'apparait
-            // jamais. Supprimer ce dossier avant le premier chargement
-            // force le WebView a relire les ressources embarquees.
-            // ---------------------------------------------------------
-            if let Some(data_dir) = app.path().app_local_data_dir().ok() {
-                let webview_dir = data_dir.join("EBWebView").join("Default");
-                let dirs_to_clear = [
-                    "Service Worker",
-                    "Cache",
-                    "Code Cache",
-                ];
-                for dir_name in &dirs_to_clear {
-                    let path = webview_dir.join(dir_name);
-                    if path.exists() {
-                        let _ = std::fs::remove_dir_all(&path);
-                    }
-                }
-            }
-
             // Le greffon a deja cree sa fenetre a ce stade : la masquer plus
             // tot ne trouverait rien.
             hide_single_instance_window(&app.config().identifier);

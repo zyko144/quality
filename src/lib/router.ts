@@ -29,6 +29,24 @@ function notify(): void {
 }
 
 /**
+ * Sommes-nous dans l'application de bureau ?
+ *
+ * La vue web y sert ses fichiers par un protocole a elle, qui ne resout que
+ * l'adresse de base. Ecrire `/connexion` dans l'historique n'y deplace donc pas
+ * la page : cela declenche une VRAIE navigation, le protocole ne trouve rien, et
+ * la fenetre repart sur l'adresse de base — ecran de chargement compris.
+ *
+ * Le bouton paraissait alors ne mener nulle part, alors qu'il rechargeait tout.
+ * Garder la route en memoire n'y suffisait pas : le rechargement remet ce module
+ * a zero, et la memoire avec.
+ *
+ * On n'y touche donc pas a l'historique. Ce qu'on y perd — le bouton
+ * « precedent », une adresse qui dit ou l'on est — n'existe de toute facon pas
+ * dans une fenetre sans barre d'adresse.
+ */
+const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+/**
  * La route en cours, tenue en memoire.
  *
  * Elle etait lue dans `window.location.pathname` a chaque rendu, et l'adresse
@@ -41,7 +59,8 @@ function notify(): void {
  * La memoire fait donc foi, et l'adresse la suit quand elle le peut. La
  * navigation ne depend plus d'une interface qui a le droit de refuser.
  */
-let routeActuelle: Route = typeof window === 'undefined' ? '/' : currentPath();
+let routeActuelle: Route =
+  typeof window === 'undefined' || DANS_TAURI ? '/' : currentPath();
 
 function lireRoute(): Route {
   return routeActuelle;
@@ -51,6 +70,9 @@ function lireRoute(): Route {
 // l'adresse change sans passer par `navigate`, et la memoire doit s'y remettre.
 if (typeof window !== 'undefined') {
   window.addEventListener('popstate', () => {
+    // Dans l'application de bureau, l'adresse ne suit pas la route : la relire
+    // ramenerait a l'accueil au premier evenement venu.
+    if (DANS_TAURI) return;
     routeActuelle = currentPath();
     notify();
   });
@@ -69,12 +91,14 @@ export function navigate(route: Route, options: { replace?: boolean } = {}): voi
    * refuse l'ecriture prive de ces deux commodites, ce qui est supportable ;
    * empecher de changer d'ecran ne l'est pas.
    */
-  try {
-    if (options.replace) window.history.replaceState(null, '', route);
-    else window.history.pushState(null, '', route);
-  } catch {
-    // Volontairement muet : l'application vient de changer d'ecran, et le seul
-    // effet est que l'adresse ne le dit pas.
+  if (!DANS_TAURI) {
+    try {
+      if (options.replace) window.history.replaceState(null, '', route);
+      else window.history.pushState(null, '', route);
+    } catch {
+      // Volontairement muet : l'application vient de changer d'ecran, et le seul
+      // effet est que l'adresse ne le dit pas.
+    }
   }
 
   notify();
