@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.6
+
+### Echow AI
+
+- **Les reponses vont jusqu'au bout.** Elles s'arretaient au milieu d'une phrase : le plafond de jetons avait ete baisse pour accelerer, mais la reflexion du modele le consomme aussi — il ne restait plus assez pour finir de repondre. Depuis la diffusion au fil de l'eau, la longueur ne coute de toute facon plus d'attente.
+- Une reponse coupee malgre tout le dit, au lieu de passer pour complete.
+
+### Profil
+
+- **Les amis en commun s'affichent.** Ils ne le pouvaient pas : la fonction lisait le carnet de l'autre a travers une politique qui ne laisse voir que le sien. L'intersection etait vide par construction, pour tout le monde.
+
 ## 9.5.5
 
 ### Echow AI

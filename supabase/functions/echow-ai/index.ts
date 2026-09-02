@@ -107,18 +107,22 @@ const PAR_JOUR_TOTAL = Number(Deno.env.get('IA_LIMITE_GLOBALE') ?? '1400');
 /**
  * La longueur maximale d'une reponse.
  *
- * Trois cent cinquante. La reponse n'apparait qu'une fois ECRITE EN ENTIER :
- * chaque jeton produit est donc du temps passe devant un ecran vide. Une reponse
- * de support tient en deux a quatre phrases, et la consigne le demande aussi.
+ * Large, et c'est voulu.
  *
- * Le plafond est une securite, pas une cible : il coupe les reponses qui
- * derapent, il ne raccourcit pas celles qui sont deja breves. C'est la consigne
- * qui fait le travail ; ceci evite qu'un debordement coute trente secondes.
+ * Il avait ete ramene a trois cent cinquante pour accelerer les reponses. Elles
+ * se sont mises a s'arreter au milieu d'une phrase : sur ces modeles, les
+ * jetons de REFLEXION comptent dans ce plafond. La deliberation le consommait,
+ * et il ne restait plus assez pour finir de repondre.
  *
- * Ce qui ne tient pas dans ce format releve du support humain, vers lequel la
- * consigne sait renvoyer.
+ * Le plafond ne doit donc pas servir a raccourcir. C'est une securite contre un
+ * emballement, rien d'autre — et depuis la diffusion au fil de l'eau, la
+ * longueur ne coute plus d'attente : les mots paraissent des le premier.
+ *
+ * La brievete se demande dans la consigne, ou elle porte sur ce qui est ECRIT
+ * plutot que sur ce qui est pense. C'est le seul endroit ou elle ne risque pas
+ * de couper une phrase en deux.
  */
-const REPONSE_MAX = 350;
+const REPONSE_MAX = 2000;
 
 /** Longueur maximale d'une question. Au-dela, c'est un texte colle. */
 const QUESTION_MAX = 2000;
@@ -399,6 +403,22 @@ Deno.serve(async (requete) => {
                 if (morceau) {
                   ecrit += morceau;
                   envoyer({ morceau });
+                }
+
+                /*
+                 * Une reponse coupee se signale.
+                 *
+                 * `MAX_TOKENS` veut dire que le modele s'est arrete parce qu'il
+                 * n'avait plus de place, pas parce qu'il avait fini. Sans cette
+                 * mention, une phrase interrompue au milieu passe pour une
+                 * reponse complete, et l'on cherche le sens de ce qui manque.
+                 */
+                if (bout?.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+                  console.error('[echow-ai] Reponse coupee par le plafond', {
+                    plafond: REPONSE_MAX,
+                    ecrits: ecrit.length,
+                  });
+                  envoyer({ morceau: String.fromCharCode(10) + '(reponse coupee)' });
                 }
               } catch {
                 // Un evenement illisible ne doit pas interrompre les suivants :

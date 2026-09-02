@@ -191,6 +191,29 @@ export const useEchowAI = create<EtatIA>((set, get) => ({
       let reste = '';
       let recu = '';
 
+      /** Traite une ligne du flux, d'ou qu'elle vienne. */
+      const lire = (ligne: string) => {
+        if (!ligne.trim()) return;
+
+        try {
+          const bout = JSON.parse(ligne);
+
+          if (typeof bout.morceau === 'string') {
+            recu += bout.morceau;
+            poser(recu, false);
+          }
+
+          if (bout.fin) {
+            if (typeof bout.restant === 'number') set({ restant: bout.restant });
+            if (bout.interrompu && !recu) {
+              set({ erreur: 'La reponse a ete interrompue. Reessayez.' });
+            }
+          }
+        } catch {
+          // Une ligne illisible ne doit pas arreter les suivantes.
+        }
+      };
+
       for (;;) {
         const { done, value } = await lecteur.read();
         if (done) break;
@@ -199,28 +222,19 @@ export const useEchowAI = create<EtatIA>((set, get) => ({
         const lignes = reste.split(String.fromCharCode(10));
         reste = lignes.pop() ?? '';
 
-        for (const ligne of lignes) {
-          if (!ligne.trim()) continue;
-
-          try {
-            const bout = JSON.parse(ligne);
-
-            if (typeof bout.morceau === 'string') {
-              recu += bout.morceau;
-              poser(recu, false);
-            }
-
-            if (bout.fin) {
-              if (typeof bout.restant === 'number') set({ restant: bout.restant });
-              if (bout.interrompu && !recu) {
-                set({ erreur: 'La reponse a ete interrompue. Reessayez.' });
-              }
-            }
-          } catch {
-            // Une ligne illisible ne doit pas arreter les suivantes.
-          }
-        }
+        for (const ligne of lignes) lire(ligne);
       }
+
+      /*
+       * Le dernier fragment, apres la fin du flux.
+       *
+       * Chaque objet est suivi d'un saut de ligne, donc `reste` est normalement
+       * vide ici. Normalement : si la connexion se ferme sur le dernier objet
+       * sans que son saut de ligne passe, ce fragment reste dans le tampon et
+       * la reponse s'arrete au milieu d'une phrase — sans aucune erreur, ce qui
+       * la rend indiscernable d'une reponse breve.
+       */
+      if (reste.trim()) lire(reste);
 
       // La main revient, meme si rien n'est arrive : sans cela le champ de
       // saisie resterait bloque sur une reponse qui ne viendra plus.
