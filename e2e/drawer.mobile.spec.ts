@@ -39,7 +39,7 @@ test.describe('Navigation mobile', () => {
   });
 
   test('le bouton d en-tete ouvre le tiroir', async ({ page }) => {
-    await page.getByRole('button', { name: 'Ouvrir la navigation' }).click();
+    await page.getByRole('button', { name: 'Revenir aux salons' }).click();
 
     const nav = page.locator('.workspace__nav');
     await expect(page.locator('.workspace')).toHaveClass(/is-nav-open/);
@@ -54,7 +54,7 @@ test.describe('Navigation mobile', () => {
   });
 
   test('le voile referme le tiroir', async ({ page }) => {
-    await page.getByRole('button', { name: 'Ouvrir la navigation' }).click();
+    await page.getByRole('button', { name: 'Revenir aux salons' }).click();
     await expect(page.locator('.workspace')).toHaveClass(/is-nav-open/);
 
     // Le voile couvre tout l'ecran, mais le tiroir en masque le centre : on
@@ -68,7 +68,7 @@ test.describe('Navigation mobile', () => {
   });
 
   test('Echap referme le tiroir', async ({ page }) => {
-    await page.getByRole('button', { name: 'Ouvrir la navigation' }).click();
+    await page.getByRole('button', { name: 'Revenir aux salons' }).click();
     await expect(page.locator('.workspace')).toHaveClass(/is-nav-open/);
 
     await page.keyboard.press('Escape');
@@ -76,7 +76,7 @@ test.describe('Navigation mobile', () => {
   });
 
   test('choisir un salon referme le tiroir', async ({ page }) => {
-    await page.getByRole('button', { name: 'Ouvrir la navigation' }).click();
+    await page.getByRole('button', { name: 'Revenir aux salons' }).click();
     await page.locator('.channel').first().click();
 
     // Sans cette fermeture, le tiroir masquerait la conversation demandee.

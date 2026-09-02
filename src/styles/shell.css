@@ -957,24 +957,22 @@
   position: relative;
   padding: 2px 48px 2px 16px;
   transition: background-color var(--duration-fast) var(--ease-in-out);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 44px;
 }
 
 /*
- * `content-visibility: auto` a ete retire d'ici, et il faut dire pourquoi.
+ * `content-visibility: auto` reste, et il a ete soupconne a tort.
  *
- * Il evitait de peindre les messages hors ecran, ce qui est une bonne idee sur
- * une longue liste. Mais il implique un CONFINEMENT DE PEINTURE : tout ce qui
- * deborde de la ligne est rogne, sans exception et sans possibilite de le
- * rouvrir — `overflow: visible` n'a aucune prise dessus.
+ * Il implique un confinement de peinture, ce qui laissait croire qu'il rognait
+ * la barre d'actions — laquelle deborde de huit pixels vers le haut. Mesure
+ * faite : la barre sort entiere, trente-huit pixels dessines sur trente-huit.
+ * Le confinement ne s'applique pas a un descendant positionne hors du flux.
  *
- * Or la barre d'actions deborde volontairement de huit pixels vers le haut,
- * pour chevaucher la ligne precedente. Elle etait donc coupee net a chaque
- * survol : le defaut rapporte, « l'encart est un peu coupe, pas beau ».
- *
- * Le confinement se paie en pixels manquants, l'absence de confinement en
- * millisecondes de peinture. Sur des listes de quelques centaines de lignes —
- * ce que charge une conversation — la seconde ne se mesure pas, la premiere se
- * voit a chaque survol.
+ * Ce qui etait « un peu coupe, pas beau » venait de l'apparence : pas de
+ * contour, une ombre qui disparait sur fond sombre, des coins a peine
+ * arrondis. La barre semblait posee a meme le texte, sans limite. C'est cela
+ * qui a ete repris — voir `.message__actions` plus bas.
  */
 
 .message:hover {
@@ -1244,7 +1242,7 @@
    disparait sous le curseur. */
 .message__actions {
   position: absolute;
-  top: -14px;
+  top: -8px;
   right: 12px;
   display: flex;
   align-items: center;
@@ -1263,9 +1261,15 @@
   box-shadow: var(--shadow-lg);
   opacity: 0;
   pointer-events: none;
-  transition:
-    opacity var(--duration-fast) var(--ease-in-out),
-    transform var(--duration-fast) var(--ease-out);
+  /*
+   * Seule l'opacite est animee.
+   *
+   * Y ajouter la transformation paraissait plus doux et coutait le menu : la
+   * barre glisse de deux pixels a l'apparition, et un element qui bouge n'est
+   * pas « stable » — le clic sur les trois points attendait la fin d'une
+   * animation qui repartait a chaque frolement, et le menu ne s'ouvrait pas.
+   */
+  transition: opacity var(--duration-fast) var(--ease-in-out);
   z-index: 5;
 }
 

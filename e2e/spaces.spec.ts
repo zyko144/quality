@@ -74,10 +74,12 @@ test.describe('Espaces et salons', () => {
      */
     await page.getByRole('button', { name: 'Parametres de l’espace' }).click();
 
-    const fenetre = openDialog(page);
-    await fenetre.getByRole('tab', { name: 'Zone sensible' }).click();
-    await fenetre.getByLabel(/Pour confirmer, tapez/).fill(nom);
-    await fenetre.getByRole('button', { name: 'Supprimer definitivement' }).click();
+    // Les reglages d'un espace sont une page, plus une boite a onglets : la
+    // navigation est un rail a gauche, comme celui des reglages de l'application.
+    const page_espace = page.locator('.espace-reglages');
+    await page_espace.locator('.settings__navitem', { hasText: 'Zone sensible' }).click();
+    await page_espace.getByLabel(/Pour confirmer, tapez/).fill(nom);
+    await page_espace.getByRole('button', { name: 'Supprimer definitivement' }).click();
 
     await expect(page.locator(`.rail__button[title="${nom}"]`)).toHaveCount(0, {
       timeout: 15_000,
@@ -332,12 +334,20 @@ test.describe('Espaces et salons', () => {
    * bandeau d'onglets, si bien qu'un menu casse a l'air intact tant qu'on ne
    * l'ouvre pas.
    */
-  test('les reglages de l espace ouvrent leurs sept onglets', async ({ page }) => {
+  test('les reglages de l espace ouvrent leurs sept sections', async ({ page }) => {
     await openApp(page);
 
     await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
 
-    const onglets = page.locator('.mod-tab');
+    /*
+     * Une page entiere, plus une boite a onglets.
+     *
+     * Sept sections, des listes de membres, de salons et de roles tenaient dans
+     * six cent vingt pixels, ou chaque liste devait defiler dans son propre
+     * creux. La navigation est desormais un rail a gauche, comme celui des
+     * reglages de l'application — memes gestes, meme disposition.
+     */
+    const onglets = page.locator('.espace-reglages .settings__navitem');
     await expect(onglets).toHaveCount(7);
 
     const attendus = [
@@ -371,7 +381,7 @@ test.describe('Espaces et salons', () => {
     };
 
     for (const nom of attendus) {
-      await page.locator('.mod-tab', { hasText: nom }).first().click();
+      await page.locator('.espace-reglages .settings__navitem', { hasText: nom }).first().click();
       await expect(page.locator(marqueurs[nom]!).first()).toBeVisible();
     }
 
@@ -382,7 +392,7 @@ test.describe('Espaces et salons', () => {
     await openApp(page);
 
     await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
-    await page.locator('.mod-tab', { hasText: 'Membres' }).first().click();
+    await page.locator('.espace-reglages .settings__navitem', { hasText: 'Membres' }).first().click();
 
     const lignes = page.locator('.membres__ligne');
     await expect(lignes.first()).toBeVisible();
@@ -404,7 +414,7 @@ test.describe('Espaces et salons', () => {
     await openApp(page);
 
     await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
-    await page.locator('.mod-tab', { hasText: 'Mes preferences' }).first().click();
+    await page.locator('.espace-reglages .settings__navitem', { hasText: 'Mes preferences' }).first().click();
 
     // L'interrupteur est une case masquee derriere un libelle dessine : c'est
     // le libelle qu'on clique, comme le ferait quelqu'un.
@@ -418,7 +428,7 @@ test.describe('Espaces et salons', () => {
     // Elles vivent sur la machine : un rechargement est le seul vrai test.
     await page.reload();
     await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
-    await page.locator('.mod-tab', { hasText: 'Mes preferences' }).first().click();
+    await page.locator('.espace-reglages .settings__navitem', { hasText: 'Mes preferences' }).first().click();
 
     const apresRechargement = page
       .locator('.switchrow', { hasText: 'Mettre ce serveur en sourdine' });

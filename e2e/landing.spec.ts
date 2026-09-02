@@ -1,10 +1,22 @@
 import { test, expect } from '@playwright/test';
+import { EN_MAINTENANCE } from '../src/features/maintenance/acces';
 
 /**
  * Page de presentation : la premiere chose que voit un visiteur.
+ *
+ * Pendant une maintenance, elle n'existe pas : l'ecran de maintenance prend
+ * toute la place, pour les visiteurs comme pour les comptes. Ces cas se
+ * declarent donc ignores plutot qu'echoues.
+ *
+ * La difference compte. Un echec attendu se confond avec un echec reel : on
+ * apprend a ne plus les lire, et le jour ou il s'en ajoute un vrai, il passe
+ * inapercu au milieu des autres. Un cas ignore dit ce qu'il est.
  */
+test.describe.configure({ mode: 'default' });
 
 test.describe('Ecran de chargement', () => {
+  test.skip(EN_MAINTENANCE, 'La presentation est remplacee par l’ecran de maintenance.');
+
   test('couvre la page avant le premier rendu, puis disparait', async ({ page }) => {
     // Le voile est ecrit dans le document, pas rendu par React : il doit donc
     // etre la des la reception du HTML, avant l'execution du script.
@@ -24,6 +36,8 @@ test.describe('Ecran de chargement', () => {
 });
 
 test.describe('Presentation', () => {
+  test.skip(EN_MAINTENANCE, 'La presentation est remplacee par l’ecran de maintenance.');
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });

@@ -7,6 +7,15 @@ import { openApp } from './session';
  * Nomme pour tomber dans le projet « authentifie » : il s'affiche depuis
  * l'espace de travail, qui suppose une session.
  */
+/*
+ * Le titre change selon le nombre de versions.
+ *
+ * « Quoi de neuf en 0.9.0 » pour une seule ; « Ce que vous avez manque » des
+ * qu'il y en a plusieurs — la seconde formule serait absurde pour une seule, la
+ * premiere mensongere pour quatre. Les cas acceptent donc les deux : ce qu'on
+ * verifie ici est que la fenetre parait, pas laquelle des deux phrases elle
+ * porte.
+ */
 test.describe('Nouveautes', () => {
   test('s affiche apres une mise a jour, une seule fois', async ({ page }) => {
     test.setTimeout(90_000);
@@ -20,7 +29,7 @@ test.describe('Nouveautes', () => {
 
     await openApp(page);
 
-    const boite = page.getByRole('dialog').filter({ hasText: /Quoi de neuf/i });
+    const boite = page.getByRole('dialog').filter({ hasText: /Quoi de neuf|vous avez manque/i });
     await expect(boite).toBeVisible({ timeout: 20_000 });
 
     // Le contenu vient de NOUVEAUTES.md, pas d'un texte de remplissage.
@@ -31,7 +40,7 @@ test.describe('Nouveautes', () => {
 
     // Une seule fois : la version vue est enregistree.
     await page.reload();
-    await expect(page.getByRole('dialog').filter({ hasText: /Quoi de neuf/i })).toHaveCount(0);
+    await expect(page.getByRole('dialog').filter({ hasText: /Quoi de neuf|vous avez manque/i })).toHaveCount(0);
   });
 
   test('ne s affiche pas au tout premier lancement', async ({ page }) => {
@@ -50,7 +59,7 @@ test.describe('Nouveautes', () => {
     await openApp(page);
     await page.waitForTimeout(2500);
 
-    await expect(page.getByRole('dialog').filter({ hasText: /Quoi de neuf/i })).toHaveCount(0);
+    await expect(page.getByRole('dialog').filter({ hasText: /Quoi de neuf|vous avez manque/i })).toHaveCount(0);
   });
 
   test('s affiche en arrivant d une version qui ne posait pas la cle', async ({ page }) => {
@@ -67,7 +76,7 @@ test.describe('Nouveautes', () => {
     await openApp(page);
 
     await expect(
-      page.getByRole('dialog').filter({ hasText: /Quoi de neuf/i }),
+      page.getByRole('dialog').filter({ hasText: /Quoi de neuf|vous avez manque/i }),
     ).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole('button', { name: 'Compris' }).click();

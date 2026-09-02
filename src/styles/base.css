@@ -19,6 +19,28 @@ body,
   height: 100%;
 }
 
+/*
+ * La page elle-meme ne defile jamais.
+ *
+ * L'application est une coquille a hauteur fixe : ce qui defile, ce sont ses
+ * panneaux — la liste des messages, le rail des espaces, la barre laterale —
+ * chacun dans ses propres bornes.
+ *
+ * Sans cette regle, un element qui deborde de quelques dizaines de pixels fait
+ * defiler la FENETRE entiere. On l'a vu : avec assez d'espaces dans le rail,
+ * l'en-tete du salon disparaissait vers le haut et le composeur sortait par le
+ * bas, alors que chaque panneau savait pourtant defiler. Le defaut est
+ * d'autant plus deroutant qu'il depend du nombre d'espaces — donc invisible
+ * tant qu'on n'en a pas beaucoup.
+ *
+ * Poser la regle sur `html` en plus de `body` est necessaire : c'est `html` qui
+ * defilait, `body` etant deja a la bonne hauteur.
+ */
+html,
+body {
+  overflow: hidden;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
