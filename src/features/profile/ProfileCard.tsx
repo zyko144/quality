@@ -6,6 +6,9 @@ import { useUI } from '@/store/ui';
 import { TiltCard } from '@/components/TiltCard';
 import { Avatar } from '@/components/Avatar';
 import { Icon, type IconName } from '@/components/Icon';
+import { useBadges, badgesDe } from '@/store/badges';
+import { useComptesLies, comptesVisibles, SERVICES } from '@/store/comptesLies';
+import { LogoService } from '@/features/profile/ComptesLies';
 import { hueFor } from '@/constants';
 import { ROLE_LABEL, type Profile, type ProfileStats, type SpaceRole, type UUID } from '@/types/db';
 import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
@@ -43,6 +46,26 @@ export function ProfileCard({ userId }: { userId: UUID }) {
 
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [onglet, setOnglet] = useState<'apropos' | 'espaces' | 'amis'>('apropos');
+
+  /*
+   * Badges, comptes lies et activite du moment.
+   *
+   * Charges ici plutot qu'au demarrage de l'application : ils ne servent que
+   * lorsqu'on regarde une fiche, et les charger pour tout le monde a l'ouverture
+   * couterait trois requetes que personne ne regarde.
+   */
+  const catalogue = useBadges((etat) => etat.catalogue);
+  const badgesParProfil = useBadges((etat) => etat.parProfil);
+  const chargerBadges = useBadges((etat) => etat.charger);
+
+  const comptesParProfil = useComptesLies((etat) => etat.parProfil);
+  const activites = useComptesLies((etat) => etat.activites);
+  const chargerComptes = useComptesLies((etat) => etat.charger);
+
+  useEffect(() => {
+    void chargerBadges();
+    void chargerComptes([userId]);
+  }, [userId, chargerBadges, chargerComptes]);
   const profile = profiles[userId] ?? (userId === me?.id ? me : undefined);
 
   useEffect(() => {
@@ -98,6 +121,9 @@ export function ProfileCard({ userId }: { userId: UUID }) {
   // arrivent alors en `undefined` plutot qu'en `null`.
   const hue = profile.theme_hue ?? null;
   const links = profile.links ?? [];
+  const mesBadges = badgesDe(userId, badgesParProfil, catalogue);
+  const sesComptes = comptesVisibles(comptesParProfil[userId], isMe);
+  const activite = activites[userId] ?? null;
 
   const espaces = stats?.mutual_spaces ?? [];
 
@@ -225,8 +251,89 @@ export function ProfileCard({ userId }: { userId: UUID }) {
               </ul>
             ) : null}
 
+            {/*
+              Les badges obtenus, apres les roles.
+
+              Les deux se ressemblent a l'ecran et n'ont rien a voir : un role
+              dit ce qu'on peut faire dans un espace, un badge dit ce qu'on a
+              fait. On les separe donc par leur teinte, qui vient du badge
+              lui-meme.
+            */}
+            {mesBadges.length > 0 ? (
+              <ul className="profile__badges profile__badges--obtenus">
+                {mesBadges.map(({ badge, obtenu }) => (
+                  <li
+                    key={badge.cle}
+                    className="profile-badge profile-badge--obtenu"
+                    style={{ '--teinte': badge.teinte } as React.CSSProperties}
+                    title={badge.description}
+                  >
+                    <Icon name="shield" size={12} />
+                    {badge.nom}
+                    {obtenu.position !== null ? (
+                      <span className="profile-badge__rang">n&deg;{obtenu.position}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
             {profile.custom_status ? (
               <p className="profile__status">{profile.custom_status}</p>
+            ) : null}
+
+            {/*
+              Ce qui est ecoute ou diffuse en ce moment.
+
+              Pose juste sous l'etat personnalise parce que c'en est un, en
+              plus vrai : il n'a pas besoin d'etre tenu a jour a la main.
+            */}
+            {activite ? (
+              <a
+                className="profile__activite"
+                href={activite.lien_url ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {activite.image_url ? (
+                  <img className="profile__activite-image" src={activite.image_url} alt="" />
+                ) : null}
+
+                <span className="profile__activite-corps">
+                  <span className="profile__activite-genre">
+                    {activite.genre === 'ecoute'
+                      ? 'Ecoute'
+                      : activite.genre === 'direct'
+                        ? 'En direct'
+                        : 'Joue a'}
+                  </span>
+                  <span className="profile__activite-titre truncate">{activite.titre}</span>
+                  {activite.detail ? (
+                    <span className="profile__activite-detail truncate">{activite.detail}</span>
+                  ) : null}
+                </span>
+              </a>
+            ) : null}
+
+            {/* Ou retrouver la personne ailleurs, si elle a choisi de le dire. */}
+            {sesComptes.length > 0 ? (
+              <ul className="profile__comptes">
+                {sesComptes.map((compte) => (
+                  <li key={compte.service}>
+                    <a
+                      className="profile__compte"
+                      style={{ '--teinte': SERVICES[compte.service].teinte } as React.CSSProperties}
+                      href={SERVICES[compte.service].profil(compte.identifiant)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`${SERVICES[compte.service].nom} · ${compte.nom_affiche}`}
+                    >
+                      <LogoService service={compte.service} taille={15} />
+                      <span className="truncate">{compte.nom_affiche}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
             ) : null}
 
             {isMe ? (

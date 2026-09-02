@@ -1107,27 +1107,36 @@
 }
 
 /* ==========================================================================
-   Fiche de profil : deux colonnes
+   Fiche de profil : une colonne, haute
    ==========================================================================
-   Une seule colonne obligeait a empiler bio, espaces et amis, alors qu'on ne
-   les regarde jamais en meme temps : la carte s'allongeait et il fallait la
-   faire defiler pour une information qui tient dans un coin.
+   Elle a eu deux colonnes, pour une carte de neuf cents pixels de large. Cette
+   largeur etalait trois lignes de biographie sur tout l'ecran : l'oeil
+   traversait le vide entre le visage et le texte, et les onglets paraissaient
+   perdus au milieu.
 
-   A gauche, ce qui ne change pas : le visage, le nom, l'action. A droite, ce
-   qu'on vient chercher, un onglet a la fois.
+   La carte fait maintenant cinq cent vingt pixels et se lit de haut en bas —
+   un visage, un nom, ce qu'on en sait, puis ce qu'on vient chercher. C'est la
+   forme d'une fiche de profil, et c'est aussi celle qui tient sur un telephone
+   sans avoir a changer de mise en page.
+
+   La bascule d'autrefois etait conditionnee a la largeur de la FENETRE, pas a
+   celle de la carte : retrecir la carte laissait donc les deux colonnes en
+   place sur un grand ecran, et la seconde tombait a une centaine de pixels —
+   un mot par ligne.
    ========================================================================== */
 
 .profile__grid {
-  display: grid;
-  grid-template-columns: 420px minmax(0, 1fr);
-  min-height: min(560px, 74vh);
+  display: flex;
+  flex-direction: column;
+  max-height: min(680px, 82vh);
 }
 
 .profile__aside {
   display: flex;
   flex-direction: column;
   position: relative;
-  border-right: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-subtle);
   background: color-mix(in oklab, var(--bg-raised) 82%, transparent);
 }
 
@@ -1135,6 +1144,11 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* C'est la partie qui defile : l'en-tete de la fiche reste en place, et l'on
+     ne fait glisser que ce qu'on est venu lire. */
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
   background: color-mix(in oklab, var(--bg-raised) 62%, transparent);
 }
 
@@ -1334,13 +1348,7 @@
 
 @media (max-width: 620px) {
   .profile__grid {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: 0;
-  }
-
-  .profile__aside {
-    border-right: 0;
-    border-bottom: 1px solid var(--border-subtle);
+    max-height: none;
   }
 
   .profile__aside .profile__since {

@@ -2673,3 +2673,110 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
+
+/* --------------------------------------------------------------------------
+   La fiche de profil : badges obtenus, comptes lies, activite
+   -------------------------------------------------------------------------- */
+
+.profile__badges--obtenus {
+  margin-top: 6px;
+}
+
+/*
+ * Un badge obtenu porte sa propre teinte.
+ *
+ * Les roles et les badges se ressemblent a l'ecran et n'ont rien a voir : un
+ * role dit ce qu'on peut faire dans un espace, un badge dit ce qu'on a fait. La
+ * couleur est ce qui les separe sans qu'il faille lire.
+ */
+.profile-badge--obtenu {
+  border-color: color-mix(in oklab, var(--teinte) 45%, transparent);
+  background: color-mix(in oklab, var(--teinte) 15%, transparent);
+  color: var(--teinte);
+}
+
+.profile-badge__rang {
+  margin-left: 3px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
+}
+
+/* L'activite du moment : ce qu'on ecoute, ce qu'on diffuse. */
+.profile__activite {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.profile__activite:hover {
+  border-color: var(--accent);
+}
+
+.profile__activite-image {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.profile__activite-corps {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile__activite-genre {
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.profile__activite-titre {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.profile__activite-detail {
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}
+
+/* Les comptes lies, en pastilles. */
+.profile__comptes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile__compte {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 180px;
+  padding: 3px 9px;
+  border: 1px solid color-mix(in oklab, var(--teinte) 42%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--teinte) 12%, transparent);
+  color: var(--teinte);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+.profile__compte:hover {
+  background: color-mix(in oklab, var(--teinte) 22%, transparent);
+}

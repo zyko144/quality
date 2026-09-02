@@ -579,7 +579,16 @@ function ProfileModal({
   // La carte se suffit a elle-meme : la boite ne porte ni titre ni chrome, pour
   // que la banniere touche le bord et que la carte reste l'objet principal.
   return (
-    <Modal open={open} title="Profil" onClose={onClose} width={900} bare>
+    /*
+      Plus etroite, et plus haute.
+
+      Neuf cents pixels de large etalaient trois lignes de biographie sur toute
+      la largeur d'un ecran : l'oeil traversait le vide entre l'avatar et le
+      texte, et les onglets paraissaient perdus au milieu. Une fiche de profil
+      se lit de haut en bas — un visage, un nom, ce qu'on en sait — et non de
+      gauche a droite.
+    */
+    <Modal open={open} title="Profil" onClose={onClose} width={520} bare>
       {userId ? <ProfileCard userId={userId} /> : null}
     </Modal>
   );
