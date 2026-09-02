@@ -46,11 +46,15 @@ const CORS = {
  * donc pas si un secret existe deja : c'est lui qui gagne, et c'est voulu — un
  * changement de modele ne doit pas demander un deploiement.
  *
- * `3.8` plutot que `3.7` : le precedent est trop demande. Un nom errone ne se
- * confond pas avec une panne — l'appel rend alors 404, et la fonction repond
- * « le modele n'est pas reconnu » plutot qu'« indisponible ».
+ * La valeur suit celle qui tourne reellement en production : un defaut qui
+ * annonce autre chose que ce qui est pose ne se voit jamais — il n'est lu que
+ * le jour ou le secret disparait, c'est-a-dire le jour ou l'on a le moins envie
+ * d'une surprise.
+ *
+ * Un nom errone ne se confond pas avec une panne : l'appel rend alors 404, et
+ * la fonction repond « le modele n'est pas reconnu » plutot qu'« indisponible ».
  */
-const MODELE = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.8-flash';
+const MODELE = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.6-flash';
 
 /**
  * Ce qu'une personne peut demander par jour.
