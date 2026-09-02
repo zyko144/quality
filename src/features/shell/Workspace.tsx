@@ -28,6 +28,7 @@ import { TiroirGlissant } from '@/features/shell/TiroirGlissant';
 import { Battement } from '@/features/shell/Battement';
 import { Arrivee } from '@/features/shell/Arrivee';
 import { Visionneuse } from '@/features/messages/Visionneuse';
+import { EchowAI } from '@/features/ia/EchowAI';
 import { Support } from '@/features/support/Support';
 import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
@@ -426,6 +427,9 @@ export function Workspace() {
 
       {/* L'image en grand, sans quitter la conversation. */}
       <Visionneuse />
+
+      {/* L'assistant. La cle vit dans une fonction du projet, jamais ici. */}
+      <EchowAI />
 
       {/* Le tiroir suit le doigt depuis le bord gauche. Voir `glisse.ts` pour
           les seuils, qui sont ce qui rend le geste agreable ou penible. */}

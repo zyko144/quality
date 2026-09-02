@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
+import { useEchowAI } from '@/store/echowAI';
+import { MarqueIA } from '@/features/ia/EchowAI';
 import { useFriends } from '@/store/friends';
 import { useSession } from '@/store/session';
 import { Icon } from '@/components/Icon';
@@ -69,6 +71,24 @@ function FriendsEntry() {
  * on aurait vu un mot barre sans savoir de quoi il s'agit, ni pour combien de
  * temps. La page, elle, peut l'expliquer.
  */
+/**
+ * L'entree d'Echow AI.
+ *
+ * Posee au-dessus des badges, sous les conversations : c'est une aide, pas une
+ * conversation, et la ranger parmi les gens ferait croire qu'on ecrit a
+ * quelqu'un.
+ */
+function EntreeIA() {
+  const ouvrir = useEchowAI((etat) => etat.ouvrir);
+
+  return (
+    <button type="button" className="dm-friends dm-ia" onClick={ouvrir}>
+      <MarqueIA taille={19} />
+      <span className="dm-waves__nom">Echow AI</span>
+    </button>
+  );
+}
+
 function WavesEntry() {
   const wavesOpen = useUI((state) => state.wavesOpen);
   const showWaves = useUI((state) => state.showWaves);
@@ -179,6 +199,7 @@ export function DirectMessageList() {
 
       <div className="sidebar__scroll scroll">
         <FriendsEntry />
+        <EntreeIA />
         <WavesEntry />
         <SuggestionsEntry />
 

@@ -370,3 +370,60 @@ alter table public.message_reports
 drop policy if exists message_reports_les_miens on public.message_reports;
 create policy message_reports_les_miens on public.message_reports for select to authenticated
   using (reporter_id = (select auth.uid()));
+
+-- ===========================================================================
+-- 6. Le compteur d'usage de l'assistant
+-- ===========================================================================
+--
+-- Chaque appel a Gemini est facture. Sans compteur, un compte seul peut vider
+-- le budget — volontairement, ou par une boucle mal ecrite qui repose la meme
+-- question mille fois.
+--
+-- Le compte est tenu ici et non dans la fonction : une fonction de bord n'a pas
+-- de memoire d'un appel a l'autre, elle peut s'executer sur une machine
+-- differente a chaque fois. Compter en memoire reviendrait a ne pas compter.
+--
+-- Une ligne par personne et par jour. La remise a zero est implicite : demain
+-- est une autre ligne, et il n'y a donc aucune tache d'entretien a oublier.
+
+create table if not exists public.ia_usage (
+  profil_id uuid not null references public.profiles (id) on delete cascade,
+  jour      date not null default current_date,
+
+  appels    integer not null default 0,
+  -- Les jetons servent au suivi du cout, pas a la limite : c'est le nombre
+  -- d'appels qui est plafonne, parce qu'il se comprend sans calcul.
+  jetons    bigint  not null default 0,
+
+  primary key (profil_id, jour)
+);
+
+alter table public.ia_usage enable row level security;
+
+-- Chacun voit sa propre consommation, et rien d'autre. Savoir combien de
+-- questions les autres posent ne regarde personne.
+drop policy if exists ia_usage_les_miens on public.ia_usage;
+create policy ia_usage_les_miens on public.ia_usage for select to authenticated
+  using (profil_id = (select auth.uid()));
+
+/*
+ * Incremente le compteur du jour.
+ *
+ * `on conflict` plutot qu'un « lire puis ecrire » : deux questions posees en
+ * meme temps liraient toutes deux la meme valeur, et l'une des deux ne serait
+ * jamais comptee. Ici la base additionne, et deux appels simultanes font deux.
+ */
+create or replace function public.ia_compter(p_jetons bigint default 0)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  insert into public.ia_usage (profil_id, jour, appels, jetons)
+  values ((select auth.uid()), current_date, 1, greatest(p_jetons, 0))
+  on conflict (profil_id, jour) do update
+    set appels = public.ia_usage.appels + 1,
+        jetons = public.ia_usage.jetons + greatest(p_jetons, 0);
+$$;
+
+grant execute on function public.ia_compter(bigint) to authenticated;
