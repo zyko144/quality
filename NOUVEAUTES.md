@@ -12,6 +12,24 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.9.3
+
+### Maintenance
+
+- **La maintenance est levee.** Les salons vocaux, les messages, les connexions et les creations de compte fonctionnent a nouveau normalement.
+
+### Corrections
+
+- **« Acces equipe » repond enfin dans l'application de bureau.** Le bouton ne faisait pas rien : il rechargeait toute l'application, qui revenait donc a son point de depart. La vue web du bureau sert ses fichiers par un protocole a elle, et lui demander une autre adresse la faisait repartir de zero.
+- **Le micro redevient atteignable en vocal sur telephone.** La barre de commandes sortait entierement par la gauche de l'ecran : on ne pouvait plus se couper le micro.
+- Le cache de l'ancienne interface n'est plus efface a chaque demarrage, mais une seule fois — et plus pendant que la fenetre s'ouvre.
+
+### Telephone
+
+- **Les reglages tiennent enfin dans un ecran de telephone** : la liste des sections, puis la section choisie, au lieu de deux colonnes ecrasees ou le moindre titre passait a la ligne.
+- **Les amis, l'assistant, les badges, les suggestions et le support ont leur bouton de retour.** On y entrait, et plus rien n'en sortait.
+- Les selecteurs a plusieurs choix passent a la ligne au lieu de sortir du cadre.
+
 ## 0.9.2
 
 ### Corrections

@@ -43,8 +43,11 @@ export function traverseLaMaintenance(courriel: string | null | undefined): bool
 /**
  * Vrai tant que l'application est en maintenance.
  *
- * Toujours fermee : cette version-ci existe pour verifier a huis clos que tout
- * marche, avec les seuls comptes de la liste ci-dessus. La levee sera un second
- * deploiement, decide une fois la verification faite.
+ * Levee le 2 septembre 2026. La liste ci-dessus reste en place : une prochaine
+ * maintenance n'aura qu'a remettre ce drapeau a `true`, sans avoir a retrouver
+ * qui doit pouvoir entrer pendant qu'elle dure.
+ *
+ * Ce drapeau decide aussi de l'ecran de retour — voir `retour.ts`. Il ne parait
+ * qu'a ceux qui ont vu l'ecran de maintenance, et une seule fois.
  */
-export const EN_MAINTENANCE = true;
+export const EN_MAINTENANCE = false;
