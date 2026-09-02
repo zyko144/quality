@@ -354,7 +354,7 @@ Deno.serve(async (requete) => {
      * Le client peut ainsi lire ligne par ligne sans assembler lui-meme les
      * paquets, qui arrivent decoupes n'importe ou.
      */
-    let total = '';
+    let ecrit = '';
     let jetons = 0;
 
     const flux = new ReadableStream({
@@ -397,7 +397,7 @@ Deno.serve(async (requete) => {
                 }
 
                 if (morceau) {
-                  total += morceau;
+                  ecrit += morceau;
                   envoyer({ morceau });
                 }
               } catch {
@@ -413,7 +413,7 @@ Deno.serve(async (requete) => {
            * Le meme cas qu'avant la diffusion, mais il ne peut plus etre une
            * erreur — le flux est ouvert. Il devient donc le texte lui-meme.
            */
-          if (!total.trim()) {
+          if (!ecrit.trim()) {
             envoyer({
               morceau:
                 'Je n’ai pas su repondre a celle-ci. Le support humain pourra vous aider.' +
