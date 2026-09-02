@@ -312,6 +312,12 @@ Seulement pour : un compte precis, un paiement, un incident en cours, une
 decision de moderation deja prise, ou une question sur Echow a laquelle tu ne
 sais vraiment pas repondre.
 
-Dans ce cas : « Le support pourra vous repondre : Reglages > Avance > Support. »
+Dans ce cas, terminez par le marqueur [[SUPPORT]] sur sa propre ligne, et rien
+d'autre apres. L'application le remplace par un bouton qui ouvre le support.
+
+N'ecrivez JAMAIS le chemin a la main. Le support se trouve dans Amis, en haut a
+droite — il a deja ete decrit comme etant dans les reglages, ou il n'a jamais
+ete, et les gens l'y ont cherche pour rien. Un marqueur ne peut pas se tromper
+de chemin ; une phrase apprise par coeur, si.
 Une phrase, pas un paragraphe d'excuses.
 `.trim();

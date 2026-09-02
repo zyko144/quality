@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { useEchowAI, AMORCES } from '@/store/echowAI';
 import { RetourMobile } from '@/components/RetourMobile';
+import { useUI } from '@/store/ui';
 
 /**
  * Echow AI.
@@ -139,7 +140,7 @@ export function EchowAI() {
                     <span />
                   </span>
                 ) : (
-                  tour.texte
+                  <TexteIA texte={tour.texte} />
                 )}
               </div>
             </div>
@@ -189,6 +190,52 @@ export function EchowAI() {
         moderation, passez par Reglages &rsaquo; Avance &rsaquo; Support.
       </p>
     </div>
+  );
+}
+
+/**
+ * Le texte d'une reponse, avec ses parties actives.
+ *
+ * L'assistant ne produit que du texte : il ne peut pas fabriquer de bouton. Il
+ * pose donc un marqueur, `[[SUPPORT]]`, remplace ici par le vrai bouton, qui
+ * ouvre le support la ou il se trouve REELLEMENT.
+ *
+ * C'est ce qui evite la faute qu'il commettait : il ecrivait « Reglages >
+ * Avance > Support », un chemin ou le support n'a jamais ete. Une phrase apprise
+ * par coeur vieillit avec l'application ; un marqueur pointe vers le code, qui
+ * suit tout seul.
+ *
+ * Les adresses ecrites en clair deviennent cliquables au passage : une adresse
+ * qu'on ne peut pas suivre oblige a la recopier a la main.
+ */
+function TexteIA({ texte }: { texte: string }) {
+  const montrerSupport = useUI((state) => state.showSupport);
+
+  const morceaux = texte.split(/(\[\[SUPPORT\]\]|https?:\/\/[^\s<>"')]+)/g);
+
+  return (
+    <>
+      {morceaux.map((morceau, i) => {
+        if (morceau === '[[SUPPORT]]') {
+          return (
+            <button key={i} type="button" className="ia__support" onClick={montrerSupport}>
+              <Icon name="mail" size={14} />
+              Contacter le support
+            </button>
+          );
+        }
+
+        if (/^https?:\/\//.test(morceau)) {
+          return (
+            <a key={i} href={morceau} target="_blank" rel="noreferrer noopener">
+              {morceau}
+            </a>
+          );
+        }
+
+        return <span key={i}>{morceau}</span>;
+      })}
+    </>
   );
 }
 

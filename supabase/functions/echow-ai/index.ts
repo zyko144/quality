@@ -283,6 +283,20 @@ Deno.serve(async (requete) => {
       const inconnu = reponse.status === 404 || detail.includes('not found');
 
       /*
+       * Une surcharge n'est pas une panne.
+       *
+       * `429` veut dire « trop de demandes en ce moment » : cela se resout en
+       * attendant, et souvent en quelques secondes. « L'assistant est
+       * momentanement indisponible » laisse croire a une panne, donc a quelque
+       * chose a signaler ou a reparer — alors qu'il n'y a qu'a reessayer.
+       *
+       * Le quota epuise porte le meme code. On les separe sur le texte : Google
+       * dit « credits are depleted » pour l'un, et parle de debit pour l'autre.
+       */
+      const surcharge =
+        reponse.status === 429 && !detail.toLowerCase().includes('depleted');
+
+      /*
        * La raison part aussi dans les journaux du serveur.
        *
        * Elle etait renvoyee dans la reponse, et seulement la. Quand l'assistant
@@ -301,10 +315,12 @@ Deno.serve(async (requete) => {
 
       return repondre(
         {
-          erreur: inconnu ? 'modele-inconnu' : 'service',
+          erreur: inconnu ? 'modele-inconnu' : surcharge ? 'surcharge' : 'service',
           message: inconnu
             ? `Le modele « ${MODELE} » n’est pas reconnu par l’API. Changez GEMINI_MODEL.`
-            : 'L’assistant est momentanement indisponible.',
+            : surcharge
+              ? 'Les serveurs sont surcharges en ce moment. Reessayez dans quelques secondes.'
+              : 'L’assistant est momentanement indisponible.',
           detail: detail.slice(0, 400),
         },
         inconnu ? 400 : 502,
@@ -321,7 +337,8 @@ Deno.serve(async (requete) => {
         {
           erreur: 'reponse-vide',
           message:
-            'Je n’ai pas su repondre a celle-ci. Le support humain pourra vous aider : Reglages > Avance > Support.',
+            'Je n’ai pas su repondre a celle-ci. Le support humain pourra vous aider.
+[[SUPPORT]]',
         },
         200,
       );

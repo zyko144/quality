@@ -3060,3 +3060,44 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/*
+ * Le bouton de support, dans une reponse de l'assistant.
+ *
+ * Rouge, parce qu'il sort de la reponse : c'est le seul endroit ou l'assistant
+ * renonce et passe la main a quelqu'un. Une couleur d'accent l'aurait fait
+ * passer pour une action ordinaire parmi d'autres.
+ *
+ * Il remplace un marqueur pose par l'assistant lui-meme, plutot qu'un chemin
+ * ecrit dans sa reponse : un chemin appris vieillit avec l'application, et
+ * celui qu'il donnait — « Reglages > Avance > Support » — designait un endroit
+ * ou le support n'a jamais ete.
+ */
+.ia__support {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in oklab, var(--danger, #ef4444) 55%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--danger, #ef4444) 14%, transparent);
+  color: var(--danger, #ef4444);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ia__support:hover {
+  background: color-mix(in oklab, var(--danger, #ef4444) 24%, transparent);
+  border-color: var(--danger, #ef4444);
+}
+
+/* Les adresses citees par l'assistant se suivent d'un clic. */
+.ia__bulle a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
