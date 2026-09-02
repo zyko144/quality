@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useSession } from '@/store/session';
 import { useBadges } from '@/store/badges';
 import { journal } from '@/lib/journal';
+import { badgesMerites, mesuresUtiles, type Mesures } from './paliers';
 
 /**
  * Ce qui attribue les badges.
@@ -10,14 +11,26 @@ import { journal } from '@/lib/journal';
  * Sans ce composant, le catalogue existe et personne n'obtient rien : des
  * badges qu'on ne peut pas gagner sont une decoration, pas une recompense.
  *
+ * Les paliers ne sont plus ecrits ici
+ * -----------------------------------
+ * Ils l'ont ete, en double : une fois en SQL dans le catalogue, une fois ici.
+ * Les deux listes ont diverge des la premiere modification — le catalogue
+ * proposait `espace-10` que ce fichier n'attribuait jamais, et ce fichier
+ * visait `espace-100` qui n'existait pas. Deux defauts inverses, et aucun des
+ * deux visible : un badge simplement jamais donne, et personne ne remarque
+ * l'absence de quelque chose.
+ *
+ * Les seuils se lisent desormais dans la cle du badge — voir `paliers.ts`.
+ * Ajouter un palier redevient une ligne de SQL, et ce fichier suit tout seul.
+ *
  * Pourquoi ici et pas dans la base
  * --------------------------------
  * Un declencheur cote base serait plus sur — il ne dependrait pas de
- * l'application — mais il faudrait un declencheur par condition, et chacun
- * s'executerait a chaque ecriture de la table qu'il surveille. « A ecrit mille
- * messages » couterait un comptage a chaque message envoye par qui que ce soit.
+ * l'application — mais il en faudrait un par condition, et chacun s'executerait
+ * a chaque ecriture de la table qu'il surveille. « Dix mille messages »
+ * couterait un comptage a chaque message envoye par qui que ce soit.
  *
- * Ici, la verification a lieu une fois par ouverture de session. C'est
+ * La verification a donc lieu une fois par ouverture de session. C'est
  * suffisant : un badge obtenu trois minutes plus tard reste obtenu, et personne
  * ne regarde sa collection a la seconde pres.
  *
@@ -39,6 +52,7 @@ export function AttributionBadges() {
       await charger();
       if (abandonne) return;
 
+      const catalogue = useBadges.getState().catalogue;
       const deja = new Set(
         (useBadges.getState().parProfil[profile.id] ?? []).map((entree) => entree.badge_cle),
       );
@@ -50,6 +64,8 @@ export function AttributionBadges() {
         const obtenu = await reclamer(cle);
         if (obtenu) journal.info('badges', 'Badge obtenu', { badge: cle });
       };
+
+      /* --------------------------------------------- Ce qui ne se mesure pas */
 
       /*
        * Pionnier : parmi les cent premiers comptes.
@@ -69,92 +85,56 @@ export function AttributionBadges() {
       const ouverture = Date.parse('2026-08-26T00:00:00Z');
       const cree = Date.parse(profile.created_at ?? '');
       if (!Number.isNaN(cree)) {
-        const jour = 24 * 3600 * 1000;
-        await tenter('premiere-heure', cree - ouverture < jour);
-
-        // Fidele : plus d'un an. Personne ne l'a encore, et c'est normal.
-        await tenter('fidele', Date.now() - cree > 365 * jour);
+        await tenter('premiere-heure', cree - ouverture < 24 * 3600 * 1000);
       }
 
-      /*
-       * Les messages ecrits, en cinq paliers.
-       *
-       * Compte a la demande plutot que tenu a jour : une colonne de compteur
-       * demanderait d'etre incrementee a chaque message, et de rester juste
-       * apres chaque suppression. Une requete de comptage une fois par session
-       * coute moins cher que cette exactitude-la.
-       *
-       * On demande le compte une seule fois pour les cinq paliers : cinq
-       * requetes identiques diraient cinq fois la meme chose.
-       */
-      const paliersMessages: [string, number][] = [
-        ['messages-10k', 10_000],
-        ['messages-50k', 50_000],
-        ['messages-100k', 100_000],
-        ['messages-500k', 500_000],
-        ['messages-1m', 1_000_000],
-      ];
+      /* ------------------------------------------------- Ce qui se mesure */
 
-      if (paliersMessages.some(([cle]) => !deja.has(cle))) {
+      /*
+       * On ne mesure que ce qui peut encore etre gagne.
+       *
+       * Compter les messages de quelqu'un qui a deja les cinq paliers est une
+       * requete pour rien — et elle partirait a chaque ouverture de session,
+       * pour toujours.
+       */
+      const besoins = mesuresUtiles(catalogue, deja);
+      const mesures: Mesures = {};
+
+      if (besoins.has('anciennete') && !Number.isNaN(cree)) {
+        mesures.anciennete = (Date.now() - cree) / (365 * 24 * 3600 * 1000);
+      }
+
+      if (besoins.has('messages')) {
         const { count } = await supabase
           .from('messages')
           .select('id', { count: 'exact', head: true })
           .eq('author_id', profile.id);
 
-        const ecrits = count ?? 0;
-        for (const [cle, seuil] of paliersMessages) await tenter(cle, ecrits >= seuil);
+        mesures.messages = count ?? 0;
       }
 
-      /*
-       * Le temps en vocal, en sept paliers.
-       *
-       * Le total est tenu par `TempsVocal`, qui rapporte toutes les cinq
-       * minutes. Ici on ne fait que le lire et comparer : la mesure et la
-       * recompense restent deux choses distinctes, et l'une peut changer sans
-       * toucher a l'autre.
-       */
-      const paliersVocal: [string, number][] = [
-        ['vocal-10', 10],
-        ['vocal-50', 50],
-        ['vocal-100', 100],
-        ['vocal-150', 150],
-        ['vocal-300', 300],
-        ['vocal-500', 500],
-        ['vocal-5000', 5000],
-      ];
-
-      if (paliersVocal.some(([cle]) => !deja.has(cle))) {
+      if (besoins.has('vocal')) {
         const { data: temps } = await supabase
           .from('temps_vocal')
           .select('secondes')
           .eq('profil_id', profile.id)
           .maybeSingle();
 
-        const heures = (Number(temps?.secondes ?? 0)) / 3600;
-        for (const [cle, seuil] of paliersVocal) await tenter(cle, heures >= seuil);
+        mesures.vocal = Number(temps?.secondes ?? 0) / 3600;
       }
 
-      /*
-       * Les espaces fondes, en quatre paliers.
-       *
-       * On lit les espaces dont on est proprietaire, puis leurs membres, et
-       * l'on retient le PLUS GRAND : les paliers portent sur un espace, pas sur
-       * une somme. Fonder dix espaces de dix membres n'est pas fonder un espace
-       * de cent.
-       */
-      const paliersEspace: [string, number][] = [
-        ['espace-100', 100],
-        ['espace-10k', 10_000],
-        ['espace-100k', 100_000],
-        ['espace-1m', 1_000_000],
-      ];
-
-      if (paliersEspace.some(([cle]) => !deja.has(cle))) {
+      if (besoins.has('espace')) {
         const { data: miens } = await supabase
           .from('spaces')
           .select('id')
           .eq('owner_id', profile.id);
 
+        /*
+         * On retient le PLUS GRAND espace, pas leur somme.
+         *
+         * Les paliers portent sur un espace : fonder dix espaces de dix membres
+         * n'est pas fonder un espace de cent.
+         */
         let plusGrand = 0;
 
         for (const espace of miens ?? []) {
@@ -166,7 +146,13 @@ export function AttributionBadges() {
           plusGrand = Math.max(plusGrand, count ?? 0);
         }
 
-        for (const [cle, seuil] of paliersEspace) await tenter(cle, plusGrand >= seuil);
+        mesures.espace = plusGrand;
+      }
+
+      if (abandonne) return;
+
+      for (const cle of badgesMerites(catalogue, mesures, deja)) {
+        await tenter(cle, true);
       }
     })();
 

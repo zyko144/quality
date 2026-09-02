@@ -1,0 +1,189 @@
+﻿/* ==========================================================================
+   Badges Discord-Style Echow - Effets Neons, Paliers et Raretés
+   ========================================================================== */
+
+.echow-badge-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--badge-color, #6366f1) 18%, #111116);
+  border: 1px solid color-mix(in oklab, var(--badge-color, #6366f1) 45%, transparent);
+  color: var(--badge-color, #6366f1);
+  padding: 3px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  user-select: none;
+}
+
+.echow-badge-icon:hover {
+  transform: translateY(-2px) scale(1.1);
+  z-index: 10;
+}
+
+.echow-badge-icon__svg-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.echow-badge-icon__svg-wrap svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* --------------------------------------------------------------------------
+   Paliers de Rareté & Effets Visuels (Néons, Hologrammes, Reflets)
+   -------------------------------------------------------------------------- */
+
+/* Tier 1 - Common / Doux */
+.badge-glow--common {
+  box-shadow: 0 0 6px color-mix(in oklab, var(--badge-color) 20%, transparent);
+}
+
+.badge-glow--common:hover {
+  box-shadow: 0 0 12px color-mix(in oklab, var(--badge-color) 45%, transparent);
+  border-color: var(--badge-color);
+}
+
+/* Tier 2 - Rare / Néon Net */
+.badge-glow--rare {
+  border-color: color-mix(in oklab, var(--badge-color) 65%, transparent);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--badge-color) 35%, transparent);
+}
+
+.badge-glow--rare svg {
+  filter: drop-shadow(0 0 3px var(--badge-color));
+}
+
+.badge-glow--rare:hover {
+  box-shadow: 0 0 16px color-mix(in oklab, var(--badge-color) 60%, transparent);
+  border-color: var(--badge-color);
+}
+
+/* Tier 3 - Épique / Électrique & Éclatant */
+.badge-glow--epic {
+  background: color-mix(in oklab, var(--badge-color) 25%, #0f0f14);
+  border-color: color-mix(in oklab, var(--badge-color) 85%, transparent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--badge-color) 45%, transparent), inset 0 0 6px color-mix(in oklab, var(--badge-color) 30%, transparent);
+}
+
+.badge-glow--epic svg {
+  filter: drop-shadow(0 0 4px var(--badge-color)) drop-shadow(0 0 8px color-mix(in oklab, var(--badge-color) 50%, transparent));
+}
+
+.badge-glow--epic:hover {
+  box-shadow: 0 0 20px var(--badge-color), inset 0 0 8px var(--badge-color);
+}
+
+/* Tier 4 - Légendaire / Laser Néon Incandescent */
+.badge-glow--legendary {
+  background: radial-gradient(circle at center, color-mix(in oklab, var(--badge-color) 40%, transparent) 0%, #0d0d12 100%);
+  border: 1.5px solid var(--badge-color);
+  box-shadow: 0 0 15px color-mix(in oklab, var(--badge-color) 65%, transparent), 0 0 30px color-mix(in oklab, var(--badge-color) 25%, transparent);
+  animation: pulse-legendary 3s ease-in-out infinite alternate;
+}
+
+.badge-glow--legendary svg {
+  filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 10px var(--badge-color));
+}
+
+@keyframes pulse-legendary {
+  0% {
+    box-shadow: 0 0 10px color-mix(in oklab, var(--badge-color) 50%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 22px var(--badge-color), 0 0 35px color-mix(in oklab, var(--badge-color) 35%, transparent);
+  }
+}
+
+/* Tier 5 - Mythique / Prisme Chromatique & Aura Cosmique (Top 100, 1M msg, 5000h, 1M espace, 10 ans) */
+.badge-glow--mythic {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.25), rgba(168, 85, 247, 0.25), rgba(59, 130, 246, 0.25), rgba(234, 179, 8, 0.25));
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 18px rgba(236, 72, 153, 0.7), 0 0 30px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3);
+  animation: chromatic-shift 4s linear infinite;
+}
+
+.badge-glow--mythic svg {
+  filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px rgba(236, 72, 153, 0.8));
+}
+
+@keyframes chromatic-shift {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* Shimmer raytracé holographique */
+.echow-badge-icon__shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.6) 50%, transparent 80%);
+  background-size: 200% 100%;
+  animation: shimmer-sweep 2.5s infinite;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  z-index: 3;
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Badges dans la fiche de profil (ProfileCard) & BadgesPage
+   -------------------------------------------------------------------------- */
+
+.profile__badges--obtenus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.profile-badge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.profile-badge-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.profile-badge-item__rang {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

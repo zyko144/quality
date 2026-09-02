@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Icon } from '@/components/Icon';
+import { BadgeVisual } from '@/components/BadgeVisual';
 import { useSession } from '@/store/session';
 import {
   useBadges,
@@ -159,9 +160,13 @@ function Vignette({
       }
       style={{ '--teinte': badge.teinte } as React.CSSProperties}
     >
-      <span className="badge-vignette__pastille" aria-hidden="true">
-        <Icon name={possede ? 'check' : close ? 'shield-off' : 'shield'} size={16} />
-      </span>
+      <BadgeVisual
+        badgeCle={badge.cle}
+        nom={badge.nom}
+        teinte={badge.teinte}
+        size={36}
+        className="badge-vignette__visual"
+      />
 
       <div className="badge-vignette__corps">
         <h3 className="badge-vignette__nom">

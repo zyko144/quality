@@ -12,6 +12,7 @@ import { LogoService } from '@/features/profile/ComptesLies';
 import { hueFor } from '@/constants';
 import { ROLE_LABEL, type Profile, type ProfileStats, type SpaceRole, type UUID } from '@/types/db';
 import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
+import { BadgeVisual } from '@/components/BadgeVisual';
 import { MemberRoles } from './MemberRoles';
 
 /**
@@ -264,14 +265,18 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                 {mesBadges.map(({ badge, obtenu }) => (
                   <li
                     key={badge.cle}
-                    className="profile-badge profile-badge--obtenu"
-                    style={{ '--teinte': badge.teinte } as React.CSSProperties}
-                    title={badge.description}
+                    className="profile-badge-item"
+                    title={`${badge.nom} : ${badge.description}`}
                   >
-                    <Icon name="shield" size={12} />
-                    {badge.nom}
+                    <BadgeVisual
+                      badgeCle={badge.cle}
+                      nom={badge.nom}
+                      teinte={badge.teinte}
+                      size={20}
+                    />
+                    <span>{badge.nom}</span>
                     {obtenu.position !== null ? (
-                      <span className="profile-badge__rang">n&deg;{obtenu.position}</span>
+                      <span className="profile-badge-item__rang">#{obtenu.position}</span>
                     ) : null}
                   </li>
                 ))}

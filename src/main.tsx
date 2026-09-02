@@ -19,6 +19,7 @@ import './styles/landing.css';
 // surfaces, les ombres et les reponses au survol, jamais les metriques.
 import './styles/voice.css';
 import './styles/depth.css';
+import './styles/badges.css';
 // En dernier : les regles mobiles surchargent celles des grands ecrans.
 import './styles/mobile.css';
 import { useSession } from '@/store/session';
