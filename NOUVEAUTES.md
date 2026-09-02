@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.5.7
+
+### Profil
+
+- **La fiche s'ouvre en deux colonnes**, et prend la place qu'il faut : l'identite a gauche, « A propos », les espaces et les amis en commun a droite. Tout s'empilait dans une colonne de cinq cent vingt pixels, et la bio, les liens et les notes se disputaient les derniers pixels avant le bord.
+- Sur une fenetre etroite, les deux colonnes se rempilent : deux gouttieres seraient pires qu'une.
+
+### Messages prives
+
+- La pastille de presence redevient lisible sans manger le visage. Le probleme n'etait pas sa taille mais son anneau — trois pixels de contour sur une pastille de huit.
+
 ## 9.5.6
 
 ### Echow AI

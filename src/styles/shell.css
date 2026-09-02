@@ -764,9 +764,18 @@
  * d'oeil en passant.
  */
 .dm-item .avatar__status {
+  /*
+   * L'anneau maigrit, la pastille non.
+   *
+   * Elle etait illisible : calculee sur la taille de l'avatar puis cerclee de
+   * trois pixels de fond, il n'en restait qu'un point de deux pixels. Je l'ai
+   * d'abord grossie d'un tiers — et elle s'est mise a manger le visage.
+   *
+   * Le probleme n'etait pas sa taille mais son ANNEAU : trois pixels de bordure
+   * sur une pastille de huit, c'est les trois quarts du diametre perdus en
+   * contour. Le reduire rend la couleur visible sans rien agrandir.
+   */
   border-width: 2px;
-  transform: scale(1.35);
-  transform-origin: bottom right;
 }
 
 /*

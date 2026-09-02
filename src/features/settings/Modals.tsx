@@ -588,7 +588,7 @@ function ProfileModal({
       se lit de haut en bas — un visage, un nom, ce qu'on en sait — et non de
       gauche a droite.
     */
-    <Modal open={open} title="Profil" onClose={onClose} width={520} bare>
+    <Modal open={open} title="Profil" onClose={onClose} width={880} bare>
       {userId ? <ProfileCard userId={userId} /> : null}
     </Modal>
   );

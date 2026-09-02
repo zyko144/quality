@@ -1181,10 +1181,42 @@
    un mot par ligne.
    ========================================================================== */
 
+/*
+ * Deux colonnes : l'identite a gauche, ce qu'on en apprend a droite.
+ *
+ * La fiche etait une seule colonne de cinq cent vingt pixels, et tout s'y
+ * empilait — banniere, visage, nom, badges, statut, puis les onglets. La bio,
+ * les liens et les notes se disputaient les derniers pixels avant le bord, et
+ * il fallait defiler pour lire trois lignes.
+ *
+ * Le fichier prevoyait pourtant deux colonnes : le commentaire qui suit parle
+ * de « colonne de gauche », et la banniere y est decrite comme coiffant cette
+ * colonne, pas la fiche entiere. La mise en page avait ete aplatie, les
+ * intentions non.
+ *
+ * A gauche l'identite, qui a une largeur naturelle — un visage, un nom, des
+ * badges. A droite ce qui se lit : a propos, espaces en commun, amis en commun.
+ * Ce qui varie en hauteur est ainsi separe de ce qui n'en change pas.
+ */
 .profile__grid {
-  display: flex;
-  flex-direction: column;
-  max-height: min(680px, 82vh);
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  max-height: min(760px, 86vh);
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Sous huit cent soixante pixels, elles se rempilent.
+ *
+ * Deux colonnes dans une fenetre etroite donneraient deux gouttieres, et c'est
+ * exactement ce que cette fiche vient de quitter.
+ */
+@media (max-width: 860px) {
+  .profile__grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: min(680px, 82vh);
+  }
 }
 
 .profile__aside {
@@ -1248,10 +1280,12 @@
   background: transparent;
 }
 
-.profile__grid {
-  position: relative;
-  z-index: 1;
-}
+/*
+ * `position` et `z-index` sont poses avec le reste de la grille, plus haut.
+ * Une regle de meme nom ecrite loin de sa jumelle finit par l'annuler sans
+ * qu'on puisse le voir en lisant l'une ou l'autre — c'est arrive trois fois
+ * dans ce projet aujourd'hui.
+ */
 
 /* --------------------------------------------------------------------------
    Colonne de gauche
