@@ -109,6 +109,15 @@ suivreLesLiens();
  */
 installerJournal();
 
+// On supprime les service workers s'ils existent (pour forcer la mise a jour de l'app bureau)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
 /*
  * Les lignes suivantes portent le nom de qui est connecte.
  *

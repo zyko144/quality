@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.9
+
+### Maintenance
+
+- **Fix cache.** Suppression du Service Worker pour forcer la mise a jour de l'application de bureau sans delai.
+
 ## 0.7.8
 
 ### Maintenance
