@@ -77,6 +77,21 @@ export function codeWindows(code: string): number | null {
   if (pave) return 0x60 + Number(pave[1]);
 
   const table: Record<string, number> = {
+    /*
+     * Les boutons de souris, dans le meme espace de codes.
+     *
+     * Windows leur reserve des numeros bien en dessous de ceux des touches, si
+     * bien qu'aucune collision n'est possible. Le pouce d'une souris de joueur
+     * — `Souris4` et `Souris5` — est le meilleur endroit ou poser une touche de
+     * conversation : on l'atteint sans quitter les commandes du jeu.
+     *
+     * Gauche et droit ne figurent pas ici, et ne doivent jamais y figurer :
+     * les poser sur une action rendrait l'ordinateur inutilisable, et l'on ne
+     * pourrait meme plus atteindre le reglage pour le defaire.
+     */
+    Souris3: 0x04,
+    Souris4: 0x05,
+    Souris5: 0x06,
     Backspace: 0x08,
     Tab: 0x09,
     Enter: 0x0d,

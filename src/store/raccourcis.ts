@@ -143,6 +143,11 @@ function nommer(code: string): string {
   if (code.startsWith('Numpad')) return `Pave ${code.slice(6)}`;
 
   const noms: Record<string, string> = {
+    // Les boutons de souris portent le nom qu'on leur donne dans les jeux :
+    // « molette » et « pouce », pas « bouton 4 ».
+    Souris3: 'Clic molette',
+    Souris4: 'Souris pouce 1',
+    Souris5: 'Souris pouce 2',
     Space: 'Espace',
     Enter: 'Entree',
     Tab: 'Tab',
@@ -172,6 +177,26 @@ export function correspond(event: KeyboardEvent, combinaison: Combinaison | null
     event.shiftKey === combinaison.shift &&
     event.altKey === combinaison.alt
   );
+}
+
+/**
+ * Le code d'un bouton de souris, ou `null` si on ne l'accepte pas.
+ *
+ * Le navigateur numerote ses boutons autrement que Windows : 1 pour la molette,
+ * 3 et 4 pour le pouce. On les ramene a des noms qui parlent — ceux que les
+ * jeux emploient — et l'on refuse gauche et droit, qu'on ne doit jamais
+ * pouvoir poser sur une action.
+ */
+export function codeSouris(bouton: number): string | null {
+  if (bouton === 1) return 'Souris3';
+  if (bouton === 3) return 'Souris4';
+  if (bouton === 4) return 'Souris5';
+  return null;
+}
+
+/** Vrai si la combinaison porte sur un bouton de souris. */
+export function estSouris(combinaison: Combinaison | null): boolean {
+  return combinaison !== null && combinaison.code.startsWith('Souris');
 }
 
 interface EtatRaccourcis {

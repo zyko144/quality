@@ -12,6 +12,18 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.4
+
+### Nouveau
+
+- **Les boutons de souris se posent comme des touches.** Le pouce d'une souris de joueur porte deux boutons dont aucun jeu ne se sert vraiment : c'est le meilleur endroit ou poser une touche de conversation, parce qu'on l'atteint sans lacher les commandes. Le clic molette aussi. Gauche et droit sont refuses, et a deux endroits plutot qu'un : les poser sur une action rendrait l'ordinateur inutilisable, et l'on ne pourrait meme plus cliquer le reglage pour le defaire.
+- **Un bandeau signale les reglages non enregistres.** Les reglages continuent de s'appliquer sur-le-champ — c'est la seule facon de regler un micro en s'ecoutant — mais rien ne disait qu'on avait touche a quelque chose, et revenir en arriere demandait de s'en souvenir. « Tout annuler » remet tout comme a l'ouverture, et l'on ne referme plus sans avoir tranche.
+
+### Corrige
+
+- **Le partage d'un ami restait parfois invisible.** Le role d'un flux — camera ou ecran — voyage par un autre chemin que l'image, et rien n'ordonne les deux. Quand la reponse n'etait pas encore arrivee, un unique rattrapage etait tente une seconde plus tard : s'il tombait trop tot, le flux restait en attente POUR TOUJOURS, sans erreur ni trace. On cliquait « Regarder » et rien n'apparaissait. Cela explique aussi les deux contournements trouves a tatons — lancer son propre partage, ou quitter et revenir — qui refaisaient l'operation dans le bon ordre. Le classement se retente desormais a chaque changement, et se tranche par elimination quand quelqu'un montre sa camera et son ecran en meme temps.
+- **Les raccourcis ne dependent plus d'un seul chemin.** Quand la surveillance par le systeme s'annoncait active, celle de la fenetre etait debranchee : une seule faille en aval, et il ne restait plus aucun raccourci — pas meme ceux qui marchaient depuis toujours. Les deux sont branches en permanence, et le double declenchement est ecarte autrement.
+
 ## 0.7.3
 
 ### Ameliore

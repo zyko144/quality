@@ -132,7 +132,15 @@
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
-  padding: 60px var(--space-10) var(--space-10) var(--space-9);
+  /*
+   * Le bas laisse la place au bandeau d'enregistrement.
+   *
+   * Il flotte au-dessus du contenu, et la place est reservee EN PERMANENCE
+   * plutot qu'a son apparition : sinon la page sauterait au moment ou l'on
+   * touche un reglage, c'est-a-dire pendant qu'on le regarde. Reservee, elle ne
+   * coute qu'un peu de vide au bas d'une page qui defile deja.
+   */
+  padding: 60px var(--space-10) 88px var(--space-9);
 }
 
 .settings__scroll::-webkit-scrollbar {

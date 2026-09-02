@@ -1271,13 +1271,49 @@ let cadenceCapture = 0;
   }
 
   /**
+   * Reprend les flux restes en attente et les range si l'on sait maintenant.
+   *
+   * C'EST LE POINT QUI MANQUAIT, et il explique un defaut qu'on ne savait pas
+   * reproduire : « des fois je ne vois pas le partage de mon ami ».
+   *
+   * Le repli ne tentait le classement qu'une seule fois, une seconde apres
+   * l'arrivee de la piste. Si la presence n'etait pas encore a jour a cet
+   * instant precis — elle voyage par un autre chemin que la piste, et rien ne
+   * les ordonne — le flux restait en attente POUR TOUJOURS. Aucune erreur,
+   * aucune trace : on cliquait « Regarder » et rien n'apparaissait.
+   *
+   * Cela explique aussi les deux contournements trouves par tatonnement :
+   * lancer son propre partage force une renegociation, donc une nouvelle
+   * arrivee de piste et un nouvel essai ; quitter et revenir refait tout dans
+   * le bon ordre.
+   *
+   * On repasse donc a chaque changement de presence et au battement : ce sont
+   * exactement les moments ou la reponse a pu arriver.
+   */
+  function reclasserEnAttente(): void {
+    if (pendingStreams.size === 0) return;
+
+    for (const attente of [...pendingStreams.values()]) {
+      const devine = classerParPresence(attente.peerId, attente.stream.id);
+      if (!devine) continue;
+
+      journal.alerte('vocal', 'Flux classe sans son annonce', {
+        pair: attente.peerId,
+        suppose: devine,
+      });
+
+      placeVideoStream(attente.peerId, attente.stream, devine);
+    }
+  }
+
+  /**
    * Devine le role d'un flux a partir de ce que la presence annonce.
    *
    * Rend `null` des que la reponse est ambigue — personne introuvable, ou bien
    * partage ET camera en meme temps. Deviner faux afficherait une camera en
    * plein ecran a la place d'un jeu, ce qui est pire que d'attendre.
    */
-  function classerParPresence(peerId: UUID): StreamPurpose | null {
+  function classerParPresence(peerId: UUID, fluxId?: string): StreamPurpose | null {
     const salon = get().channelId;
     if (!salon) return null;
 
@@ -1288,6 +1324,28 @@ let cadenceCapture = 0;
     if (!qui) return null;
     if (qui.sharing && !qui.video) return 'screen';
     if (qui.video && !qui.sharing) return 'camera';
+
+    /*
+     * Les deux a la fois : on tranche par elimination, si l'on peut.
+     *
+     * Quelqu'un qui montre sa camera ET son ecran envoie deux flux, et la
+     * presence ne dit pas lequel est lequel. Mais si l'un des deux est deja
+     * range, le second ne peut etre que l'autre — et c'est une deduction, pas
+     * une supposition.
+     *
+     * Sans cela, ces deux flux restaient en attente indefiniment : le cas le
+     * plus courant etant justement celui ou l'on regarde quelqu'un qui joue en
+     * montrant sa tete.
+     */
+    if (qui.sharing && qui.video && fluxId) {
+      const etat = get();
+      const camera = etat.remoteCameras[peerId];
+      const ecran = etat.remoteScreens[peerId];
+
+      if (camera && camera.id !== fluxId && !ecran) return 'screen';
+      if (ecran && ecran.id !== fluxId && !camera) return 'camera';
+    }
+
     return null;
   }
 
@@ -1355,19 +1413,7 @@ let cadenceCapture = 0;
        * l'on continue d'attendre — mieux vaut un flux en retard qu'une camera
        * affichee en grand a la place d'un jeu.
        */
-      window.setTimeout(() => {
-        if (!pendingStreams.has(stream.id)) return;
-
-        const devine = classerParPresence(peerId);
-        if (!devine) return;
-
-        journal.alerte('vocal', 'Flux classe sans son annonce', {
-          pair: peerId,
-          suppose: devine,
-        });
-
-        placeVideoStream(peerId, stream, devine);
-      }, REPLI_CLASSEMENT);
+      window.setTimeout(() => reclasserEnAttente(), REPLI_CLASSEMENT);
 
       return;
     }
@@ -1907,6 +1953,7 @@ let cadenceCapture = 0;
         const salon = get().channelId;
         if (!salon) return;
         syncPeers(get().participantsByChannel[salon] ?? []);
+        reclasserEnAttente();
 
         /*
          * On se re-annonce, meme sans rien avoir change.
@@ -1998,6 +2045,10 @@ let cadenceCapture = 0;
             participantsByChannel: { ...state.participantsByChannel, [channelId]: participants },
           }));
           syncPeers(participants);
+
+          // La presence vient de parler : un flux qu'on ne savait pas classer
+          // a peut-etre trouve sa reponse.
+          reclasserEnAttente();
         })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') publishState();

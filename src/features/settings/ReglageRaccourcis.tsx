@@ -5,6 +5,7 @@ import {
   ecrire,
   type ActionVocale,
   type Combinaison,
+  codeSouris,
 } from '@/store/raccourcis';
 import { clavierGlobalActif } from '@/features/voice/clavierGlobal';
 
@@ -72,10 +73,54 @@ export function ReglageRaccourcis() {
       setEcoute(null);
     };
 
+    /*
+     * Les boutons de souris se choisissent comme les touches.
+     *
+     * Le pouce d'une souris de joueur porte deux boutons dont aucun jeu ne se
+     * sert vraiment, et c'est le meilleur endroit ou poser une touche de
+     * conversation : on l'atteint sans lacher les commandes.
+     *
+     * Gauche et droit sont refuses par `codeSouris`, et ce n'est pas une
+     * precaution de principe : le clic gauche sert justement a lancer la
+     * capture, si bien que le poser sur une action serait la premiere chose qui
+     * arriverait — et l'on ne pourrait plus rien cliquer pour le defaire.
+     */
+    const capturerSouris = (event: MouseEvent) => {
+      const code = codeSouris(event.button);
+      if (!code) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const combinaison: Combinaison = {
+        code,
+        ctrl: event.ctrlKey,
+        shift: event.shiftKey,
+        alt: event.altKey,
+      };
+
+      const pris = conflit(ecoute, combinaison);
+      definir(ecoute, combinaison);
+      setRemplace(pris ? pris.libelle : null);
+      setEcoute(null);
+    };
+
     // En phase de capture : on veut la touche avant que quoi que ce soit
     // d'autre ne l'intercepte, y compris les raccourcis de l'application.
     window.addEventListener('keydown', capturer, true);
-    return () => window.removeEventListener('keydown', capturer, true);
+    window.addEventListener('mousedown', capturerSouris, true);
+    // Le navigateur ouvre son menu sur le bouton droit, et certaines souris
+    // envoient un `auxclick` en plus : on les ecarte pendant la capture.
+    const bloquer = (event: Event) => event.preventDefault();
+    window.addEventListener('contextmenu', bloquer, true);
+    window.addEventListener('auxclick', bloquer, true);
+
+    return () => {
+      window.removeEventListener('keydown', capturer, true);
+      window.removeEventListener('mousedown', capturerSouris, true);
+      window.removeEventListener('contextmenu', bloquer, true);
+      window.removeEventListener('auxclick', bloquer, true);
+    };
   }, [ecoute, definir, conflit]);
 
   return (
@@ -84,8 +129,9 @@ export function ReglageRaccourcis() {
 
       <p className="settings__hint">
         Cliquez sur une touche pour la changer, puis appuyez sur la combinaison
-        voulue. Echap annule. Ces raccourcis ne repondent qu&rsquo;une fois
-        connecte a un salon, et jamais pendant qu&rsquo;on ecrit.
+        voulue — une touche, ou un bouton de souris. Echap annule. Ces
+        raccourcis ne repondent qu&rsquo;une fois connecte a un salon, et jamais
+        pendant qu&rsquo;on ecrit.
       </p>
 
       {/* Ce qui est vrai, pas ce qui devrait l'etre : promettre des touches

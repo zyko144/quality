@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
 import { useVoice } from './useVoice';
-import { useRaccourcis, correspond, type ActionVocale, type Combinaison } from '@/store/raccourcis';
+import {
+  useRaccourcis,
+  correspond,
+  codeSouris,
+  type ActionVocale,
+  type Combinaison,
+} from '@/store/raccourcis';
 import { tenir, etatTenueVide, type Evenement, type EtatTenue } from './tenue';
 import { surveillerGlobalement, enSaisie } from './clavierGlobal';
 import { journal } from '@/lib/journal';
@@ -24,7 +30,19 @@ import { journal } from '@/lib/journal';
  * crochet. Les touches ne repondent alors qu'au premier plan — c'est ce qu'on
  * avait partout jusqu'ici.
  *
- * Un seul des deux est branche a la fois, jamais les deux.
+ * **Les deux sont branches en permanence**, et c'est une correction, pas un
+ * oubli. La version precedente n'en gardait qu'un : quand le systeme
+ * s'annoncait actif, la fenetre etait debranchee. Une seule faille en aval — un
+ * evenement qui ne traverse pas, une ecoute qui ne s'attache pas — et il ne
+ * restait plus AUCUN raccourci, pas meme ceux qui marchaient depuis toujours.
+ * Un repli qu'on demonte des que le chemin principal se declare n'est pas un
+ * repli.
+ *
+ * Le double declenchement est ecarte autrement : le chemin systeme laisse une
+ * trace datee de ce qu'il vient de traiter, et celui de la fenetre s'efface
+ * devant elle. Une trace perimee ne bloque rien, si bien que le pire cas reste
+ * « les raccourcis marchent quand la fenetre est devant » — ce qu'on avait
+ * toujours eu.
  *
  * Ce que les touches maintenues rendent
  * -------------------------------------
@@ -50,6 +68,7 @@ export function RaccourcisVocaux() {
   useEffect(() => {
     let abandonne = false;
     let defaire: (() => void) | null = null;
+    let surveilleParLeSysteme = false;
 
     const pour = (action: ActionVocale) =>
       raccourcis.find((entree) => entree.action === action)?.combinaison ?? null;
@@ -151,8 +170,27 @@ export function RaccourcisVocaux() {
       if (bas) basculer(action);
     };
 
+    /*
+     * Ce que le systeme vient de traiter, et quand.
+     *
+     * La fenetre recoit la meme frappe que lui quand l'application est devant.
+     * Sans cette trace, la bascule partirait deux fois — donc pas du tout.
+     *
+     * Un quart de seconde : bien plus que l'ecart entre les deux chemins pour
+     * une meme frappe, bien moins que l'intervalle entre deux pressions
+     * volontaires, meme rapides.
+     */
+    const traitees = new Map<string, number>();
+    const MEMOIRE = 250;
+
+    const dejaTraitee = (action: ActionVocale, bas: boolean) => {
+        const cle = `${action}|${bas}`;
+        const vue = traitees.get(cle);
+        return vue !== undefined && Date.now() - vue < MEMOIRE;
+    };
+
     /* ------------------------------------------------------------------ */
-    /* Par la fenetre : le repli, quand le systeme ne surveille pas.        */
+    /* Par la fenetre : toujours branche.                                   */
     /* ------------------------------------------------------------------ */
 
     const parLaFenetre = (): (() => void) => {
@@ -164,7 +202,8 @@ export function RaccourcisVocaux() {
         for (const entree of raccourcis) {
           if (!correspond(event, entree.combinaison)) continue;
           event.preventDefault();
-          agir(entree.action, true);
+          // Le systeme a pu voir la meme frappe un instant plus tot.
+          if (!dejaTraitee(entree.action, true)) agir(entree.action, true);
           return;
         }
       };
@@ -175,7 +214,7 @@ export function RaccourcisVocaux() {
           // Le code de la touche, pas la combinaison entiere : lacher `Ctrl`
           // avant la lettre change la combinaison, pas le fait qu'on a lache.
           if (!combinaison || event.code !== combinaison.code) continue;
-          agir(MAINTENUES[sens], false);
+          if (!dejaTraitee(MAINTENUES[sens], false)) agir(MAINTENUES[sens], false);
         }
       };
 
@@ -190,18 +229,65 @@ export function RaccourcisVocaux() {
        * ou il commence a servir.
        */
       const rendre = () => {
+        /*
+         * Quand le systeme surveille, un alt-tab est le cas nominal : rendre le
+         * micro en quittant la fenetre couperait le push-to-talk a l'instant
+         * meme ou il commence a servir. Le vrai relachement arrivera par le
+         * systeme, qui le voit ou que l'on soit.
+         */
+        if (surveilleParLeSysteme) return;
+
         maintenir('parler', 'perdu');
         maintenir('couper', 'perdu');
       };
 
+      /*
+       * Les boutons de souris, par la fenetre aussi.
+       *
+       * Sans cela, un bouton de pouce ne repondrait que dans l'application de
+       * bureau, jamais dans un navigateur — et l'ecart serait d'autant plus
+       * deroutant qu'il porterait sur un seul type de raccourci.
+       */
+      const clic = (event: MouseEvent, bas: boolean) => {
+        const code = codeSouris(event.button);
+        if (!code) return;
+
+        for (const entree of raccourcis) {
+          if (!entree.combinaison || entree.combinaison.code !== code) continue;
+
+          // Les modificateurs ne sont exiges qu'a l'enfoncement, comme pour les
+          // touches : lacher `Ctrl` avant le bouton ne defait pas le fait qu'on
+          // a lache le bouton.
+          if (
+            bas &&
+            (event.ctrlKey !== entree.combinaison.ctrl ||
+              event.shiftKey !== entree.combinaison.shift ||
+              event.altKey !== entree.combinaison.alt)
+          ) {
+            continue;
+          }
+
+          event.preventDefault();
+          if (!dejaTraitee(entree.action, bas)) agir(entree.action, bas);
+          return;
+        }
+      };
+
+      const clicBas = (event: MouseEvent) => clic(event, true);
+      const clicHaut = (event: MouseEvent) => clic(event, false);
+
       window.addEventListener('keydown', enfoncee);
       window.addEventListener('keyup', relachee);
       window.addEventListener('blur', rendre);
+      window.addEventListener('mousedown', clicBas);
+      window.addEventListener('mouseup', clicHaut);
 
       return () => {
         window.removeEventListener('keydown', enfoncee);
         window.removeEventListener('keyup', relachee);
         window.removeEventListener('blur', rendre);
+        window.removeEventListener('mousedown', clicBas);
+        window.removeEventListener('mouseup', clicHaut);
         rendre();
       };
     };
@@ -216,8 +302,13 @@ export function RaccourcisVocaux() {
       )
       .map((entree) => ({ nom: entree.action, combinaison: entree.combinaison }));
 
+    // La fenetre d'abord, et sans condition : c'est le socle, pas le repli.
+    const defaireFenetre = parLaFenetre();
+
     void surveillerGlobalement(entrees, (frappe) => {
-      agir(frappe.nom as ActionVocale, frappe.bas);
+      const action = frappe.nom as ActionVocale;
+      traitees.set(`${action}|${frappe.bas}`, Date.now());
+      agir(action, frappe.bas);
     }).then((suivi) => {
       // L'effet a pu etre defait pendant l'attente : on rend alors ce qu'on
       // vient d'obtenir plutot que de laisser une surveillance orpheline.
@@ -226,20 +317,22 @@ export function RaccourcisVocaux() {
         return;
       }
 
-      if (suivi.actif) {
-        journal.info('vocal', 'Touches vocales surveillees par le systeme', {
-          touches: entrees.length,
-        });
-        defaire = suivi.arreter;
-        return;
-      }
+      surveilleParLeSysteme = suivi.actif;
+      defaire = suivi.arreter;
 
-      defaire = parLaFenetre();
+      journal.info(
+        'vocal',
+        suivi.actif
+          ? 'Touches vocales surveillees par le systeme'
+          : 'Touches vocales lues par la fenetre seule',
+        { touches: entrees.length },
+      );
     });
 
     return () => {
       abandonne = true;
       defaire?.();
+      defaireFenetre();
     };
   }, [raccourcis]);
 

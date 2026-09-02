@@ -2277,3 +2277,84 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   padding: var(--space-9) 0;
 }
 
+
+/* --------------------------------------------------------------------------
+   Le bandeau des modifications non enregistrees
+   -------------------------------------------------------------------------- */
+
+/*
+ * Pose au bas du panneau, au-dessus du contenu qui defile.
+ *
+ * Il ne pousse rien : la page garde exactement la meme mise en page selon qu'il
+ * est la ou non, faute de quoi son apparition ferait sauter le reglage qu'on
+ * etait en train de lire.
+ */
+.reglages-barre {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+  z-index: 20;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-floating);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+
+  width: max-content;
+  max-width: calc(100% - var(--space-8));
+  animation: reglages-barre-entre 260ms var(--ease-out);
+}
+
+/*
+ * L'animation d'entree sert deux fois.
+ *
+ * A l'apparition, et a chaque fois qu'on tente de fermer sans avoir tranche :
+ * le composant est remonte, l'animation rejoue, et le regard revient dessus.
+ * Sans cela, la seconde tentative de fermeture ne produirait rien de visible et
+ * l'on croirait le bouton casse.
+ */
+@keyframes reglages-barre-entre {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  40% {
+    transform: translate(-50%, -3px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reglages-barre {
+    animation: none;
+  }
+}
+
+.reglages-barre__icone {
+  display: flex;
+  color: var(--warning);
+}
+
+.reglages-barre__texte {
+  color: var(--text-primary);
+}
+
+@media (max-width: 720px) {
+  .reglages-barre {
+    left: var(--space-4);
+    right: var(--space-4);
+    transform: none;
+    width: auto;
+    max-width: none;
+    animation: none;
+  }
+}

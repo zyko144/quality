@@ -1,4 +1,4 @@
-//! Les raccourcis qui repondent meme quand on joue.
+//! Les raccourcis qui repondent meme quand on joue — clavier et souris.
 //!
 //! Jusqu'ici les touches vocales etaient lues par la vue web, qui ne recoit
 //! rien des que la fenetre perd le focus. Autrement dit : le push-to-talk
@@ -27,6 +27,18 @@
 //! nulle part ou cela pourrait fuir : la comparaison se fait ici, dans le
 //! crochet, et ce qui ne correspond pas est oublie dans la foulee.
 //!
+//! Les boutons de souris
+//! ---------------------
+//! Le pouce d'une souris de joueur porte deux boutons dont aucun jeu ne se sert
+//! vraiment : c'est le meilleur endroit ou poser une touche de conversation,
+//! parce qu'on l'atteint sans quitter les commandes. Ils passent par un second
+//! crochet, de la meme famille, et rejoignent exactement le meme chemin que les
+//! touches — meme regle de modificateurs, meme filtrage des repetitions.
+//!
+//! Le clic gauche et le clic droit ne sont **pas** proposes. Les poser sur une
+//! action rendrait l'ordinateur inutilisable, et l'on ne pourrait meme plus
+//! atteindre le reglage pour defaire ce qu'on vient de faire.
+//!
 //! Une limite qui vient du systeme : une fenetre lancee en administrateur ne
 //! transmet pas ses frappes a un programme qui ne l'est pas. Les touches
 //! resteront donc sans effet au-dessus d'un jeu lance en administrateur, et
@@ -54,6 +66,52 @@ pub struct ToucheSurveillee {
 pub struct Frappe {
     pub nom: String,
     pub bas: bool,
+}
+
+/// Les boutons de souris qu'on accepte, dans l'espace des codes de touches.
+///
+/// Windows leur reserve deja des numeros — molette cliquee, et les deux du
+/// pouce — bien en dessous de ceux des touches. Les faire passer par le meme
+/// chemin evite d'avoir deux mecaniques a garder d'accord.
+pub const BOUTON_MILIEU: u32 = 0x04;
+pub const BOUTON_POUCE_1: u32 = 0x05;
+pub const BOUTON_POUCE_2: u32 = 0x06;
+
+/// Quel bouton, et dans quel sens, pour un message de la souris.
+///
+/// Separe de la procedure du crochet parce que l'eprouver autrement
+/// demanderait de cliquer pour de vrai sur le bureau de quelqu'un — un bouton
+/// de pouce, c'est « page precedente » dans la plupart des fenetres, et le cas
+/// se paierait en navigation perdue.
+///
+/// Rend `None` pour tout le reste, y compris les deplacements : le crochet en
+/// recoit plusieurs centaines par seconde, et c'est la sortie qui doit etre la
+/// plus rapide.
+pub fn bouton_de(message: u32, donnees: u32) -> Option<(u32, bool)> {
+    // Les valeurs viennent de `WinUser.h`. Les nommer ici plutot que d'importer
+    // le module Windows garde cette fonction compilable partout, donc
+    // eprouvable partout.
+    const MILIEU_BAS: u32 = 0x0207;
+    const MILIEU_HAUT: u32 = 0x0208;
+    const POUCE_BAS: u32 = 0x020b;
+    const POUCE_HAUT: u32 = 0x020c;
+
+    match message {
+        MILIEU_BAS => Some((BOUTON_MILIEU, true)),
+        MILIEU_HAUT => Some((BOUTON_MILIEU, false)),
+        POUCE_BAS | POUCE_HAUT => {
+            // Lequel des deux boutons du pouce vit dans les seize bits de poids
+            // fort de `mouseData`.
+            let bouton = match (donnees >> 16) & 0xffff {
+                1 => BOUTON_POUCE_1,
+                2 => BOUTON_POUCE_2,
+                _ => return None,
+            };
+
+            Some((bouton, message == POUCE_BAS))
+        }
+        _ => None,
+    }
 }
 
 /// Vrai si les modificateurs demandes sont enfonces.
@@ -92,8 +150,11 @@ mod fenetres {
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         CallNextHookEx, GetMessageW, SetWindowsHookExW, HC_ACTION, KBDLLHOOKSTRUCT, MSG,
-        WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+        MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_MBUTTONDOWN,
+        WM_MBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
     };
+
+
 
     /// Ce qu'on surveille. Vide tant que l'interface n'a rien demande, et c'est
     /// la sortie la plus rapide du crochet.
@@ -187,6 +248,38 @@ mod fenetres {
         }
     }
 
+    unsafe extern "system" fn procedure_souris(
+        code: i32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> LRESULT {
+        if code == HC_ACTION as i32 {
+            let message = wparam.0 as u32;
+
+            /*
+             * Le deplacement est ecarte en premier, et c'est ce qui compte.
+             *
+             * Ce crochet recoit chaque mouvement de la souris : plusieurs
+             * centaines par seconde des qu'on la bouge. Tout ce qui suit doit
+             * donc etre saute le plus tot possible, sans prendre le moindre
+             * verrou.
+             */
+            let donnees = if message == WM_XBUTTONDOWN || message == WM_XBUTTONUP {
+                (*(lparam.0 as *const MSLLHOOKSTRUCT)).mouseData
+            } else {
+                0
+            };
+
+            if let Some((bouton, bas)) = super::bouton_de(message, donnees) {
+                observer(bouton, bas);
+            }
+        }
+
+        // Le clic poursuit son chemin : un bouton de conversation ne doit pas
+        // disparaitre du jeu.
+        CallNextHookEx(None, code, wparam, lparam)
+    }
+
     unsafe extern "system" fn procedure(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
         if code == HC_ACTION as i32 {
             let message = wparam.0 as u32;
@@ -231,9 +324,21 @@ mod fenetres {
         let (pose, resultat) = sync_channel::<bool>(1);
 
         std::thread::spawn(move || unsafe {
-            let crochet = SetWindowsHookExW(WH_KEYBOARD_LL, Some(procedure), None, 0);
-            let _ = pose.try_send(crochet.is_ok());
-            if crochet.is_err() {
+            let clavier = SetWindowsHookExW(WH_KEYBOARD_LL, Some(procedure), None, 0);
+
+            /*
+             * La souris est posee sur le MEME fil, et c'est necessaire : un
+             * crochet appartient au fil qui l'a pose, et c'est la boucle de
+             * messages de ce fil qui le fait vivre. Deux fils demanderaient deux
+             * boucles pour rien.
+             *
+             * Son echec n'empeche pas le reste : le clavier seul vaut mieux que
+             * rien, et c'est de loin le cas le plus courant.
+             */
+            let souris = SetWindowsHookExW(WH_MOUSE_LL, Some(procedure_souris), None, 0);
+            let _ = pose.try_send(clavier.is_ok() || souris.is_ok());
+
+            if clavier.is_err() && souris.is_err() {
                 return;
             }
 
@@ -321,6 +426,49 @@ mod tests {
         assert!(modificateurs_suffisants(&nue, false, false, false));
         assert!(modificateurs_suffisants(&nue, false, true, false));
         assert!(modificateurs_suffisants(&nue, true, true, true));
+    }
+
+    #[test]
+    fn les_boutons_de_souris_se_decodent() {
+        use super::{bouton_de, BOUTON_MILIEU, BOUTON_POUCE_1, BOUTON_POUCE_2};
+
+        assert_eq!(bouton_de(0x0207, 0), Some((BOUTON_MILIEU, true)));
+        assert_eq!(bouton_de(0x0208, 0), Some((BOUTON_MILIEU, false)));
+
+        // Le numero du bouton du pouce vit dans les seize bits de poids fort ;
+        // le lire dans les seize bits de poids faible rendrait toujours zero, et
+        // aucun des deux boutons ne repondrait jamais.
+        assert_eq!(bouton_de(0x020b, 1 << 16), Some((BOUTON_POUCE_1, true)));
+        assert_eq!(bouton_de(0x020c, 2 << 16), Some((BOUTON_POUCE_2, false)));
+
+        // Les bits de poids faible portent l'etat des autres boutons : ils ne
+        // doivent rien changer au numero qu'on lit.
+        assert_eq!(bouton_de(0x020b, (1 << 16) | 0xffff), Some((BOUTON_POUCE_1, true)));
+    }
+
+    #[test]
+    fn le_reste_de_la_souris_est_ignore() {
+        use super::bouton_de;
+
+        // Le deplacement, avant tout : le crochet en recoit plusieurs centaines
+        // par seconde des qu'on bouge la souris.
+        assert_eq!(bouton_de(0x0200, 0), None);
+
+        /*
+         * Gauche et droit ne doivent JAMAIS repondre.
+         *
+         * Les poser sur une action rendrait l'ordinateur inutilisable, et l'on
+         * ne pourrait meme plus cliquer le reglage pour le defaire. Le refus est
+         * ici, dans le crochet, en plus de celui de l'interface : deux verrous
+         * plutot qu'un sur ce qui ne se rattrape pas.
+         */
+        assert_eq!(bouton_de(0x0201, 0), None, "clic gauche accepte");
+        assert_eq!(bouton_de(0x0202, 0), None);
+        assert_eq!(bouton_de(0x0204, 0), None, "clic droit accepte");
+        assert_eq!(bouton_de(0x0205, 0), None);
+
+        // Un troisieme bouton de pouce, que Windows ne definit pas.
+        assert_eq!(bouton_de(0x020b, 3 << 16), None);
     }
 
     #[test]

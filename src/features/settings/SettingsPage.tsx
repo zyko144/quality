@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSession, type AccentName, type Density, type Theme } from '@/store/session';
 import { useUI, type SettingsSection } from '@/store/ui';
+import { useBrouillon } from '@/store/brouillonReglages';
+import { BarreEnregistrement } from './BarreEnregistrement';
 import { useFriends } from '@/store/friends';
 import { supabase } from '@/lib/supabase';
 import { Icon, type IconName } from '@/components/Icon';
@@ -66,6 +68,8 @@ const GROUPES: { titre: string; entrees: { value: SettingsSection; label: string
 
 export function SettingsPage() {
   const section = useUI((state) => state.settings);
+  const ouvrirBrouillon = useBrouillon((etat) => etat.ouvrir);
+  const fermerBrouillon = useBrouillon((etat) => etat.fermer);
   const openSettings = useUI((state) => state.openSettings);
   const closeSettings = useUI((state) => state.closeSettings);
   const signOut = useSession((state) => state.signOut);
@@ -77,6 +81,19 @@ export function SettingsPage() {
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [section]);
+
+  /*
+   * L'instantane est pris a l'ouverture de la page, pas a chaque section.
+   *
+   * Changer de section ne doit pas valider ce qu'on vient de modifier : on
+   * regle souvent le micro, puis on va verifier autre chose, puis on revient.
+   * Le point de retour reste celui de l'ouverture.
+   */
+  useEffect(() => {
+    const ouverte = section !== null;
+    if (ouverte) ouvrirBrouillon();
+    else fermerBrouillon();
+  }, [section !== null, ouvrirBrouillon, fermerBrouillon]);
 
   useEffect(() => {
     if (!section) return;
@@ -90,6 +107,12 @@ export function SettingsPage() {
       if (target?.tagName === 'SELECT') return;
 
       event.preventDefault();
+
+      // On ne part pas en laissant des changements qu'on n'a pas vus : le
+      // bandeau se signale, et Echap ne referme rien tant qu'on n'a pas
+      // tranche.
+      if (useBrouillon.getState().retientLaFermeture()) return;
+
       closeSettings();
     };
 
@@ -162,10 +185,15 @@ export function SettingsPage() {
           {section === 'avance' ? <AdvancedSection /> : null}
         </div>
 
+        <BarreEnregistrement />
+
         <button
           type="button"
           className="settings__close"
-          onClick={closeSettings}
+          onClick={() => {
+            if (useBrouillon.getState().retientLaFermeture()) return;
+            closeSettings();
+          }}
           aria-label="Fermer les parametres"
         >
           <Icon name="x" size={18} />
