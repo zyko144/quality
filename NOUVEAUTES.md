@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.6
+
+### Corrige
+
+- **Le salon vocal ne se reparait jamais tout seul, et c'est la cause d'une famille entiere de defauts.** Le canal qui porte la presence — qui est la, qui parle, qui partage — signale son etat : souscrit, en erreur, delai depasse, ferme. Seul le premier etait traite. Les trois autres ne declenchaient rien : le canal restait mort, la presence vide, et l'on se retrouvait seul dans un salon ou les autres etaient pourtant la, chacun de son cote. Rien ne le disait, et la seule issue etait de quitter et de revenir. C'est la meme cause pour « on ne se voit pas », « on ne s'entend pas », « mon profil ne s'affiche pas » et « je dois quitter et revenir ». Le canal se surveille desormais au fait le plus simple — s'y voir soi-meme — et se rebatit apres douze secondes de silence, sans couper le micro ni les connexions en cours.
+- **On ne voyait pas toujours son propre partage.** La liste des partages etait construite a partir de la presence, y compris pour soi : voir SON PROPRE ecran attendait donc un aller-retour par le serveur, et tant que l'annonce n'etait pas revenue, notre entree disait « ne partage pas ». Quitter et revenir republiait tout, ce qui explique le contournement. Son propre partage se lit desormais chez soi, et s'ouvre deja regarde — il n'y a aucun decodage a epargner sur une capture qui est deja en memoire.
+
 ## 0.7.5
 
 ### Nouveau

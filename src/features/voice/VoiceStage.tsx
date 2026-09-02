@@ -81,16 +81,41 @@ export function VoiceStage({ channel }: { channel: Channel }) {
    * donc pas de decodage — c'est la que se joue le cout, pas dans la
    * reception.
    */
+  const moi = profile?.id;
+
   const screenShares = participants
-    .filter((participant) => participant.sharing && watchedShares[participant.user_id])
+    .filter(
+      (participant) =>
+        participant.user_id !== moi &&
+        participant.sharing &&
+        watchedShares[participant.user_id],
+    )
     .map((participant) => ({
       userId: participant.user_id,
-      stream:
-        participant.user_id === profile?.id
-          ? (localScreen ?? undefined)
-          : remoteScreens[participant.user_id],
+      stream: remoteScreens[participant.user_id] as MediaStream | undefined,
     }))
     .filter((entry) => entry.stream !== undefined);
+
+  /*
+   * Son propre partage vient de chez soi, jamais de la presence.
+   *
+   * C'etait la cause d'un defaut qu'on ne savait pas reproduire : « je lance un
+   * partage et je ne le vois pas, je dois quitter et revenir ». La liste etait
+   * construite a partir de la presence — y compris pour soi — si bien que voir
+   * SON PROPRE partage attendait un aller-retour par le serveur. Tant que
+   * l'annonce n'etait pas revenue, notre propre entree disait « ne partage
+   * pas », et la vignette n'existait pas.
+   *
+   * Quitter et revenir republiait tout : c'est exactement pour cela que le
+   * contournement marchait.
+   *
+   * La scene lisait deja l'etat local pour le micro et la sourdine ; le partage
+   * ne le faisait pas, et c'est tout l'ecart entre les deux. La liste laterale
+   * a recu la meme correction, pour la meme raison.
+   */
+  if (moi && sharing && localScreen && watchedShares[moi] !== false) {
+    screenShares.unshift({ userId: moi, stream: localScreen });
+  }
 
   // Un partage mis en avant occupe seul la zone : les autres passent en
   // vignettes sous les participants.

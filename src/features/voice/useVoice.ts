@@ -1025,6 +1025,20 @@ export const useVoice = create<VoiceState>((set, get) => {
 let battementPairs: number | null = null;
 
 /**
+ * Quand on s'est vu soi-meme dans la presence pour la derniere fois.
+ *
+ * C'est la seule mesure de sante du canal qui ne se devine pas : notre entree
+ * n'y figure que si le serveur l'a recue ET nous la renvoie.
+ */
+let derniereFoisVu = 0;
+
+/** Un canal se rebatit a la fois. */
+let reconstructionEnCours = false;
+
+/** Silence au-dela duquel on considere le canal perdu. */
+const SILENCE_CANAL = 12_000;
+
+/**
  * Definition et cause de limitation du dernier releve, pour ce partage.
  *
  * Sert a n'ecrire que ce qui change : un partage stable ne dit rien, un partage
@@ -1733,6 +1747,176 @@ let cadenceCapture = 0;
     }
   }
 
+  /**
+   * Ouvre le canal du salon et pose tout ce qui l'ecoute.
+   *
+   * Rend `false` si le canal n'a pas pu s'ouvrir — l'appelant a deja ete
+   * prevenu et le salon quitte.
+   *
+   * Sortie de `join` pour une raison precise : il faut pouvoir le REFAIRE sans
+   * refaire le reste. Rouvrir le micro, renegocier les connexions et rejouer le
+   * signal d'arrivee pour un canal a remplacer serait une coupure audible, la
+   * ou seul le canal est en cause.
+   */
+  function ouvrirCanal(channelId: UUID, userId: UUID): boolean {
+    /*
+     * L'installation du canal ne doit jamais emporter l'interface.
+     *
+     * `supabase.channel(sujet)` rend un canal DEJA EXISTANT quand il en trouve
+     * un sur ce sujet, et poser un ecouteur sur un canal souscrit leve une
+     * exception. Elle partait d'ici, remontait jusqu'a React, et emportait tout
+     * l'arbre : ecran noir, application inutilisable, et rien qui dise pourquoi.
+     */
+    try {
+      room = supabase.channel(`orbit:voice:${channelId}`, {
+        config: { presence: { key: userId }, broadcast: { self: false } },
+      });
+    } catch (cause) {
+      journal.erreur('vocal', 'Canal du salon inutilisable', {
+        salon: channelId,
+        cause: String(cause),
+      });
+
+      room = null;
+      set({
+        connecting: false,
+        error: 'Le salon vocal n’a pas pu s’ouvrir. Reessayez dans un instant.',
+      });
+      void get().leave();
+      return false;
+    }
+
+    room
+      .on('broadcast', { event: 'voice-signal' }, ({ payload }) => {
+        const message = payload as VoiceMessage;
+        if (message.to !== userId) return;
+
+        if ('kind' in message && message.kind === 'deconnexion') {
+          set({ error: 'Vous avez ete deconnecte du salon vocal.' });
+          void get().leave();
+          return;
+        }
+
+        if ('kind' in message && message.kind === 'deplacement') {
+          const moi = get().userId;
+          if (moi) void get().join(message.salon, moi);
+          return;
+        }
+
+        if ('kind' in message && message.kind === 'refus') {
+          // Rester seul dans le salon apres un refus n'a aucun sens : on
+          // raccroche, en disant pourquoi.
+          set({ error: 'Votre appel a ete refuse.' });
+          void get().leave();
+          return;
+        }
+
+        void handleSignal(message as VoiceSignal);
+      })
+      .on('presence', { event: 'sync' }, () => {
+        if (!room) return;
+        const participants = dedupliquer(
+          Object.values(room.presenceState<VoiceParticipant>())
+            .flat()
+            .filter((entry): entry is VoiceParticipant & { presence_ref: string } =>
+              Boolean(entry && typeof entry === 'object' && 'user_id' in entry),
+            ),
+        );
+
+        /*
+         * Se voir soi-meme est le signe que le canal est vivant.
+         *
+         * C'est la seule preuve qui ne se devine pas : notre entree n'apparait
+         * que si le serveur l'a bien recue ET nous la renvoie. Tant qu'on s'y
+         * voit, la presence circule ; des qu'on n'y est plus, plus rien ne
+         * circule — et personne d'autre ne s'y trouve non plus.
+         */
+        if (participants.some((participant) => participant.user_id === userId)) {
+          derniereFoisVu = Date.now();
+        }
+
+        set((state) => ({
+          participantsByChannel: { ...state.participantsByChannel, [channelId]: participants },
+        }));
+        syncPeers(participants);
+
+        // La presence vient de parler : un flux qu'on ne savait pas classer
+        // a peut-etre trouve sa reponse.
+        reclasserEnAttente();
+      })
+      .subscribe((status) => {
+        /*
+         * TOUS les etats sont traites, et c'est la correction la plus lourde de
+         * consequences de ce fichier.
+         *
+         * Seul `SUBSCRIBED` l'etait. Les trois autres — canal en erreur, delai
+         * depasse, canal ferme — ne declenchaient RIEN : le canal restait mort,
+         * la presence vide, et l'on se retrouvait seul dans un salon ou les
+         * autres etaient pourtant la, chacun de son cote. Rien ne le disait, et
+         * la seule issue etait de quitter et de revenir.
+         *
+         * C'est la meme cause pour toute une famille de defauts rapportes : « on
+         * ne se voit pas », « on ne s'entend pas », « mon profil ne s'affiche
+         * pas », « je dois quitter et revenir ».
+         */
+        journal.info('vocal', 'Canal du salon', { salon: channelId, etat: status });
+
+        if (status === 'SUBSCRIBED') {
+          derniereFoisVu = Date.now();
+          publishState();
+          return;
+        }
+
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          // On ne rebatit pas ici : le client tente sa propre reconnexion, et
+          // s'y superposer ouvrirait deux canaux sur le meme sujet. Le
+          // battement s'en charge s'il ne revient pas.
+          journal.alerte('vocal', 'Canal du salon perdu', { salon: channelId, etat: status });
+        }
+      });
+
+    return true;
+  }
+
+  /**
+   * Rebatit le canal quand il ne donne plus signe de vie.
+   *
+   * Le client de Realtime sait se reconnecter, mais pas toujours : un canal
+   * laisse en erreur peut ne jamais revenir, et rien dans l'application ne s'en
+   * apercevait. On mesure donc le seul fait qui compte — se voir soi-meme dans
+   * la presence — et l'on refait le canal quand il cesse d'etre vrai.
+   */
+  async function reconstruireCanal(channelId: UUID, userId: UUID): Promise<void> {
+    if (reconstructionEnCours) return;
+    reconstructionEnCours = true;
+
+    journal.alerte('vocal', 'Canal du salon rebati', {
+      salon: channelId,
+      silence: Date.now() - derniereFoisVu,
+    });
+
+    try {
+      const ancien = room;
+      room = null;
+
+      // Le sujet doit etre libere avant d'etre repris : `supabase.channel` rend
+      // un canal deja existant quand il en trouve un, et l'on rebatirait alors
+      // sur le cadavre qu'on voulait remplacer.
+      if (ancien) await supabase.removeChannel(ancien).catch(() => undefined);
+
+      // Entre-temps on a pu quitter le salon.
+      if (get().channelId !== channelId) return;
+
+      // Le compteur repart : sans cela, le premier battement qui suit
+      // rebatirait aussitot un canal qui n'a pas encore eu le temps de repondre.
+      derniereFoisVu = Date.now();
+      etatEnAttente = true;
+      ouvrirCanal(channelId, userId);
+    } finally {
+      reconstructionEnCours = false;
+    }
+  }
+
   function syncPeers(participants: VoiceParticipant[]): void {
     const me = get().userId;
     const localStream = get().localStream;
@@ -1956,6 +2140,20 @@ let cadenceCapture = 0;
         reclasserEnAttente();
 
         /*
+         * Le canal donne-t-il encore signe de vie ?
+         *
+         * Douze secondes sans s'y voir soi-meme : c'est bien au-dela de tout
+         * hoquet de reseau — la presence se resynchronise a chaque changement et
+         * l'on se republie toutes les trois secondes — et bien en deca de ce
+         * qu'on supporte a l'usage. Passe ce delai, le canal est mort et rien
+         * ne le ressuscitera tout seul.
+         */
+        const moi = get().userId;
+        if (moi && Date.now() - derniereFoisVu > SILENCE_CANAL) {
+          void reconstruireCanal(salon, moi);
+        }
+
+        /*
          * On se re-annonce, meme sans rien avoir change.
          *
          * La presence de Realtime est declarative : elle ne vaut que tant que
@@ -1972,87 +2170,9 @@ let cadenceCapture = 0;
         publishState();
       }, 3000);
 
-      /*
-       * L'installation du canal ne doit jamais emporter l'interface.
-       *
-       * `supabase.channel(sujet)` rend un canal DEJA EXISTANT quand il en
-       * trouve un sur ce sujet, et poser un ecouteur sur un canal souscrit leve
-       * une exception. Elle partait d'ici, remontait jusqu'a React, et emportait
-       * tout l'arbre : ecran noir, application inutilisable, et rien qui dise
-       * pourquoi. Deux traces l'ont montre avant qu'on la comprenne.
-       *
-       * La cause est traitee au-dessus — l'observateur ne s'ouvre plus sur le
-       * salon qu'on rejoint. Ce garde-fou traite la CONSEQUENCE : quoi qu'il
-       * arrive ici, on repart avec un message plutot qu'un ecran noir.
-       */
-      try {
-        room = supabase.channel(`orbit:voice:${channelId}`, {
-          config: { presence: { key: userId }, broadcast: { self: false } },
-        });
-      } catch (cause) {
-        journal.erreur('vocal', 'Canal du salon inutilisable', {
-          salon: channelId,
-          cause: String(cause),
-        });
-
-        room = null;
-        set({
-          connecting: false,
-          error: 'Le salon vocal n’a pas pu s’ouvrir. Reessayez dans un instant.',
-        });
-        void get().leave();
-        return;
-      }
-
-      room
-        .on('broadcast', { event: 'voice-signal' }, ({ payload }) => {
-          const message = payload as VoiceMessage;
-          if (message.to !== userId) return;
-
-          if ('kind' in message && message.kind === 'deconnexion') {
-            set({ error: 'Vous avez ete deconnecte du salon vocal.' });
-            void get().leave();
-            return;
-          }
-
-          if ('kind' in message && message.kind === 'deplacement') {
-            const moi = get().userId;
-            if (moi) void get().join(message.salon, moi);
-            return;
-          }
-
-          if ('kind' in message && message.kind === 'refus') {
-            // Rester seul dans le salon apres un refus n'a aucun sens : on
-            // raccroche, en disant pourquoi.
-            set({ error: 'Votre appel a ete refuse.' });
-            void get().leave();
-            return;
-          }
-
-          void handleSignal(message as VoiceSignal);
-        })
-        .on('presence', { event: 'sync' }, () => {
-          if (!room) return;
-          const participants = dedupliquer(
-            Object.values(room.presenceState<VoiceParticipant>())
-              .flat()
-              .filter((entry): entry is VoiceParticipant & { presence_ref: string } =>
-                Boolean(entry && typeof entry === 'object' && 'user_id' in entry),
-              ),
-          );
-
-          set((state) => ({
-            participantsByChannel: { ...state.participantsByChannel, [channelId]: participants },
-          }));
-          syncPeers(participants);
-
-          // La presence vient de parler : un flux qu'on ne savait pas classer
-          // a peut-etre trouve sa reponse.
-          reclasserEnAttente();
-        })
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') publishState();
-        });
+      // Le canal, ses ecouteurs et sa reprise vivent dans `ouvrirCanal` : il
+      // faut pouvoir le refaire sans refaire le micro ni les connexions.
+      if (!ouvrirCanal(channelId, userId)) return;
 
       startSpeechDetection();
       salonEnJonction = null;
@@ -2077,6 +2197,9 @@ let cadenceCapture = 0;
 
       stopSpeechDetection();
       stopStats();
+
+      derniereFoisVu = 0;
+      reconstructionEnCours = false;
 
       if (battementPairs !== null) {
         window.clearInterval(battementPairs);
@@ -2227,11 +2350,18 @@ let cadenceCapture = 0;
           couperSonNatif();
           couperCaptureNative();
 
-          set({
-            sharing: false,
-            localScreen: null,
-            partageSansSon: false,
-            raisonSansSon: null,
+          set((etat) => {
+            const moi = etat.userId;
+            return {
+              sharing: false,
+              localScreen: null,
+              partageSansSon: false,
+              raisonSansSon: null,
+              // On oublie qu'on le regardait, sinon le partage suivant
+              // heriterait d'un choix pris pour un autre.
+              watchedShares: moi ? retirer(etat.watchedShares, moi) : etat.watchedShares,
+              focusedShare: etat.focusedShare === moi ? null : etat.focusedShare,
+            };
           });
           stopStats();
           playCue('share-stop');
@@ -2383,11 +2513,18 @@ let cadenceCapture = 0;
           }
           couperSonNatif();
           couperCaptureNative();
-          set({
-            sharing: false,
-            localScreen: null,
-            partageSansSon: false,
-            raisonSansSon: null,
+          set((etat) => {
+            const moi = etat.userId;
+            return {
+              sharing: false,
+              localScreen: null,
+              partageSansSon: false,
+              raisonSansSon: null,
+              // On oublie qu'on le regardait, sinon le partage suivant
+              // heriterait d'un choix pris pour un autre.
+              watchedShares: moi ? retirer(etat.watchedShares, moi) : etat.watchedShares,
+              focusedShare: etat.focusedShare === moi ? null : etat.focusedShare,
+            };
           });
           publishState();
         });
@@ -2516,7 +2653,24 @@ let cadenceCapture = 0;
           announceStream(peerId, display.id, 'screen');
         }
 
-        set({ sharing: true, localScreen: display });
+        /*
+         * Son propre partage s'ouvre deja regarde.
+         *
+         * Le clic « Regarder » existe pour epargner un DECODAGE : recevoir un
+         * flux ne coute presque rien, le developper coute un coeur entier. Or
+         * son propre partage ne se decode pas — c'est la capture elle-meme,
+         * deja en memoire. Il n'y avait donc rien a epargner, et l'on devait
+         * cliquer pour voir ce qu'on venait soi-meme de lancer.
+         */
+        set((etat) => {
+          const moi = etat.userId;
+          return {
+            sharing: true,
+            localScreen: display,
+            watchedShares: moi ? { ...etat.watchedShares, [moi]: true } : etat.watchedShares,
+          };
+        });
+
         startStats();
         playCue('share-start');
         publishState();
