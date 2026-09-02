@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 0.7.8
+
+### Maintenance
+
+- **Mise en maintenance technique de l'application.** Les serveurs font l'objet d'une opération de maintenance globale. L'accès aux conversations, salons vocaux et inscriptions est temporairement suspendu pour tous les utilisateurs le temps de déployer les améliorations d'infrastructure.
+
 ## 0.7.7
 
 ### Corrige
