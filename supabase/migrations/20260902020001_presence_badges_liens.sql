@@ -337,8 +337,20 @@ create policy signalements_lecture on public.signalements for select to authenti
 -- Un meme signalement, envoye trois fois de suite par impatience, ne vaut pas
 -- trois signalements. La contrainte porte sur l'heure : signaler la meme chose
 -- le lendemain reste possible, et c'est alors une information.
+--
+-- `at time zone 'UTC'` n'est pas une precaution de style : `date_trunc` sur un
+-- horodatage AVEC fuseau depend du fuseau de la session, et Postgres refuse
+-- d'indexer une expression dont le resultat peut changer d'une connexion a
+-- l'autre. Le ramener a UTC le rend fixe, donc indexable — et c'est de toute
+-- facon ce qu'on veut : deux personnes dans deux fuseaux ne doivent pas obtenir
+-- deux fenetres differentes.
 create unique index if not exists signalements_sans_doublon
-  on public.signalements (auteur_id, cible_type, cible_id, date_trunc('hour', cree_le));
+  on public.signalements (
+    auteur_id,
+    cible_type,
+    cible_id,
+    (date_trunc('hour', cree_le at time zone 'UTC'))
+  );
 
 -- ===========================================================================
 -- 5. Signaler un message envoye en prive
@@ -419,11 +431,16 @@ language sql
 security definer
 set search_path = ''
 as $$
-  insert into public.ia_usage (profil_id, jour, appels, jetons)
+  insert into public.ia_usage as u (profil_id, jour, appels, jetons)
   values ((select auth.uid()), current_date, 1, greatest(p_jetons, 0))
   on conflict (profil_id, jour) do update
-    set appels = public.ia_usage.appels + 1,
-        jetons = public.ia_usage.jetons + greatest(p_jetons, 0);
+    -- L'alias, et non le nom qualifie : dans la clause de mise a jour d'un
+    -- `on conflict`, la table cible se designe par son alias ou son nom nu.
+    -- `public.ia_usage.appels` y serait lu comme la colonne « appels » de la
+    -- table « ia_usage » du schema « public » pris pour une table, et Postgres
+    -- refuse avec « missing FROM-clause entry for table public ».
+    set appels = u.appels + 1,
+        jetons = u.jetons + greatest(p_jetons, 0);
 $$;
 
 grant execute on function public.ia_compter(bigint) to authenticated;
