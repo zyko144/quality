@@ -77,34 +77,85 @@ export function AttributionBadges() {
       }
 
       /*
-       * Bavard : mille messages ecrits.
+       * Les messages ecrits, en cinq paliers.
        *
        * Compte a la demande plutot que tenu a jour : une colonne de compteur
        * demanderait d'etre incrementee a chaque message, et de rester juste
        * apres chaque suppression. Une requete de comptage une fois par session
        * coute moins cher que cette exactitude-la.
+       *
+       * On demande le compte une seule fois pour les cinq paliers : cinq
+       * requetes identiques diraient cinq fois la meme chose.
        */
-      if (!deja.has('bavard')) {
+      const paliersMessages: [string, number][] = [
+        ['messages-10k', 10_000],
+        ['messages-50k', 50_000],
+        ['messages-100k', 100_000],
+        ['messages-500k', 500_000],
+        ['messages-1m', 1_000_000],
+      ];
+
+      if (paliersMessages.some(([cle]) => !deja.has(cle))) {
         const { count } = await supabase
           .from('messages')
           .select('id', { count: 'exact', head: true })
           .eq('author_id', profile.id);
 
-        await tenter('bavard', (count ?? 0) >= 1000);
+        const ecrits = count ?? 0;
+        for (const [cle, seuil] of paliersMessages) await tenter(cle, ecrits >= seuil);
       }
 
       /*
-       * Fondateur : avoir cree un espace qui compte au moins dix membres.
+       * Le temps en vocal, en sept paliers.
        *
-       * On lit les espaces dont on est proprietaire, puis leurs membres. Deux
-       * requetes, une fois par session : personne ne cree un espace assez vite
-       * pour que cela vaille un declencheur.
+       * Le total est tenu par `TempsVocal`, qui rapporte toutes les cinq
+       * minutes. Ici on ne fait que le lire et comparer : la mesure et la
+       * recompense restent deux choses distinctes, et l'une peut changer sans
+       * toucher a l'autre.
        */
-      if (!deja.has('fondateur')) {
+      const paliersVocal: [string, number][] = [
+        ['vocal-10', 10],
+        ['vocal-50', 50],
+        ['vocal-100', 100],
+        ['vocal-150', 150],
+        ['vocal-300', 300],
+        ['vocal-500', 500],
+        ['vocal-5000', 5000],
+      ];
+
+      if (paliersVocal.some(([cle]) => !deja.has(cle))) {
+        const { data: temps } = await supabase
+          .from('temps_vocal')
+          .select('secondes')
+          .eq('profil_id', profile.id)
+          .maybeSingle();
+
+        const heures = (Number(temps?.secondes ?? 0)) / 3600;
+        for (const [cle, seuil] of paliersVocal) await tenter(cle, heures >= seuil);
+      }
+
+      /*
+       * Les espaces fondes, en quatre paliers.
+       *
+       * On lit les espaces dont on est proprietaire, puis leurs membres, et
+       * l'on retient le PLUS GRAND : les paliers portent sur un espace, pas sur
+       * une somme. Fonder dix espaces de dix membres n'est pas fonder un espace
+       * de cent.
+       */
+      const paliersEspace: [string, number][] = [
+        ['espace-100', 100],
+        ['espace-10k', 10_000],
+        ['espace-100k', 100_000],
+        ['espace-1m', 1_000_000],
+      ];
+
+      if (paliersEspace.some(([cle]) => !deja.has(cle))) {
         const { data: miens } = await supabase
           .from('spaces')
           .select('id')
           .eq('owner_id', profile.id);
+
+        let plusGrand = 0;
 
         for (const espace of miens ?? []) {
           const { count } = await supabase
@@ -112,11 +163,10 @@ export function AttributionBadges() {
             .select('user_id', { count: 'exact', head: true })
             .eq('space_id', espace.id);
 
-          if ((count ?? 0) >= 10) {
-            await tenter('fondateur', true);
-            break;
-          }
+          plusGrand = Math.max(plusGrand, count ?? 0);
         }
+
+        for (const [cle, seuil] of paliersEspace) await tenter(cle, plusGrand >= seuil);
       }
     })();
 
