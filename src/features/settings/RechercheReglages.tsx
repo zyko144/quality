@@ -29,6 +29,16 @@ const INDEX: Entree[] = [
   // Compte et confidentialite
   { libelle: 'Changer mon mot de passe', section: 'compte', mots: 'securite identifiants' },
   { libelle: 'Supprimer mon compte', section: 'compte', mots: 'effacer partir quitter' },
+  {
+    libelle: 'Lier Spotify, Twitch, YouTube…',
+    section: 'connexions',
+    mots: 'spotify twitch youtube roblox steam github compte lie musique direct stream',
+  },
+  {
+    libelle: 'Afficher mes comptes sur mon profil',
+    section: 'connexions',
+    mots: 'visible cacher vitrine profil lien',
+  },
   { libelle: 'Qui peut m’ecrire', section: 'confidentialite', mots: 'messages prives inconnus' },
   { libelle: 'Personnes bloquees', section: 'confidentialite', mots: 'blocage ignorer' },
   { libelle: 'Mes donnees', section: 'confidentialite', mots: 'export rgpd telecharger' },
@@ -102,6 +112,7 @@ function sansAccent(texte: string): string {
 const NOMS: Record<SettingsSection, string> = {
   compte: 'Mon compte',
   profil: 'Profil',
+  connexions: 'Comptes lies',
   confidentialite: 'Confidentialite',
   apparence: 'Apparence',
   accessibilite: 'Accessibilite',

@@ -339,3 +339,34 @@ create policy signalements_lecture on public.signalements for select to authenti
 -- le lendemain reste possible, et c'est alors une information.
 create unique index if not exists signalements_sans_doublon
   on public.signalements (auteur_id, cible_type, cible_id, date_trunc('hour', cree_le));
+
+-- ===========================================================================
+-- 5. Signaler un message envoye en prive
+-- ===========================================================================
+--
+-- `message_reports.space_id` etait `not null`, et la fonction qui y insere le
+-- deduit du salon : une conversation privee n'appartient a aucun espace, donc
+-- la colonne valait `null`, donc l'insertion echouait. Signaler un message
+-- privé rendait une erreur de contrainte, presentee comme un refus.
+--
+-- C'est le cas ou signaler compte le plus. Un message deplace dans un salon
+-- public est vu par tout le monde et se moderera de lui-meme ; un message
+-- envoye en prive n'est vu que de celui qui le recoit, et lui retirer le seul
+-- recours dont il dispose est le pire endroit ou placer ce defaut.
+--
+-- La colonne devient donc facultative. Un signalement sans espace ne releve
+-- d'aucune moderation locale — il n'y a pas de proprietaire a prevenir — et
+-- part a l'equipe, qui lit par la cle de service.
+
+alter table public.message_reports
+  alter column space_id drop not null;
+
+/*
+ * Chacun relit les siens, y compris ceux qui n'ont pas d'espace.
+ *
+ * Sans cette politique, un signalement prive serait ecrit puis invisible a
+ * celui qui l'a envoye : il ne saurait meme pas s'il est parti.
+ */
+drop policy if exists message_reports_les_miens on public.message_reports;
+create policy message_reports_les_miens on public.message_reports for select to authenticated
+  using (reporter_id = (select auth.uid()));

@@ -38,6 +38,7 @@ export type SidebarView = 'space' | 'direct';
 export type SettingsSection =
   | 'compte'
   | 'profil'
+  | 'connexions'
   | 'confidentialite'
   | 'voix'
   | 'discussion'

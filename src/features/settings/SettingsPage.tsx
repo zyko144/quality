@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSession, type AccentName, type Density, type Theme } from '@/store/session';
 import { useUI, type SettingsSection } from '@/store/ui';
 import { useIsMobile } from '@/lib/useMediaQuery';
+import { ComptesLies } from '@/features/profile/ComptesLies';
 import { useBrouillon } from '@/store/brouillonReglages';
 import { BarreEnregistrement } from './BarreEnregistrement';
 import { useFriends } from '@/store/friends';
@@ -45,6 +46,7 @@ const GROUPES: { titre: string; entrees: { value: SettingsSection; label: string
     entrees: [
       { value: 'compte', label: 'Mon compte', icon: 'key' },
       { value: 'profil', label: 'Profil', icon: 'smile' },
+      { value: 'connexions', label: 'Comptes lies', icon: 'link' },
       { value: 'confidentialite', label: 'Confidentialite', icon: 'shield' },
     ],
   },
@@ -177,6 +179,7 @@ export function SettingsPage() {
         <div className="settings__scroll">
           {section === 'compte' ? <AccountSection /> : null}
           {section === 'profil' ? <ProfileSection /> : null}
+          {section === 'connexions' ? <ComptesLies /> : null}
           {section === 'confidentialite' ? <PrivacySection /> : null}
           {section === 'voix' ? <VoiceSettings /> : null}
           {section === 'apparence' ? <AppearanceSection /> : null}
