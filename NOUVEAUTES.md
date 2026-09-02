@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.1
+
+### Conversations
+
+- **Un salon s'ouvre toujours sur son dernier message.** Avoir remonte dans une conversation ouvrait la suivante la ou l'on etait reste — au milieu d'une discussion vieille de trois jours — et il fallait redescendre a la main a chaque fois.
+
+### Groupes
+
+- **La banniere s'affiche enfin.** Elle etait enregistree et ne paraissait nulle part : on pouvait la choisir, elle partait au stockage, et rien ne changeait a l'ecran.
+- **L'en-tete montre la photo du groupe**, et non le visage d'un de ses membres pris au hasard.
+
 ## 9.6.0
 
 ### Groupes

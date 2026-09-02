@@ -2440,3 +2440,43 @@ button.userbar__voice-info:hover {
 .voice-member__signe.is-partage {
   color: var(--success);
 }
+
+/*
+ * La banniere d'un groupe, derriere son en-tete.
+ *
+ * En fond plutot qu'en bandeau : un bandeau pousserait la conversation vers le
+ * bas de plusieurs dizaines de pixels, en permanence, pour une decoration.
+ *
+ * Le voile est indispensable. Une image quelconque derriere du texte blanc rend
+ * la moitie des noms illisibles, et c'est l'image qui varie — donc c'est au
+ * voile de garantir le contraste, pas a l'image d'etre choisie sombre.
+ */
+.channel-header.a-banniere {
+  position: relative;
+  background-image: var(--banniere);
+  background-size: cover;
+  background-position: center;
+  isolation: isolate;
+}
+
+.channel-header.a-banniere::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to right,
+    color-mix(in oklab, var(--bg-app) 88%, transparent),
+    color-mix(in oklab, var(--bg-app) 62%, transparent)
+  );
+}
+
+/* La photo du groupe, dans son en-tete : ronde comme les avatars qu'elle
+   remplace, pour que la ligne se lise de la meme facon. */
+.channel-header__photo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}

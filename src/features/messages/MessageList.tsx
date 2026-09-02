@@ -97,6 +97,34 @@ export function MessageList({ channelId, threadId = null, compact = false }: Mes
     }
   }, [channelId, threadId, hasMore, loading, loadOlder, isNearBottom]);
 
+  /*
+   * On arrive toujours en bas d'un salon.
+   *
+   * `stickToBottom` gardait sa valeur d'un salon a l'autre : avoir remonte dans
+   * une conversation ouvrait la suivante a l'endroit ou l'on etait resté, donc
+   * au milieu d'une discussion vieille de trois jours. Il fallait redescendre a
+   * la main a chaque fois, dans chaque salon.
+   *
+   * C'est le dernier message qu'on vient lire — c'est meme la seule raison
+   * d'ouvrir un salon. La position d'avant appartenait a l'autre conversation.
+   *
+   * Sans animation : un defilement anime depuis le haut de l'historique
+   * traverserait des centaines de messages a l'ouverture, et l'on verrait
+   * defiler des semaines de discussion avant d'arriver.
+   */
+  useLayoutEffect(() => {
+    stickToBottom.current = true;
+    setShowJump(false);
+
+    // Deux images d'attente : la premiere pose les messages, la seconde les
+    // mesure. Descendre avant que la hauteur soit connue ne mene nulle part.
+    const image = requestAnimationFrame(() => {
+      bottomAnchorRef.current?.scrollIntoView({ block: 'end' });
+    });
+
+    return () => cancelAnimationFrame(image);
+  }, [channelId, threadId]);
+
   /**
    * Apres l'ajout de messages, deux comportements opposes selon l'endroit :
    * en bas on suit le flux, en haut on garde l'oeil sur la ligne lue, sinon

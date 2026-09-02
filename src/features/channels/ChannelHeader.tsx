@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { useSession } from '@/store/session';
@@ -46,7 +47,28 @@ export function ChannelHeader({ channel }: { channel: Channel }) {
     // La barre de titre du systeme etant retiree, c'est cet en-tete qui sert
     // a deplacer la fenetre. L'attribut ne vaut que pour l'element qui le
     // porte : les boutons a l'interieur gardent leur clic.
-    <header className="channel-header" data-tauri-drag-region>
+    <header
+      className={
+        'channel-header' + (channel.kind === 'group' && channel.banner_url ? ' a-banniere' : '')
+      }
+      data-tauri-drag-region
+      style={
+        channel.kind === 'group' && channel.banner_url
+          ? ({ '--banniere': `url(${CSS.escape(channel.banner_url)})` } as React.CSSProperties)
+          : undefined
+      }
+    >
+      {/*
+        La banniere du groupe, derriere son en-tete.
+        
+        Elle etait enregistree et ne paraissait nulle part : on pouvait la
+        choisir, elle partait au stockage, et rien ne changeait a l'ecran. Une
+        image qu'on pose sans jamais la voir n'existe pas.
+        
+        Derriere l'en-tete plutot qu'au-dessus : ajouter un bandeau pousserait
+        la conversation vers le bas de plusieurs dizaines de pixels, sur toute
+        la hauteur, pour une decoration. En fond, elle habille sans rien coûter.
+      */}
       <button
         type="button"
         className="icon-btn channel-header__toggle"
@@ -66,7 +88,31 @@ export function ChannelHeader({ channel }: { channel: Channel }) {
 
       {isDirect ? (
         <>
-          <Avatar profile={otherProfile} size={28} status={otherProfile?.status} showStatus />
+          {/*
+            Un groupe porte SA photo, pas le visage de l'un de ses membres.
+            
+            L'en-tete reprenait `otherProfile` — le premier participant venu.
+            Sur une conversation a deux c'est juste : cette personne EST la
+            conversation. Sur un groupe de cinq, cela designait quelqu'un au
+            hasard, et la photo qu'on venait de poser ne paraissait nulle part.
+          */}
+          {channel.kind === 'group' ? (
+            channel.icon_url ? (
+              <img
+                src={channel.icon_url}
+                alt=""
+                className="channel-header__photo"
+                width={28}
+                height={28}
+              />
+            ) : (
+              <span className="channel-header__mark" aria-hidden="true">
+                <Icon name="users" size={17} />
+              </span>
+            )
+          ) : (
+            <Avatar profile={otherProfile} size={28} status={otherProfile?.status} showStatus />
+          )}
           <h1 className="channel-header__name truncate">{title}</h1>
         </>
       ) : (
