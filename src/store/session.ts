@@ -5,6 +5,18 @@ import type { Profile, PresenceStatus } from '@/types/db';
 import { setNePasDeranger as setSonsSilencieux } from '@/lib/sounds';
 import { setNePasDeranger as setNotificationsSilencieuses } from '@/lib/notify';
 
+/**
+ * L'adresse de l'application web.
+ *
+ * Sert de repli quand l'origine ne peut pas servir : dans l'application de
+ * bureau, elle vaut `http://tauri.localhost`, que Google refuse.
+ *
+ * Elle pointait sur `qualityy.vercel.app` — le SITE VITRINE. La connexion
+ * Google y renvoyait donc sur la page de presentation, sans session et sans
+ * moyen d'en sortir, quelle que soit la configuration de Supabase.
+ */
+const APPLICATION_WEB = 'https://echowebplayer.vercel.app';
+
 /* -------------------------------------------------------------------------- */
 /* Preferences d'affichage                                                     */
 /* -------------------------------------------------------------------------- */
@@ -506,7 +518,7 @@ export const useSession = create<SessionState>((set, get) => ({
       window.location.origin &&
       !window.location.origin.includes('tauri')
         ? window.location.origin
-        : 'https://qualityy.vercel.app';
+        : APPLICATION_WEB;
 
     const targetRedirect = `${origin.replace(/\/$/, '')}/app`;
 

@@ -712,6 +712,12 @@ export const useVoice = create<VoiceState>((set, get) => {
           window.setTimeout(() => rejeter(new Error('publication expiree')), 3000),
         ),
       ]);
+
+      // La serie d'echecs est finie : on le dit une fois, puis on oublie.
+      if (echecsPublication > 0) {
+        journal.info('vocal', 'Presence republiee', { perdues: echecsPublication });
+        echecsPublication = 0;
+      }
     } catch {
       /*
        * Un envoi perdu est remis dans la file, et c'etait le defaut le plus
@@ -728,8 +734,23 @@ export const useVoice = create<VoiceState>((set, get) => {
        * liste du salon**, et personne n'ouvre de connexion vers quelqu'un qu'il
        * ne voit pas — donc plus personne ne nous entend. Rien dans l'interface
        * ne le laissait deviner, et relancer l'application etait la seule issue.
+       *
+       * L'echec est desormais journalise. Il ne l'etait pas, et les traces d'un
+       * salon qui se coupait en boucle montraient donc trente « canal perdu »
+       * sans une seule ligne disant POURQUOI on ne s'y voyait plus. La cause
+       * etait la, muette, dans ce bloc.
        */
       etatEnAttente = true;
+      echecsPublication += 1;
+
+      // Une fois suffit a comprendre ; trente remplissent le journal sans rien
+      // apprendre de plus. On ne dit que la premiere de chaque serie.
+      if (echecsPublication === 1) {
+        journal.alerte('vocal', 'Publication de presence perdue', {
+          salon: courant.channelId,
+          suite: echecsPublication,
+        });
+      }
     } finally {
       publicationEnVol = false;
     }
@@ -1023,6 +1044,33 @@ export const useVoice = create<VoiceState>((set, get) => {
  * jusqu'a ce que quelqu'un entre ou sorte.
  */
 let battementPairs: number | null = null;
+
+/** Envois de presence perdus d'affilee. Sert a ne journaliser que le premier. */
+let echecsPublication = 0;
+
+/**
+ * Reconstructions consecutives, et l'attente qu'elles imposent.
+ *
+ * Les traces d'un salon coupe montraient trente « canal perdu » espaces de
+ * douze secondes, sur les deux postes en meme temps : la surveillance rebatit,
+ * la reconstruction ferme l'ancien canal, la fermeture est comptee comme une
+ * perte, et l'on recommence. Une boucle, pas une reprise.
+ *
+ * Rebatir repare un canal mort. Si cinq reconstructions n'ont rien change, la
+ * sixieme ne changera rien non plus : le probleme est ailleurs — une
+ * publication qui n'aboutit pas, un jeton perime — et continuer a fermer un
+ * canal toutes les douze secondes empeche justement celui-ci de s'etablir.
+ *
+ * L'attente double a chaque essai, jusqu'a deux minutes. Le compteur repart des
+ * qu'on se revoit dans la presence, c'est-a-dire des que ca marche.
+ */
+let reconstructionsDeSuite = 0;
+
+const ATTENTE_MAX = 120_000;
+
+function attenteAvantReconstruction(): number {
+  return Math.min(SILENCE_CANAL * 2 ** reconstructionsDeSuite, ATTENTE_MAX);
+}
 
 /** Retire les ecouteurs de reveil. Meme mecanique que la minuterie ci-dessus. */
 let arretReveil: (() => void) | null = null;
@@ -1921,6 +1969,9 @@ let cadenceCapture = 0;
          */
         if (participants.some((participant) => participant.user_id === userId)) {
           derniereFoisVu = Date.now();
+          // On s'y voit : le canal fait son travail, et les reconstructions
+          // precedentes n'ont plus a peser sur la suivante.
+          reconstructionsDeSuite = 0;
         }
 
         set((state) => ({
@@ -2016,6 +2067,7 @@ let cadenceCapture = 0;
       // Le compteur repart : sans cela, le premier battement qui suit
       // rebatirait aussitot un canal qui n'a pas encore eu le temps de repondre.
       derniereFoisVu = Date.now();
+      reconstructionsDeSuite += 1;
       etatEnAttente = true;
       await ouvrirCanal(channelId, userId);
     } finally {
@@ -2300,7 +2352,7 @@ let cadenceCapture = 0;
          * ne le ressuscitera tout seul.
          */
         const moi = get().userId;
-        if (moi && Date.now() - derniereFoisVu > SILENCE_CANAL) {
+        if (moi && Date.now() - derniereFoisVu > attenteAvantReconstruction()) {
           void reconstruireCanal(salon, moi);
         }
 
@@ -2350,6 +2402,8 @@ let cadenceCapture = 0;
       stopStats();
 
       derniereFoisVu = 0;
+      reconstructionsDeSuite = 0;
+      echecsPublication = 0;
       reconstructionEnCours = false;
 
       if (battementPairs !== null) {

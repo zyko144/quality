@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.5
+
+### Vocal
+
+- **Le salon ne se coupe plus en boucle.** Les traces montraient trente ruptures espacees de douze secondes : la surveillance rebatissait le canal, la reconstruction le fermait, la fermeture etait comptee comme une rupture, et l'on recommencait. L'attente double a chaque essai et repart des que la liaison tient.
+- Une annonce de presence perdue est desormais signalee. C'etait la cause de la boucle, et elle etait muette.
+
+### Connexion
+
+- **La connexion Google ne renvoie plus sur le site de presentation** depuis l'application de bureau.
+
 ## 9.6.4
 
 ### Vocal
