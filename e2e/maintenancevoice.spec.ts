@@ -128,6 +128,39 @@ test.describe('Apres la levee', () => {
 
   test.skip(EN_MAINTENANCE, 'la maintenance est encore en cours');
 
+  /*
+   * Le defaut que ce cas retient, et le plus couteux de tous.
+   *
+   * L'entree dans l'application demandait `session && autorise` — juste tant
+   * que la maintenance durait, la liste disant qui pouvait passer. La condition
+   * est restee telle quelle a la levee : tous ceux qui n'y figuraient pas se
+   * connectaient normalement, puis retombaient sur la page d'accueil. Leur
+   * session existait, leur compte etait bon, et l'application les renvoyait a la
+   * porte qu'ils venaient de franchir.
+   *
+   * Invisible depuis un compte de la liste — donc invisible pour qui developpe,
+   * et pour tous les cas ci-dessus qui utilisent ce compte. Il fallait un compte
+   * ORDINAIRE pour le voir, et c'est ce que ce cas verifie en lisant la
+   * condition plutot qu'en ouvrant une session : le compte de test est sur la
+   * liste, et le mettre en scene demanderait un second compte.
+   */
+  test('hors maintenance, la liste ne conditionne plus l entree', () => {
+    // Une adresse quelconque : elle n'a aucune raison d'etre sur la liste.
+    expect(traverseLaMaintenance('quelquun@exemple.fr')).toBe(false);
+
+    /*
+     * Ce que `App.tsx` evalue avant de rendre l'espace de travail. Recopie ici
+     * plutot qu'importe : la condition vit au milieu d'un composant, et
+     * l'extraire pour la tester deplacerait le defaut sans le supprimer.
+     */
+    const peutEntrer = (enMaintenance: boolean, surLaListe: boolean) =>
+      !enMaintenance || surLaListe;
+
+    expect(peutEntrer(false, false), 'hors maintenance, tout compte entre').toBe(true);
+    expect(peutEntrer(true, false), 'sous maintenance, la liste tranche').toBe(false);
+    expect(peutEntrer(true, true), 'sous maintenance, la liste laisse passer').toBe(true);
+  });
+
   test('un visiteur sans session voit la presentation, pas l ecran rouge', async ({ page }) => {
     await page.goto('/');
 

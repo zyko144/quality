@@ -122,9 +122,18 @@
        * Aucune pastille derriere lui : l'image porte deja sa forme, et
        * l'enfermer dans un carre colore revenait a lui en ajouter une seconde.
        */
+      /*
+       * Cent soixante-huit pixels, c'etait une affiche.
+       *
+       * Un ecran de chargement n'est pas une page d'accueil : il dure une
+       * seconde ou deux, et son logo ne sert qu'a dire « c'est bien Echow qui
+       * demarre ». A cette taille il occupait le tiers de la fenetre et faisait
+       * paraitre l'attente plus longue qu'elle ne l'est — un grand objet qui
+       * tourne se regarde, un petit se remarque et s'oublie.
+       */
       .splash__mark {
-        width: 168px;
-        height: 168px;
+        width: 64px;
+        height: 64px;
       }
 
       .splash__mark img {

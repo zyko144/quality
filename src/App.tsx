@@ -124,7 +124,25 @@ export function App() {
     return <PasswordRecovery />;
   }
 
-  if (session && autorise) {
+  /*
+   * Entrer ne demande qu'une session — la liste ne vaut que sous maintenance.
+   *
+   * Cette condition etait `session && autorise`, ce qui etait juste tant que la
+   * maintenance durait : la liste disait qui pouvait passer. Elle est restee
+   * telle quelle a la levee, et tous ceux qui n'y figurent pas se sont mis a
+   * retomber sur la page d'accueil APRES s'etre connectes. Leur session
+   * existait, leur compte etait bon, et l'application les renvoyait a la porte
+   * qu'ils venaient de franchir.
+   *
+   * Le defaut ne pouvait pas se voir de mon cote : mon adresse est sur la
+   * liste. Il ne touchait que les autres, tous les autres, et sur le web comme
+   * sur le bureau — ce qui a fait chercher du cote de l'application de bureau
+   * pendant des heures.
+   *
+   * Un drapeau leve doit rendre son verrou inoffensif, pas le laisser en place
+   * a moitie. C'est ce que la condition dit maintenant.
+   */
+  if (session && (!EN_MAINTENANCE || autorise)) {
     // Un compte ouvert par un fournisseur tiers arrive avec un pseudo deduit
     // de son adresse. On le fait trancher avant d'entrer : c'est ce par quoi
     // les autres le mentionneront.

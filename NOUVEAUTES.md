@@ -12,6 +12,16 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.2
+
+### Corrections
+
+- **On peut de nouveau se connecter.** Depuis la levee de la maintenance, tout compte hors de la liste de l'equipe se connectait normalement puis retombait sur la page d'accueil : la session existait, le compte etait bon, et l'application renvoyait a la porte qu'on venait de franchir.
+
+### Chargement
+
+- Le logo de l'ecran de demarrage passe de 168 a 64 pixels. Il occupait le tiers de la fenetre et faisait paraitre l'attente plus longue qu'elle ne l'est.
+
 ## 9.6.1
 
 ### Conversations

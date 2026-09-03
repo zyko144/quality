@@ -40,6 +40,29 @@
         "4173"
       ],
       "port": 4173
+    },
+    {
+      "name": "r6track",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Users/noamb/Documents/R6track",
+        "run",
+        "dev"
+      ],
+      "port": 5183
+    },
+    {
+      "name": "r6overlay-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "serve",
+        "C:/Users/noamb/Documents/R6track/overwolf-app",
+        "-l",
+        "4390"
+      ],
+      "port": 4390
     }
   ]
 }
