@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.6
+
+### Vocal
+
+- Une trace de plus pour identifier ce qui coupe le salon. Les journaux ont deja elimine deux causes sur quatre ; celle-ci designera la bonne.
+
 ## 9.6.5
 
 ### Vocal

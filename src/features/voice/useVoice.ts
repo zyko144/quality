@@ -889,6 +889,31 @@ export const useVoice = create<VoiceState>((set, get) => {
 
     for (const [id, canal] of observateurs) {
       if (voulus.has(id)) continue;
+
+      /*
+       * Retirer un observateur sur le salon ou l'on parle serait une faute.
+       *
+       * Les traces montrent le canal du salon ferme neuf secondes apres sa
+       * souscription, avant toute reconstruction. Quatre chemins appellent
+       * `removeChannel` ; celui de l'ouverture est deja journalise et n'apparait
+       * pas, celui de la reconstruction vient APRES la premiere fermeture. Reste
+       * celui-ci — le seul qui tourne periodiquement, donc le seul capable de
+       * fermer a intervalle regulier.
+       *
+       * Il efface aussi `participantsByChannel[id]`, ce qui correspond mot pour
+       * mot a « on s'entend mais on ne se voit plus ».
+       *
+       * `rejoint` devrait deja l'ecarter. Si cette ligne parait, c'est que non,
+       * et elle dira avec quoi `rejoint` avait ete calcule.
+       */
+      if (id === rejoint) {
+        journal.alerte('vocal', 'Observateur retire sur le salon rejoint', {
+          salon: id,
+          courant: get().channelId,
+          enJonction: salonEnJonction,
+        });
+      }
+
       void supabase.removeChannel(canal);
       observateurs.delete(id);
 
