@@ -25,12 +25,45 @@ import { useUI } from '@/store/ui';
  */
 export function RetourMobile({ label = 'Revenir a la navigation' }: { label?: string }) {
   const isMobile = useIsMobile();
-  const openNav = useUI((state) => state.openNav);
 
   if (!isMobile) return null;
 
+  /*
+   * Quitter la page, PUIS ouvrir le tiroir.
+   *
+   * Il n'ouvrait que le tiroir. Le tiroir se pose par-dessus, on le referme, et
+   * l'on se retrouve exactement ou l'on etait : sur la page qu'on voulait
+   * quitter. Le bouton ne ramenait donc nulle part — il ouvrait un menu, ce qui
+   * n'est pas ce qu'une fleche vers la gauche promet.
+   *
+   * Fermer d'abord met la conversation derriere le tiroir. Refermer celui-ci,
+   * d'un geste ou en touchant a cote, laisse alors la ou l'on voulait aller.
+   */
+  const revenir = () => {
+    /*
+     * On ferme les quatre pages pleines, sans en rouvrir une.
+     *
+     * `showDirectMessages` etait le geste evident, mais elle REMET `friendsOpen`
+     * a vrai — c'est son role, le bouton d'accueil des messages prives ouvre les
+     * amis. Depuis la page des amis elle ne changeait donc rien, et le bouton y
+     * restait aussi mort qu'avant.
+     *
+     * On pose l'etat directement : la vue reste celle des messages prives, et
+     * c'est la conversation en cours — ou son absence — qui reparait derriere
+     * le tiroir.
+     */
+    useUI.setState({
+      friendsOpen: false,
+      wavesOpen: false,
+      suggestionsOpen: false,
+      supportOpen: false,
+    });
+
+    useUI.getState().openNav();
+  };
+
   return (
-    <button type="button" className="icon-btn retour-mobile" onClick={openNav} aria-label={label}>
+    <button type="button" className="icon-btn retour-mobile" onClick={revenir} aria-label={label}>
       <Icon name="arrow-left" size={18} />
     </button>
   );

@@ -589,3 +589,89 @@
   flex-shrink: 0;
   margin-right: var(--space-1);
 }
+
+/* ==========================================================================
+   Moins de defilement : ce qui compte doit tenir a l'ecran
+
+   Les tailles de l'application sont calees sur un ecran de bureau, ou l'espace
+   ne manque pas. Sur un telephone les memes marges, les memes hauteurs de ligne
+   et les memes vignettes font qu'il faut defiler pour lire ce qui aurait tenu.
+
+   On ne reduit pas le TEXTE : une interface qu'on n'arrive plus a lire n'a rien
+   gagne. On reduit ce qui l'entoure — les marges, les paddings, les hauteurs
+   imposees — et les blocs decoratifs qui prennent la place d'un contenu.
+   ========================================================================== */
+
+@media (max-width: 860px) {
+  /* La discussion avec l'assistant : les bulles se serrent, le texte non. */
+  .ia__tour {
+    gap: var(--space-2);
+  }
+
+  .ia__bulle {
+    padding: var(--space-3);
+    line-height: 1.45;
+  }
+
+  .ia__tete {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  /*
+   * L'accueil de l'assistant tient sans defiler.
+   *
+   * Sa marque faisait quarante-quatre pixels et son texte respirait comme sur
+   * un ecran de bureau : les trois amorces — qui sont la raison d'etre de cet
+   * ecran, puisqu'elles disent quoi demander — se retrouvaient sous le bord.
+   */
+  .ia__accueil {
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .ia__accueil-texte {
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+
+  /* Les pages pleines : moins de marge autour, autant de contenu visible. */
+  .badges-page,
+  .suggestions,
+  .support {
+    padding: var(--space-4);
+  }
+
+  .badges-page__tete,
+  .badges-mien,
+  .badges-famille {
+    margin-bottom: var(--space-4);
+  }
+
+  .badges-page__sous-titre,
+  .badges-famille__detail {
+    font-size: var(--text-xs);
+    line-height: 1.4;
+  }
+
+  /* Une grille de badges a deux colonnes plutot qu'une : les vignettes font
+     268 px de large au minimum, ce qui n'en laissait tenir qu'une. */
+  .badges-grille {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--space-2);
+  }
+
+  .badge-vignette {
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+
+  .badge-vignette__description {
+    font-size: var(--text-xs);
+    line-height: 1.35;
+  }
+
+  /* La fiche de profil : la banniere prend le tiers de l'ecran pour rien. */
+  .profile__banner {
+    height: 96px;
+  }
+}

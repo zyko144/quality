@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.3
+
+### Telephone
+
+- **Les boutons de retour ramenent vraiment en arriere.** Ils ouvraient le tiroir de navigation par-dessus la page : en le refermant on se retrouvait exactement ou l'on etait. Une fleche vers la gauche ne promet pas un menu.
+- **Moins de defilement partout.** Les marges, les hauteurs imposees et les vignettes etaient calees sur un ecran de bureau. Les badges tiennent en deux colonnes, l'accueil de l'assistant tient sans defiler, et la banniere d'un profil ne mange plus le tiers de l'ecran. Le texte, lui, n'a pas retreci.
+
 ## 9.6.2
 
 ### Corrections
