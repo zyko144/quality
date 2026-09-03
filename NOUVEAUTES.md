@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.4
+
+### Vocal
+
+- **Le vocal se remet en place des qu'on revient sur l'application.** Sur telephone, verrouiller l'ecran ou changer d'application suspend la page : la presence disparait alors que le son continue de passer. On se retrouvait absent de la liste de l'autre, puis « ca rejoignait tout seul » une dizaine de secondes plus tard. La reprise est desormais immediate.
+
 ## 9.6.3
 
 ### Telephone

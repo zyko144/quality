@@ -1024,6 +1024,9 @@ export const useVoice = create<VoiceState>((set, get) => {
  */
 let battementPairs: number | null = null;
 
+/** Retire les ecouteurs de reveil. Meme mecanique que la minuterie ci-dessus. */
+let arretReveil: (() => void) | null = null;
+
 /**
  * Quand on s'est vu soi-meme dans la presence pour la derniere fois.
  *
@@ -2237,6 +2240,50 @@ let cadenceCapture = 0;
        * assez peu frequent pour ne rien couter : la fonction ne fait rien
        * quand tout est en place.
        */
+      /*
+       * Le retour au premier plan ne s'attend pas, il se saisit.
+       *
+       * Sur telephone, quitter l'application ou verrouiller l'ecran suspend la
+       * page : le socket se ferme et la presence disparait. Les minuteries sont
+       * gelees en meme temps — c'est le point important. Le controle de silence
+       * ci-dessous ne repart donc qu'au reveil, et il faut encore attendre son
+       * tour puis douze secondes avant que quoi que ce soit se repare.
+       *
+       * Pendant tout ce temps, chacun est absent de la liste de l'autre alors
+       * que le son continue de passer : la liaison WebRTC, elle, survit a la
+       * suspension. « On s'entend mais on ne se voit plus », puis « ca rejoint
+       * tout seul » quand la minuterie finit par se reveiller.
+       *
+       * `visibilitychange` arrive AVANT que les minuteries ne reprennent leur
+       * rythme. On republie donc immediatement, et l'on rebatit le canal si
+       * l'on ne s'y voit plus — sans attendre le tour d'une horloge qui vient
+       * elle-meme de redemarrer.
+       */
+      const auReveil = () => {
+        if (document.visibilityState !== 'visible') return;
+
+        const salon = get().channelId;
+        const moi = get().userId;
+        if (!salon || !moi) return;
+
+        publishState();
+        syncPeers(get().participantsByChannel[salon] ?? []);
+
+        // La suspension a pu durer des heures. On ne juge donc pas sur la
+        // duree du silence, qui serait toujours depassee, mais sur ce qu'on
+        // observe une fois revenu : si l'on ne se voit plus, le canal est mort.
+        if (!(get().participantsByChannel[salon] ?? []).some((p) => p.user_id === moi)) {
+          void reconstruireCanal(salon, moi);
+        }
+      };
+
+      document.addEventListener('visibilitychange', auReveil);
+      window.addEventListener('pageshow', auReveil);
+      arretReveil = () => {
+        document.removeEventListener('visibilitychange', auReveil);
+        window.removeEventListener('pageshow', auReveil);
+      };
+
       battementPairs = window.setInterval(() => {
         const salon = get().channelId;
         if (!salon) return;
@@ -2309,6 +2356,8 @@ let cadenceCapture = 0;
         window.clearInterval(battementPairs);
         battementPairs = null;
       }
+      arretReveil?.();
+      arretReveil = null;
       arretSuiviMicro?.();
       arretSuiviMicro = null;
       teardownPeers();
