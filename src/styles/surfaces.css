@@ -2605,7 +2605,6 @@ a.ecoute__lien:hover {
    pour un reglage qu'on touche une fois par jour.
    ========================================================================== */
 
-/* L'etat et la phrase, empiles a cote du visage. */
 .profile__dits {
   display: flex;
   flex-direction: column;
@@ -2619,35 +2618,29 @@ a.ecoute__lien:hover {
   position: relative;
 }
 
-.choix-statut__pastille {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 9px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--profil-voile, var(--border-subtle));
-  background: var(--profil-voile, var(--bg-raised));
-  color: inherit;
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-  white-space: nowrap;
+/* Un point de couleur, de la taille d'une icone de la barre. */
+.choix-statut__bouton {
+  display: grid;
+  place-items: center;
 }
 
-.choix-statut__pastille:hover {
-  border-color: currentColor;
+.choix-statut__bouton .status-dot {
+  width: 10px;
+  height: 10px;
 }
 
 /*
- * Le menu s'ouvre VERS LE BAS et par-dessus.
+ * Le menu s'ouvre VERS LE HAUT.
  *
- * `position: absolute` le sort du flux : sans cela, l'ouvrir pousserait le nom
- * et les badges vers le bas, et la fiche sauterait a chaque clic.
+ * La barre est collee au bas de la fenetre : un menu qui descend en sortirait.
+ * `bottom` plutot que `top` le fait pousser vers le haut, quelle que soit sa
+ * hauteur.
  */
 .choix-statut__menu {
   position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
   min-width: 170px;
   padding: 4px;

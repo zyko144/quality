@@ -3,6 +3,7 @@ import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { useSession } from '@/store/session';
 import { useVoice } from '@/features/voice/useVoice';
+import { ChoixStatut } from '@/features/profile/ChoixStatut';
 import { useSpacePrefs } from '@/store/spacePrefs';
 import { Icon } from '@/components/Icon';
 import { Avatar } from '@/components/Avatar';
@@ -839,6 +840,15 @@ function UserBar() {
         </button>
 
         <div className="userbar__controls">
+          {/*
+            L'etat, entre le nom et les reglages.
+
+            Le nom ouvre la fiche, ce bouton ouvre les quatre etats. Deux gestes
+            voisins, deux boutons distincts : c'est ce qui evite qu'un clic
+            fasse la mauvaise des deux choses.
+          */}
+          <ChoixStatut />
+
           <button
             type="button"
             className={'icon-btn' + (muted ? ' is-active' : '')}

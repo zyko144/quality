@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.6
+
+- L'etat — en ligne, ne pas deranger, invisible — retrouve sa place en bas
+  a gauche, dans un bouton a lui, entre votre nom et les reglages. Il
+  n'encombre plus la fiche de profil.
+
 ## 9.8.5
 
 - Echow ne se fige plus quand « Montrer ce que j'ecoute » est active. La

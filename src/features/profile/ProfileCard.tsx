@@ -19,7 +19,6 @@ import { MemberRoles } from './MemberRoles';
 import { lireCadrage, styleDeCadrage } from './cadrage';
 import { lireCouleurs, styleDesCouleurs } from './couleursProfil';
 import { CarteEcoute } from './CarteEcoute';
-import { ChoixStatut } from './ChoixStatut';
 import { useFriends } from '@/store/friends';
 
 /**
@@ -307,14 +306,6 @@ ${activite.lien_url}`,
               chacun prend la largeur qu'il lui faut.
             */}
             <div className="profile__dits">
-            {/*
-              Changer son etat, la ou l'anneau de couleur le montre deja.
-
-              Sur sa propre fiche seulement : l'etat de quelqu'un d'autre se
-              constate, il ne se regle pas.
-            */}
-            {isMe ? <ChoixStatut /> : null}
-
             {profile.custom_status ? (
               <p
                 className="profile__bulle"

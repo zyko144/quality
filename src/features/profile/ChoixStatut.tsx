@@ -4,21 +4,24 @@ import { useSession } from '@/store/session';
 import type { PresenceStatus } from '@/types/db';
 
 /**
- * Changer son etat, depuis sa propre fiche.
+ * Changer son etat, dans la barre du bas.
  *
- * Il vivait dans la barre du bas : cliquer son nom ouvrait une liste de quatre
- * etats. Utile, mais ce n'est pas ce qu'un nom promet — partout ailleurs,
- * cliquer un nom montre la personne — et l'on n'avait aucun moyen simple de
- * voir sa propre fiche.
+ * Il y etait deja, mais SUR le nom : cliquer son pseudo ouvrait la liste des
+ * etats. Or partout ailleurs, cliquer un nom montre la personne — et l'on
+ * n'avait aucun moyen simple de voir sa propre fiche.
  *
- * Le nom ouvre donc la fiche, et l'etat se change ici, contre la photo, la ou
- * l'anneau de couleur le montre deja. Le reglage est a cote de ce qu'il regle.
+ * Le nom ouvre donc la fiche, et l'etat garde sa place en bas a gauche, dans un
+ * bouton a lui. Deux gestes voisins, deux boutons distincts : c'est ce qui
+ * evite qu'un clic fasse la mauvaise des deux choses.
  *
- * Une pastille, pas une ligne
- * ---------------------------
- * Elle ne prend que la place de son libelle, et le menu ne parait qu'au clic.
- * Quatre boutons poses en permanence auraient pousse le nom, les badges et le
- * statut vers le bas — pour un reglage qu'on touche une fois par jour.
+ * Il a transite par la fiche de profil entre-temps, et il y encombrait : la
+ * colonne de gauche porte deja un visage, un nom, des badges, un statut et une
+ * carte d'ecoute. Un reglage n'a pas sa place dans une vitrine.
+ *
+ * Un point, pas une ligne
+ * -----------------------
+ * Dans la barre, il ne prend que la place d'une pastille de couleur — celle qui
+ * dit deja l'etat. Le libelle ne parait qu'au survol, et la liste qu'au clic.
  */
 
 const ETATS: readonly [PresenceStatus, string][] = [
@@ -70,15 +73,14 @@ export function ChoixStatut() {
     <div className="choix-statut" ref={boite}>
       <button
         type="button"
-        className="choix-statut__pastille"
+        className="icon-btn choix-statut__bouton"
         onClick={() => setOuvert((etat) => !etat)}
         aria-expanded={ouvert}
         aria-haspopup="menu"
-        title="Changer mon etat"
+        aria-label={`Mon etat : ${courant?.[1] ?? 'En ligne'}. Changer.`}
+        title={`Mon etat : ${courant?.[1] ?? 'En ligne'}`}
       >
         <span className={`status-dot status-dot--${profile.status}`} aria-hidden="true" />
-        <span>{courant?.[1] ?? 'En ligne'}</span>
-        <Icon name="chevron-down" size={12} aria-hidden="true" />
       </button>
 
       {ouvert ? (
