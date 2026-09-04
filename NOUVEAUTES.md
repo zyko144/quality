@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.7.2
+
+- Echow consommait enormement sans que personne ne s'en serve : un
+  battement de presence toutes les trois secondes sur un canal ou tout le
+  monde recoit tout, et des images retelechargees toutes les heures faute
+  de consigne de cache. Corrige aux deux endroits.
+
 ## 9.7.1
 
 - Le son d'une seule application se prend enfin sur Spotify et les

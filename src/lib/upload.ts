@@ -80,6 +80,28 @@ export function rejectionReason(file: File): string | null {
   return null;
 }
 
+/**
+ * Combien de temps une image envoyee peut rester en cache : un an.
+ *
+ * Sans consigne, Supabase repond `max-age=3600`. Une heure, pour des fichiers
+ * qui ne changeront JAMAIS : chaque chemin porte un identifiant unique —
+ * `Date.now()` pour les avatars et les bannieres, l'identifiant de l'envoi
+ * pour les pieces jointes — si bien qu'une image modifiee est une AUTRE
+ * adresse. Rien ne peut donc devenir perime a cette adresse-la.
+ *
+ * Le prix de cette heure se lit dans la facture. Sur un mois a onze personnes
+ * actives, la sortie servie par le cache a atteint 14 Go pour un plafond de 5,
+ * soit 286 % — sans qu'aucun contenu nouveau ne le justifie. Un avatar parait
+ * dans chaque ligne de conversation, dans la barre laterale, dans la liste des
+ * membres ; une banniere peut peser plusieurs mega-octets. Tout cela etait
+ * retelecharge chaque heure, par chaque personne, a chaque rechargement.
+ *
+ * Un an est la valeur habituelle pour une adresse qui identifie son contenu.
+ * `immutable` le dit au navigateur encore plus clairement : ne revalide meme
+ * pas, ce fichier ne changera pas.
+ */
+const CACHE_UN_AN = '31536000';
+
 export async function uploadOne(
   pending: PendingUpload,
   channelId: UUID,
@@ -91,6 +113,7 @@ export async function uploadOne(
   const { error } = await supabase.storage.from(BUCKET).upload(path, pending.file, {
     contentType: pending.file.type || 'application/octet-stream',
     upsert: false,
+    cacheControl: CACHE_UN_AN,
   });
 
   if (error) {
@@ -159,7 +182,11 @@ export async function uploadProfileImage(
 
   const { error } = await supabase.storage
     .from('avatars')
-    .upload(path, file, { contentType: file.type, upsert: true });
+    .upload(path, file, {
+      contentType: file.type,
+      upsert: true,
+      cacheControl: CACHE_UN_AN,
+    });
 
   if (error) return { error: error.message };
 
@@ -202,7 +229,11 @@ export async function uploadSpaceImage(
 
   const { error } = await supabase.storage
     .from('avatars')
-    .upload(path, file, { contentType: file.type, upsert: true });
+    .upload(path, file, {
+      contentType: file.type,
+      upsert: true,
+      cacheControl: CACHE_UN_AN,
+    });
 
   if (error) return { error: error.message };
 

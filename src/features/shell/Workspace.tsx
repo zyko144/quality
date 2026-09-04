@@ -34,6 +34,7 @@ import { TempsVocal } from '@/features/voice/TempsVocal';
 import { Support } from '@/features/support/Support';
 import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
+import { BATTEMENT } from '@/lib/presence';
 import { Icon } from '@/components/Icon';
 import { useIsMobile } from '@/lib/useMediaQuery';
 import type { Profile } from '@/types/db';
@@ -161,10 +162,36 @@ export function Workspace() {
         }
       });
 
-    // Battement de coeur toutes les 3s pour synchronisation instantanee avec le portfolio
+    /*
+     * Le battement passe de trois secondes a une minute, et c'est ce qui a
+     * fait exploser la facture Realtime.
+     *
+     * `public:presence` est un canal GLOBAL : tout le monde y est, et un
+     * message diffuse est reexpedie a CHAQUE abonne. Le cout n'est donc pas
+     * proportionnel au nombre de personnes mais a son carre.
+     *
+     *     N personnes x 20 messages par minute x N destinataires
+     *
+     * A onze personnes connectees, cela fait deux mille quatre cents messages
+     * par minute, soit cent quarante-cinq mille par heure — pour annoncer que
+     * rien n'a change. Le relevé de facturation le dit sans detour : 1 956 495
+     * messages sur un plafond de 2 000 000, avec ONZE utilisateurs actifs dans
+     * le mois.
+     *
+     * Une minute suffit, et ce n'est pas un chiffre choisi au hasard : c'est
+     * `BATTEMENT`, la cadence que tout le reste de l'application utilise deja
+     * pour dire « je suis la », avec `EXPIRATION` a deux battements et demi
+     * pour tolerer ceux qu'on rate. Suivre la meme regle ici evite d'avoir
+     * deux definitions concurrentes de « en ligne ».
+     *
+     * Rien n'est perdu cote fraicheur : le site qui consomme cette presence
+     * peut la DEMANDER quand il en a besoin, par `presence_ping` ci-dessus, et
+     * tout le monde repond aussitot. Un battement rapide envoyait vingt fois
+     * par minute une reponse que personne n'avait demandee.
+     */
     const heartbeat = setInterval(() => {
       sendPresence();
-    }, 3000);
+    }, BATTEMENT);
 
     const handleBeforeUnload = () => {
       if (isSubscribed) {
