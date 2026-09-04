@@ -228,6 +228,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             musique::lecture_en_cours,
+            musique::pochette_en_cours,
             musique::ouvrir_lien,
             capture::sources_partageables,
             capture::zone_source,

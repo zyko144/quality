@@ -45,13 +45,14 @@ pub struct Lecture {
     pub joue: bool,
     pub position_ms: i64,
     pub duree_ms: i64,
-    /// La pochette, en `data:` prete a poser dans un `src`. Vide si absente.
+    /// Vrai si un dessin de pochette existe. Il se demande a part.
     ///
-    /// Encodee ici plutot que rendue en octets bruts : le pont vers la page ne
-    /// transmet pas efficacement de gros tableaux — voir l'en-tete de `son.rs`,
-    /// ou la meme limite a coute une capture entiere — et une pochette tient en
-    /// quelques dizaines de kilo-octets.
-    pub image: String,
+    /// La pochette pese jusqu'a plusieurs centaines de kilo-octets une fois
+    /// encodee. La faire transiter a CHAQUE releve — toutes les dix secondes,
+    /// pour un morceau qui n'a pas change — chargeait le pont vers la page pour
+    /// rien. Voir `pochette_en_cours`, qu'on n'appelle qu'au changement de
+    /// titre.
+    pub a_une_pochette: bool,
 }
 
 /// La pochette, lue jusqu'au bout et encodee.
@@ -146,15 +147,69 @@ fn base64_simple(octets: &[u8]) -> String {
 /// Windows trop ancien pour cette interface, et un systeme qui n'est pas
 /// Windows. Du point de vue de l'interface, ce sont le meme : il n'y a rien a
 /// montrer, et rien a expliquer.
+/*
+ * Les commandes sont ASYNCHRONES, et ce n'est pas un detail de style.
+ *
+ * Tauri execute une commande synchrone sur le FIL PRINCIPAL — celui qui dessine
+ * la fenetre. Or tout ce qui suit attend : `RequestAsync().get()` attend le
+ * gestionnaire de Windows, la lecture de la pochette attend un flux. Dix
+ * secondes plus tard, cela recommence.
+ *
+ * Le resultat s'est vu tout de suite a l'usage : « Echow ne repond pas ». La
+ * fenetre cessait de repondre parce qu'on lui prenait son fil pour interroger
+ * le lecteur de musique.
+ *
+ * `spawn_blocking` porte ce travail sur un fil fait pour attendre. La fenetre
+ * garde le sien.
+ */
 #[tauri::command]
 #[cfg(windows)]
-pub fn lecture_en_cours() -> Option<Lecture> {
-    let gestionnaire = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+pub async fn lecture_en_cours() -> Option<Lecture> {
+    tauri::async_runtime::spawn_blocking(lire_maintenant)
+        .await
+        .ok()
+        .flatten()
+}
+
+/// La pochette du morceau en cours, ou une chaine vide.
+///
+/// A part, et appelee seulement quand le titre change : elle pese jusqu'a
+/// plusieurs centaines de kilo-octets une fois encodee, et la faire transiter a
+/// chaque releve chargeait le pont pour redire la meme image.
+#[tauri::command]
+#[cfg(windows)]
+pub async fn pochette_en_cours() -> String {
+    tauri::async_runtime::spawn_blocking(|| {
+        let Some(seance) = seance_courante() else {
+            return String::new();
+        };
+
+        seance
+            .TryGetMediaPropertiesAsync()
+            .ok()
+            .and_then(|o| o.get().ok())
+            .and_then(|p| p.Thumbnail().ok())
+            .map(|r| pochette(&r))
+            .unwrap_or_default()
+    })
+    .await
+    .unwrap_or_default()
+}
+
+/// La seance de lecture en cours, telle que Windows la connait.
+#[cfg(windows)]
+fn seance_courante() -> Option<windows::Media::Control::GlobalSystemMediaTransportControlsSession> {
+    GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
         .ok()?
         .get()
-        .ok()?;
+        .ok()?
+        .GetCurrentSession()
+        .ok()
+}
 
-    let seance = gestionnaire.GetCurrentSession().ok()?;
+#[cfg(windows)]
+fn lire_maintenant() -> Option<Lecture> {
+    let seance = seance_courante()?;
     let proprietes = seance.TryGetMediaPropertiesAsync().ok()?.get().ok()?;
 
     let titre = proprietes.Title().map(|t| t.to_string()).unwrap_or_default();
@@ -191,14 +246,20 @@ pub fn lecture_en_cours() -> Option<Lecture> {
         joue,
         position_ms,
         duree_ms,
-        image: proprietes.Thumbnail().map(|r| pochette(&r)).unwrap_or_default(),
+        a_une_pochette: proprietes.Thumbnail().is_ok(),
     })
 }
 
 #[tauri::command]
 #[cfg(not(windows))]
-pub fn lecture_en_cours() -> Option<Lecture> {
+pub async fn lecture_en_cours() -> Option<Lecture> {
     None
+}
+
+#[tauri::command]
+#[cfg(not(windows))]
+pub async fn pochette_en_cours() -> String {
+    String::new()
 }
 
 #[cfg(all(test, windows))]
@@ -211,8 +272,27 @@ mod essais {
     /// verifie que la question peut etre posee.
     #[test]
     fn la_question_peut_etre_posee() {
-        let reponse = super::lecture_en_cours();
-        println!("lecture en cours : {:?}", reponse.as_ref().map(|l| (&l.titre, &l.artiste, &l.source, l.joue, l.position_ms, l.duree_ms, l.image.len())));
+        /*
+         * La lecture des metadonnees doit rester BREVE.
+         *
+         * Elle est desormais portee par un fil qui n'est pas celui de la
+         * fenetre, mais la borne reste utile : une attente longue ici
+         * signalerait un appel qui a change de nature, et l'on empilerait des
+         * attentes toutes les dix secondes.
+         *
+         * Mesure au moment ou ce cas a ete ecrit : 17 ms pour les
+         * metadonnees, 14 ms pour la pochette.
+         */
+        let debut = std::time::Instant::now();
+        let reponse = super::lire_maintenant();
+        let duree = debut.elapsed();
+
+        println!("metadonnees en {duree:?} : {:?}", reponse.as_ref().map(|l| &l.titre));
+
+        assert!(
+            duree < std::time::Duration::from_millis(500),
+            "la lecture des metadonnees a pris {duree:?}"
+        );
     }
 }
 

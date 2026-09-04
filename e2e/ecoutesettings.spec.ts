@@ -31,7 +31,7 @@ function lecture(patch: Partial<Lecture> = {}): Lecture {
     joue: true,
     position_ms: 83_711,
     duree_ms: 180_000,
-    image: '',
+    a_une_pochette: false,
     ...patch,
   };
 }

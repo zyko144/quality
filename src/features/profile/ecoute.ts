@@ -31,7 +31,8 @@ export interface Lecture {
   joue: boolean;
   position_ms: number;
   duree_ms: number;
-  image: string;
+  /** Vrai si une pochette existe. Elle se demande a part, au changement. */
+  a_une_pochette: boolean;
 }
 
 /**

@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.5
+
+- Echow ne se fige plus quand « Montrer ce que j'ecoute » est active. La
+  pochette traversait le pont vers l'interface toutes les dix secondes ;
+  elle n'y passe plus qu'au changement de morceau.
+- Le suivi s'arrete de lui-meme s'il echoue ou traine : un reglage qu'on ne
+  peut plus atteindre pour l'eteindre est pire qu'une fonction qui s'arrete.
+
 ## 9.8.4
 
 - Les liens s'ouvrent enfin dans l'application de bureau. Le systeme
