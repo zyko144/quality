@@ -141,7 +141,13 @@ export function devPreview(name: string): ReactNode | null {
       custom_status: 'Au calme jusqu’a jeudi',
       status: 'online',
       theme_hue: 268,
-      links: [{ label: 'lumine.example', url: 'https://lumine.example' }],
+      links: [
+        // Un lien nomme, un lien sans nom, un lien colore : les trois formes.
+        { label: 'Mon portfolio', url: 'https://lumine.example', couleur: '#f59e0b' },
+        { url: 'https://exemple.fr/une/page/assez/longue' },
+      ],
+      status_couleur: '#5865f2',
+      status_opacite: 0.85,
       username_chosen: true,
       created_at: '2025-03-14T10:00:00.000Z',
     };

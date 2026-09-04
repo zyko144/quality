@@ -19,8 +19,16 @@ export type ChannelKind = 'text' | 'voice' | 'dm' | 'group';
 
 /** Lien externe affiche sur une carte de profil. */
 export interface ProfileLink {
-  label: string;
+  /**
+   * Nom donne au lien. Facultatif : sans lui, l'adresse entiere s'affiche.
+   *
+   * Exiger un nom obligeait a en inventer un pour une adresse collee — et le
+   * plus honnete est souvent l'adresse elle-meme, qu'on recopiait a cote.
+   */
+  label?: string;
   url: string;
+  /** Couleur choisie pour la carte, `#rrggbb`. Sans elle, celle du site. */
+  couleur?: string;
 }
 
 export interface Profile {
@@ -41,6 +49,10 @@ export interface Profile {
   links: ProfileLink[];
   /** Teinte choisie, appliquee a la carte de profil. `null` = teinte derivee. */
   theme_hue: number | null;
+  /** Couleur de la bulle de statut, `#rrggbb`. `null` = teinte de la fiche. */
+  status_couleur?: string | null;
+  /** Opacite du fond de la bulle, de 0,1 a 1. Jamais 0. */
+  status_opacite?: number | null;
   status: PresenceStatus;
   /**
    * Dernier signe de vie, ou `null` si le compte n'a jamais battu.

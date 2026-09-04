@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.7.5
+
+- Le statut du moment devient une bulle posee contre votre photo. Vous en
+  choisissez la couleur et l'opacite — jamais transparente au point de
+  laisser un texte flotter sur la banniere.
+- Un lien n'a plus besoin d'un nom : sans lui, la carte montre l'adresse
+  entiere. Sa couleur se choisit aussi.
+- Les liens descendent sous les comptes lies, chacun sous son titre : ils se
+  touchaient et se lisaient comme une seule liste.
+- La fiche de profil est plus haute, et garde sa hauteur meme peu remplie.
+
 ## 9.7.4
 
 - Les liens partages dans une conversation prennent la couleur du site

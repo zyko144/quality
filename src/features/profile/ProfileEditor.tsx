@@ -16,6 +16,18 @@ import {
   type Cadrage,
 } from './cadrage';
 
+/**
+ * Opacite du fond de la bulle de statut, et son plancher.
+ *
+ * Le plancher n'est pas une precaution, c'est la regle : une bulle entierement
+ * transparente ne disparait pas, elle laisse un texte flottant sur la banniere,
+ * souvent illisible et impossible a distinguer du reste de la fiche. La base
+ * porte la meme borne — voir `profiles_status_opacite_valide` — pour qu'une
+ * valeur ecrite par un autre chemin donne le meme resultat.
+ */
+const OPACITE_MIN = 0.1;
+const OPACITE_DEFAUT = 0.85;
+
 /** Teintes proposees pour personnaliser sa carte. */
 const HUES = [
   { hue: 275, name: 'Indigo' },
@@ -37,6 +49,8 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
   const [pronouns, setPronouns] = useState('');
   const [bio, setBio] = useState('');
   const [customStatus, setCustomStatus] = useState('');
+  const [statutCouleur, setStatutCouleur] = useState<string | null>(null);
+  const [statutOpacite, setStatutOpacite] = useState<number>(OPACITE_DEFAUT);
   const [links, setLinks] = useState<ProfileLink[]>([]);
   const [hue, setHue] = useState<number | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -61,6 +75,8 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
     setPronouns(profile.pronouns ?? '');
     setBio(profile.bio ?? '');
     setCustomStatus(profile.custom_status ?? '');
+    setStatutCouleur(profile.status_couleur ?? null);
+    setStatutOpacite(profile.status_opacite ?? OPACITE_DEFAUT);
     setLinks(profile.links ?? []);
     setHue(profile.theme_hue);
     setAvatarUrl(profile.avatar_url);
@@ -146,12 +162,29 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
     setBusy(true);
     setError(null);
 
-    // Un lien sans adresse valide est ecarte plutot que refuse : la contrainte
-    // en base rejetterait tout l'enregistrement pour une ligne laissee vide.
+    /*
+     * Un lien sans adresse valide est ecarte plutot que refuse : la contrainte
+     * en base rejetterait tout l'enregistrement pour une ligne laissee vide.
+     *
+     * Seule l'ADRESSE compte desormais. Le nom etait exige, ce qui obligeait a
+     * en inventer un pour une adresse collee — et le plus honnete est souvent
+     * l'adresse elle-meme, qu'on recopiait a cote. Sans nom, la carte montre
+     * l'adresse entiere.
+     *
+     * Les cles absentes ne sont pas ecrites du tout : un `label` vide et un
+     * `label` absent se lisent pareil ici, mais la contrainte en base ne teste
+     * que la seconde forme.
+     */
     const cleanLinks = links
-      .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
-      .filter((link) => link.label.length > 0 && /^https?:\/\//.test(link.url))
-      .slice(0, 5);
+      .filter((link) => /^https?:\/\//.test(link.url.trim()))
+      .slice(0, 5)
+      .map((link) => {
+        const propre: ProfileLink = { url: link.url.trim() };
+        const nom = link.label?.trim();
+        if (nom) propre.label = nom;
+        if (link.couleur) propre.couleur = link.couleur;
+        return propre;
+      });
 
     /*
      * Le pseudo part en premier, et seul son echec interrompt tout.
@@ -202,6 +235,22 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
       ...(JSON.stringify(cadrageVoulu) === JSON.stringify(cadrageActuel)
         ? {}
         : { banner_frame: cadrageVoulu }),
+
+      /*
+       * La bulle n'est envoyee qu'au changement, meme precaution.
+       *
+       * `status_couleur` et `status_opacite` sont des colonnes neuves. Tant
+       * que la migration n'est pas appliquee, PostgREST refuse l'ecriture
+       * ENTIERE des qu'elle nomme une colonne inconnue : les envoyer a chaque
+       * enregistrement casserait la modification de profil pour tout le monde,
+       * y compris pour qui n'a jamais touche a sa bulle.
+       */
+      ...(statutCouleur === (profile.status_couleur ?? null)
+        ? {}
+        : { status_couleur: statutCouleur }),
+      ...((profile.status_opacite ?? OPACITE_DEFAUT) === statutOpacite
+        ? {}
+        : { status_opacite: statutOpacite }),
       pronouns: pronouns.trim() || null,
       links: cleanLinks,
       theme_hue: hue,
@@ -480,6 +529,56 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
           placeholder="En reunion jusqu'a 15 h"
           onChange={(event) => setCustomStatus(event.target.value)}
         />
+
+        {/*
+          Les reglages de la bulle ne paraissent qu'avec un statut.
+
+          Sans texte, il n'y a pas de bulle : choisir sa couleur reviendrait a
+          decorer quelque chose qui n'existe pas, et l'on se demanderait ensuite
+          pourquoi le reglage ne se voit nulle part.
+        */}
+        {customStatus.trim() ? (
+          <div className="statut-reglages">
+            <label className="statut-reglages__couleur">
+              <input
+                type="color"
+                value={statutCouleur ?? '#5865f2'}
+                onChange={(event) => setStatutCouleur(event.target.value)}
+                aria-label="Couleur de la bulle de statut"
+              />
+              <span>Couleur</span>
+            </label>
+
+            <label className="statut-reglages__opacite">
+              <span>Opacite</span>
+              <input
+                type="range"
+                min={OPACITE_MIN}
+                max={1}
+                step={0.05}
+                value={statutOpacite}
+                onChange={(event) => setStatutOpacite(Number(event.target.value))}
+                aria-label="Opacite du fond de la bulle"
+              />
+              <span className="statut-reglages__valeur">
+                {Math.round(statutOpacite * 100)}%
+              </span>
+            </label>
+
+            {statutCouleur ? (
+              <button
+                type="button"
+                className="btn btn--sm btn--ghost"
+                onClick={() => {
+                  setStatutCouleur(null);
+                  setStatutOpacite(OPACITE_DEFAUT);
+                }}
+              >
+                Couleur de la fiche
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="field">
@@ -530,18 +629,36 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
       <div className="field">
         <span className="field__label">Liens</span>
         <p className="field__hint">
-          Jusqu'a cinq liens, affiches sur votre carte. Ils doivent commencer par
-          <code> https://</code>.
+          Jusqu&rsquo;a cinq liens, affiches sur votre carte. Ils doivent
+          commencer par <code>https://</code>. Le nom est facultatif : sans lui,
+          la carte montre l&rsquo;adresse entiere. La pastille choisit sa
+          couleur, sinon c&rsquo;est celle du site qui s&rsquo;applique.
         </p>
 
         <ul className="link-editor">
           {links.map((link, index) => (
             <li key={index} className="link-editor__row">
+              {/*
+                La couleur, en premier : c'est ce qu'on voit de la carte.
+
+                `type="color"` ouvre le selecteur du systeme, qui connait la
+                pipette et les couleurs recentes. En redessiner un ici aurait
+                coute une fenetre de plus pour faire moins bien.
+              */}
+              <input
+                className="link-editor__couleur"
+                type="color"
+                value={link.couleur ?? '#8b93a7'}
+                onChange={(event) => updateLink(index, { couleur: event.target.value })}
+                aria-label={`Couleur du lien ${index + 1}`}
+                title="Couleur de la carte"
+              />
+
               <input
                 className="input"
-                value={link.label}
+                value={link.label ?? ''}
                 maxLength={40}
-                placeholder="Mon site"
+                placeholder="Nom (facultatif)"
                 onChange={(event) => updateLink(index, { label: event.target.value })}
                 aria-label={`Libelle du lien ${index + 1}`}
               />
@@ -569,7 +686,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
           <button
             type="button"
             className="btn btn--sm btn--ghost"
-            onClick={() => setLinks((current) => [...current, { label: '', url: '' }])}
+            onClick={() => setLinks((current) => [...current, { url: '' }])}
           >
             <Icon name="plus" size={14} />
             Ajouter un lien

@@ -27,6 +27,17 @@ import { useFriends } from '@/store/friends';
  * fiche : qui est cette personne, et d'ou est-ce que je la connais.
  */
 
+/**
+ * L'adresse, sans son `https://` ni son `www.`.
+ *
+ * C'est ce qu'on montre quand aucun nom n'a ete donne. Le protocole n'apprend
+ * rien — tous les liens acceptes commencent par le meme — et il mange la
+ * largeur d'une carte deja etroite.
+ */
+function sansProtocole(url: string): string {
+  return url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+}
+
 const ROLE_ICON: Record<SpaceRole, IconName> = {
   owner: 'sparkles',
   admin: 'settings',
@@ -235,6 +246,19 @@ export function ProfileCard({ userId }: { userId: UUID }) {
               ) : null}
             </div>
 
+            {/*
+              La photo et la bulle de statut, cote a cote.
+
+              Le statut etait une pastille posee sous le nom, sur le gris le
+              plus sombre de la palette, large de toute la colonne. Il se lisait
+              comme une ligne de plus dans une fiche qui en a deja beaucoup.
+
+              A cote du visage, il se lit comme ce qu'il est : quelque chose que
+              cette personne DIT, en ce moment. C'est la meme convention que
+              partout ailleurs — une bulle attachee a qui parle — et elle ne
+              demande aucune explication.
+            */}
+            <div className="profile__tete">
             <div className="profile__avatar">
               {isMe ? (
                 <button
@@ -251,6 +275,22 @@ export function ProfileCard({ userId }: { userId: UUID }) {
               ) : (
                 <Avatar profile={profile} size={96} status={profile.status} showStatus />
               )}
+            </div>
+
+            {profile.custom_status ? (
+              <p
+                className="profile__bulle"
+                style={
+                  {
+                    '--bulle': profile.status_couleur ?? 'var(--accent)',
+                    '--bulle-opacite': profile.status_opacite ?? 0.85,
+                  } as React.CSSProperties
+                }
+                title={profile.custom_status}
+              >
+                {profile.custom_status}
+              </p>
+            ) : null}
             </div>
 
             <div className="profile__identity">
@@ -322,10 +362,6 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                   </li>
                 ))}
               </ul>
-            ) : null}
-
-            {profile.custom_status ? (
-              <p className="profile__status">{profile.custom_status}</p>
             ) : null}
 
             {/*
@@ -516,13 +552,18 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                                 <LogoService service={compte.service} taille={18} />
                               </span>
 
-                              <span className="profile__compte-corps">
-                                <span className="profile__compte-service">
-                                  {SERVICES[compte.service].nom}
-                                </span>
-                                <span className="profile__compte-nom truncate">
-                                  {compte.nom_affiche}
-                                </span>
+                              {/*
+                                Le nom du SERVICE, et rien d'autre.
+
+                                Le pseudo tenait la seconde ligne. Il n'apprend
+                                rien a qui regarde — on veut savoir « ou », pas
+                                « sous quel nom », et le nom se lit de toute
+                                facon en arrivant sur la page. Il obligeait en
+                                revanche a une carte deux fois plus haute, et
+                                se coupait des qu'il depassait.
+                              */}
+                              <span className="profile__compte-service">
+                                {SERVICES[compte.service].nom}
                               </span>
 
                               <Icon name="link" size={13} aria-hidden="true" />
@@ -533,22 +574,47 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                     </section>
                   ) : null}
 
+                  {/*
+                    Les liens libres, SOUS les comptes lies et sous leur propre
+                    titre.
+
+                    Ils suivaient les cartes de comptes sans separation : les
+                    deux series se touchaient et se lisaient comme une seule,
+                    alors qu'elles ne disent pas la meme chose — un compte lie
+                    designe un service, un lien designe une page.
+
+                    Sans nom, on montre l'adresse entiere. C'est ce qu'on aurait
+                    tape de toute facon, et c'est plus honnete qu'un intitule
+                    invente.
+                  */}
                   {links.length > 0 ? (
-                    <ul className="profile__links">
-                      {links.map((link) => (
-                        <li key={link.url}>
-                          <a
-                            className="profile-link"
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                          >
-                            <Icon name="link" size={13} />
-                            <span className="truncate">{link.label}</span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
+                    <section className="profile__bloc">
+                      <h4 className="profile__bloc-titre">Liens</h4>
+
+                      <ul className="profile__links">
+                        {links.map((link) => (
+                          <li key={link.url}>
+                            <a
+                              className="profile-link"
+                              style={
+                                link.couleur
+                                  ? ({ '--lien': link.couleur } as React.CSSProperties)
+                                  : undefined
+                              }
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer nofollow"
+                              title={link.url}
+                            >
+                              <Icon name="link" size={13} />
+                              <span className="truncate">
+                                {link.label ?? sansProtocole(link.url)}
+                              </span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
                   ) : null}
                 </>
               ) : null}
