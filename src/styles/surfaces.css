@@ -2189,6 +2189,7 @@
   align-items: flex-end;
   gap: var(--space-3);
   padding-right: var(--space-5);
+  min-width: 0;
 }
 
 /*
@@ -2206,7 +2207,7 @@
  */
 .profile__bulle {
   position: relative;
-  margin: 0 0 var(--space-2);
+  margin: 0;
   padding: 7px 12px;
   max-width: 260px;
   border-radius: var(--radius-lg);
@@ -2595,3 +2596,88 @@ a.ecoute__lien:hover {
 .teintes-style__apercu[data-fond='noir'] { background: #000; }
 .teintes-style__apercu[data-fond='gris'] { background: var(--bg-raised); }
 .teintes-style__apercu[data-fond='blanc'] { background: #fff; }
+
+/* ==========================================================================
+   Changer son etat, depuis sa fiche
+
+   Une pastille qui ne prend que la place de son libelle. Quatre boutons poses
+   en permanence auraient pousse le nom, les badges et le statut vers le bas —
+   pour un reglage qu'on touche une fois par jour.
+   ========================================================================== */
+
+/* L'etat et la phrase, empiles a cote du visage. */
+.profile__dits {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding-bottom: var(--space-2);
+}
+
+.choix-statut {
+  position: relative;
+}
+
+.choix-statut__pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--profil-voile, var(--border-subtle));
+  background: var(--profil-voile, var(--bg-raised));
+  color: inherit;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.choix-statut__pastille:hover {
+  border-color: currentColor;
+}
+
+/*
+ * Le menu s'ouvre VERS LE BAS et par-dessus.
+ *
+ * `position: absolute` le sort du flux : sans cela, l'ouvrir pousserait le nom
+ * et les badges vers le bas, et la fiche sauterait a chaque clic.
+ */
+.choix-statut__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 170px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.choix-statut__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.choix-statut__item:hover {
+  background: var(--bg-hover);
+}
+
+/* La coche pousse a droite : elle dit « celui-ci », pas « lis-moi ». */
+.choix-statut__item svg:last-child {
+  margin-left: auto;
+  color: var(--accent-text);
+}

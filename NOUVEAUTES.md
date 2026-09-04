@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.4
+
+- Les liens s'ouvrent enfin dans l'application de bureau. Le systeme
+  refusait la commande du greffon ; on passe desormais par la notre, celle
+  qui a toujours fonctionne.
+- Cliquer son nom en bas a gauche ouvre sa fiche. L'etat — en ligne, ne pas
+  deranger, invisible — se change depuis la fiche, contre la photo.
+
 ## 9.8.3
 
 - Un vrai noir et un vrai blanc sont enfin possibles sur la fiche. La

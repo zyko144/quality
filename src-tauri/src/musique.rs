@@ -215,3 +215,97 @@ mod essais {
         println!("lecture en cours : {:?}", reponse.as_ref().map(|l| (&l.titre, &l.artiste, &l.source, l.joue, l.position_ms, l.duree_ms, l.image.len())));
     }
 }
+
+/// Ouvre une adresse dans le navigateur du systeme.
+///
+/// Pourquoi ici plutot que par le greffon
+/// --------------------------------------
+/// `tauri-plugin-opener` refuse la commande sur cette installation :
+///
+///     Command plugin:opener|open_url not allowed by ACL
+///
+/// La permission est pourtant declaree, le greffon enregistre, le binaire a
+/// jour et la fenetre correctement nommee — la cause n'est pas trouvee. Ce qui
+/// EST etabli, c'est que les commandes de l'application, elles, aboutissent :
+/// la capture d'ecran, le son du systeme et la lecture en cours passent toutes
+/// par ce chemin sans jamais etre refusees.
+///
+/// On emprunte donc le chemin qui marche. Une dependance de moins, aussi : le
+/// greffon ne servait qu'a cela.
+///
+/// Le protocole est verifie ICI
+/// ----------------------------
+/// `ShellExecuteW` lance ce qu'on lui donne — une adresse, mais aussi un
+/// programme, un fichier, une commande. La page verifie deja le protocole avant
+/// d'appeler ; le refaire ici est la seule barriere qui tienne, parce que c'est
+/// la seule que du code de page ne peut pas contourner.
+#[tauri::command]
+#[cfg(windows)]
+pub fn ouvrir_lien(url: String) -> Result<(), String> {
+    use windows::core::HSTRING;
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let propre = url.trim();
+
+    if !(propre.starts_with("https://") || propre.starts_with("http://")) {
+        return Err("Seules les adresses http et https s'ouvrent ainsi.".into());
+    }
+
+    // Un retour a la ligne ou un caractere nul couperait la chaine et ferait
+    // executer autre chose que ce qu'on a lu.
+    if propre.contains(['\n', '\r', '\0']) {
+        return Err("Adresse illisible.".into());
+    }
+
+    let cible = HSTRING::from(propre);
+    let action = HSTRING::from("open");
+
+    let retour = unsafe {
+        ShellExecuteW(None, &action, &cible, None, None, SW_SHOWNORMAL)
+    };
+
+    // `ShellExecuteW` rend une valeur superieure a 32 en cas de succes. C'est
+    // une convention d'un autre age, mais c'est la sienne.
+    if retour.0 as isize > 32 {
+        Ok(())
+    } else {
+        Err(format!("Le systeme a refuse d'ouvrir l'adresse ({}).", retour.0 as isize))
+    }
+}
+
+#[tauri::command]
+#[cfg(not(windows))]
+pub fn ouvrir_lien(_url: String) -> Result<(), String> {
+    Err("Disponible seulement sur Windows.".into())
+}
+
+#[cfg(all(test, windows))]
+mod essais_lien {
+    /// Le protocole est refuse avant d'atteindre le systeme.
+    ///
+    /// C'est la seule barriere qui tienne : la page verifie deja, mais du code
+    /// de page peut etre contourne. Celle-ci ne le peut pas.
+    #[test]
+    fn seules_les_adresses_web_passent() {
+        for mauvais in [
+            "file:///C:/Windows/System32/cmd.exe",
+            "cmd.exe",
+            "javascript:alert(1)",
+            r"C:\Windows\System32\calc.exe",
+            "",
+        ] {
+            assert!(
+                super::ouvrir_lien(mauvais.to_string()).is_err(),
+                "aurait du refuser : {mauvais}"
+            );
+        }
+    }
+
+    /// Une adresse coupee par un retour a la ligne ferait executer la suite.
+    #[test]
+    fn une_adresse_coupee_est_refusee() {
+        assert!(super::ouvrir_lien("https://exemple.fr\ncalc.exe".to_string()).is_err());
+        assert!(super::ouvrir_lien("https://exemple.fr\0calc".to_string()).is_err());
+    }
+}

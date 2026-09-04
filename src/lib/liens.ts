@@ -55,26 +55,37 @@ export function suivreLesLiens(): () => void {
 
     event.preventDefault();
 
-    void import('@tauri-apps/plugin-opener')
-      .then(({ openUrl }) => openUrl(lien.href))
+    /*
+     * Notre propre commande, et non le greffon `opener`.
+     *
+     * Le greffon refusait la commande sur les installations reelles :
+     *
+     *     Command plugin:opener|open_url not allowed by ACL
+     *
+     * La permission est pourtant declaree dans `capabilities/default.json`, le
+     * greffon enregistre, le binaire a jour et la fenetre correctement nommee.
+     * La cause n'a pas ete trouvee — mais ce qui EST etabli, c'est que les
+     * commandes de l'application aboutissent toutes : la capture d'ecran, le
+     * son du systeme et la lecture en cours passent par ce chemin sans jamais
+     * etre refusees. Seules celles des greffons echouent.
+     *
+     * On emprunte donc le chemin qui marche. `ouvrir_lien` revalide le
+     * protocole cote natif : la verification faite ici ne protege que d'une
+     * erreur, pas d'un contournement.
+     */
+    void import('@tauri-apps/api/core')
+      .then(({ invoke }) => invoke('ouvrir_lien', { url: lien.href }))
       .catch((cause: unknown) => {
         /*
-         * L'echec est journalise, et il l'a ete trop tard.
+         * L'echec est journalise, et il l'a ete trop tard une premiere fois.
          *
-         * Il ne l'etait pas : un `console.error` dans une vue web sans outils
-         * de developpement ne se lit nulle part. Le clic ne faisait donc rien,
-         * en silence, et l'application paraissait simplement cassee — c'est
-         * exactement ainsi que le defaut a ete rapporte, sans qu'aucune trace
-         * n'existe pour le nommer.
+         * Il ne l'etait pas du tout : un `console.error` dans une vue web sans
+         * outils de developpement ne se lit nulle part. Le clic ne faisait donc
+         * rien, en silence, et l'application paraissait cassee — c'est
+         * exactement ainsi que le defaut a ete rapporte, deux fois.
          *
-         * La cause etait une permission : `opener:allow-open-url` autorise la
-         * COMMANDE mais ne dit rien des adresses, et sa portee vide les
-         * refusait toutes. Il y manquait `opener:allow-default-urls`. Une ligne
-         * ici l'aurait dit tout de suite.
-         *
-         * On ne se rabat pas sur une navigation dans la fenetre : cela
-         * remplacerait l'application par le site vise, sans barre d'adresse ni
-         * retour possible.
+         * C'est cette ligne qui a fini par donner la cause exacte, mot pour
+         * mot, alors qu'aucune lecture du code ne l'avait trouvee.
          */
         journal.erreur('interface', 'Lien externe refuse par le systeme', {
           hote: (() => {

@@ -19,6 +19,7 @@ import { MemberRoles } from './MemberRoles';
 import { lireCadrage, styleDeCadrage } from './cadrage';
 import { lireCouleurs, styleDesCouleurs } from './couleursProfil';
 import { CarteEcoute } from './CarteEcoute';
+import { ChoixStatut } from './ChoixStatut';
 import { useFriends } from '@/store/friends';
 
 /**
@@ -298,6 +299,22 @@ ${activite.lien_url}`,
               )}
             </div>
 
+            {/*
+              L'etat et la phrase se rangent en colonne, a cote du visage.
+
+              Cote a cote, ils se disputaient la largeur : la pastille poussait
+              la bulle, qui passait sur deux lignes pour trois mots. Empiles,
+              chacun prend la largeur qu'il lui faut.
+            */}
+            <div className="profile__dits">
+            {/*
+              Changer son etat, la ou l'anneau de couleur le montre deja.
+
+              Sur sa propre fiche seulement : l'etat de quelqu'un d'autre se
+              constate, il ne se regle pas.
+            */}
+            {isMe ? <ChoixStatut /> : null}
+
             {profile.custom_status ? (
               <p
                 className="profile__bulle"
@@ -312,6 +329,7 @@ ${activite.lien_url}`,
                 {profile.custom_status}
               </p>
             ) : null}
+            </div>
             </div>
 
             <div className="profile__identity">

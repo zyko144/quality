@@ -758,7 +758,7 @@ function ChannelItem({
 
 function UserBar() {
   const profile = useSession((state) => state.profile);
-  const setStatus = useSession((state) => state.setStatus);
+  const openModal = useUI((state) => state.openModal);
   const openSettings = useUI((state) => state.openSettings);
   const selectChannel = useUI((state) => state.selectChannel);
   const selectSpace = useUI((state) => state.selectSpace);
@@ -773,7 +773,6 @@ function UserBar() {
   const channels = useChat((state) => state.channels);
   const voiceChannel = channels.find((channel) => channel.id === voiceChannelId);
 
-  const [statusOpen, setStatusOpen] = useState(false);
 
   if (!profile) return null;
 
@@ -813,11 +812,22 @@ function UserBar() {
       ) : null}
 
       <div className="userbar__row">
+        {/*
+          Cliquer sur son nom ouvre SA FICHE, pas un menu de statut.
+
+          C'est le geste attendu : partout ailleurs dans l'application, cliquer
+          un nom montre la personne. Ici, il ouvrait une liste de quatre etats —
+          utile, mais ce n'est pas ce qu'un nom promet, et il fallait passer par
+          les reglages pour voir sa propre fiche.
+
+          Le statut n'est pas perdu : il se change sur la fiche, dans une
+          pastille posee contre la photo. Voir `ChoixStatut`.
+        */}
         <button
           type="button"
           className="userbar__identity"
-          onClick={() => setStatusOpen((open) => !open)}
-          aria-expanded={statusOpen}
+          onClick={() => openModal({ kind: 'profile', userId: profile.id })}
+          title="Voir mon profil"
         >
           <Avatar profile={profile} size={30} status={profile.status} showStatus />
           <span className="userbar__names">
@@ -858,32 +868,6 @@ function UserBar() {
         </div>
       </div>
 
-      {statusOpen ? (
-        <div className="status-menu surface">
-          {(
-            [
-              ['online', 'En ligne'],
-              ['idle', 'Absent'],
-              ['dnd', 'Ne pas deranger'],
-              ['offline', 'Invisible'],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              type="button"
-              key={value}
-              className="status-menu__item"
-              onClick={() => {
-                void setStatus(value);
-                setStatusOpen(false);
-              }}
-            >
-              <span className={`status-dot status-dot--${value}`} aria-hidden="true" />
-              {label}
-              {profile.status === value ? <Icon name="check" size={14} /> : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }
