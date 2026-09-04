@@ -164,6 +164,7 @@ export function devPreview(name: string): ReactNode | null {
      */
     useBadges.setState({
       catalogue: [
+        ['ceo', 'C.E.O', 'Fondateur d’Echow.', 'equipe', '#e0245e', null, 0],
         ['pionnier', '100 premiers soutiens', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
         ['premiere-heure', 'Premiere heure', 'Present le jour de l’ouverture.', 'soutien', '#ec4899', null, 2],
         ['rapporteur', 'Bug Hunter', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
@@ -174,6 +175,7 @@ export function devPreview(name: string): ReactNode | null {
       })) as Badge[],
       parProfil: {
         [faux.id]: [
+          { badge_cle: 'ceo', position: null, obtenu_le: '2026-08-26T00:20:00.000Z' },
           { badge_cle: 'pionnier', position: 7, obtenu_le: '2026-08-26T00:20:00.000Z' },
           { badge_cle: 'premiere-heure', position: null, obtenu_le: '2026-08-26T00:20:00.000Z' },
           { badge_cle: 'rapporteur', position: null, obtenu_le: '2026-08-30T10:00:00.000Z' },

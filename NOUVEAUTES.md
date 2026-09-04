@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.0
+
+- Un badge « C.E.O », avec son dessin. Il ne peut pas se gagner : seule la
+  console peut le donner.
+- Les badges reserves existent desormais comme categorie. Un badge marque
+  ainsi est refuse a qui le demande, meme en appelant la base directement.
+
 ## 9.8.9
 
 - Un badge retire depuis la console ne se redonne plus tout seul au
