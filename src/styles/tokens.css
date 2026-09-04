@@ -567,9 +567,23 @@
 :root[data-text-scale='grand']      { font-size: 17px; }
 :root[data-text-scale='tres-grand'] { font-size: 19px; }
 
-/* Souligner les liens, pour qui ne les distingue pas a la couleur. */
-:root[data-underline-links='on'] a,
-:root[data-underline-links='on'] .link {
+/*
+ * Souligner les liens, pour qui ne les distingue pas a la couleur.
+ *
+ * `.lien-carte` en est exclu, et l'exclusion sert le meme but que la regle.
+ *
+ * Ce reglage existe parce que la couleur seule ne doit pas dire « ceci est un
+ * lien » : qui ne la distingue pas n'a alors aucun indice. Une CARTE, elle, en
+ * donne trois — une bordure, un fond, un logo — et se reconnait comme un
+ * controle sans qu'on ait a lire son texte. Le trait n'y ajoute rien, et il
+ * barre un intitule court en donnant l'impression d'un defaut d'affichage.
+ *
+ * L'exclusion se fait par une classe et non par une liste de selecteurs : une
+ * carte ajoutee demain porterait sinon le trait, et personne ne saurait ou le
+ * retirer.
+ */
+:root[data-underline-links='on'] a:not(.lien-carte),
+:root[data-underline-links='on'] .link:not(.lien-carte) {
   text-decoration: underline;
   text-underline-offset: 2px;
 }

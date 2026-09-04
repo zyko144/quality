@@ -537,7 +537,7 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                         {sesComptes.map((compte) => (
                           <li key={compte.service}>
                             <a
-                              className="profile__compte"
+                              className="profile__compte lien-carte"
                               style={
                                 {
                                   '--teinte': SERVICES[compte.service].teinte,
@@ -546,27 +546,26 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                               href={SERVICES[compte.service].profil(compte.identifiant)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              title={`Ouvrir le profil ${SERVICES[compte.service].nom} de ${compte.nom_affiche}`}
+                              title={`${SERVICES[compte.service].nom} — ${compte.nom_affiche}`}
+                              aria-label={`Ouvrir le profil ${SERVICES[compte.service].nom} de ${compte.nom_affiche}`}
                             >
-                              <span className="profile__compte-marque" aria-hidden="true">
-                                <LogoService service={compte.service} taille={18} />
-                              </span>
-
                               {/*
-                                Le nom du SERVICE, et rien d'autre.
+                                Le logo seul.
 
-                                Le pseudo tenait la seconde ligne. Il n'apprend
-                                rien a qui regarde — on veut savoir « ou », pas
-                                « sous quel nom », et le nom se lit de toute
-                                facon en arrivant sur la page. Il obligeait en
-                                revanche a une carte deux fois plus haute, et
-                                se coupait des qu'il depassait.
+                                Le nom du service etait ecrit a cote, et il
+                                doublait ce que le logo dit deja : personne ne
+                                lit « Twitch » sous un logo Twitch. Il forcait
+                                en revanche une carte large, et se faisait
+                                souligner par le reglage d'accessibilite —
+                                lequel vise les liens dans un texte, pas des
+                                controles qui portent bordure, fond et dessin.
+                                Sans texte, la question ne se pose plus.
+
+                                Le nom reste dit a qui ne voit pas le dessin :
+                                `aria-label` pour les lecteurs d'ecran, `title`
+                                pour la souris, avec le pseudo en prime.
                               */}
-                              <span className="profile__compte-service">
-                                {SERVICES[compte.service].nom}
-                              </span>
-
-                              <Icon name="link" size={13} aria-hidden="true" />
+                              <LogoService service={compte.service} taille={20} />
                             </a>
                           </li>
                         ))}
@@ -595,7 +594,7 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                         {links.map((link) => (
                           <li key={link.url}>
                             <a
-                              className="profile-link"
+                              className="profile-link lien-carte"
                               style={
                                 link.couleur
                                   ? ({ '--lien': link.couleur } as React.CSSProperties)

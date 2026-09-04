@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.7.6
+
+- Les comptes lies deviennent des pastilles portant le seul logo du
+  service. Le nom ecrit a cote doublait ce que le dessin dit deja.
+- Le reglage « souligner les liens » n'atteint plus les cartes : il vise
+  les liens dans un texte, ou la couleur seule ne suffit pas a les
+  reconnaitre. Une carte porte deja bordure, fond et logo.
+
 ## 9.7.5
 
 - Le statut du moment devient une bulle posee contre votre photo. Vous en

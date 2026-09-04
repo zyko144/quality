@@ -150,7 +150,7 @@ function ImagePreview({ link }: { link: Parsed }) {
   if (failed) return <LinkCard link={link} />;
 
   return (
-    <a className="preview-image" href={link.url} target="_blank" rel="noopener noreferrer nofollow">
+    <a className="preview-image lien-carte" href={link.url} target="_blank" rel="noopener noreferrer nofollow">
       <img src={link.url} alt="" loading="lazy" onError={() => setFailed(true)} />
     </a>
   );
@@ -215,7 +215,7 @@ function LinkCard({ link }: { link: Parsed }) {
 
   return (
     <a
-      className="preview-card"
+      className="preview-card lien-carte"
       style={{ '--teinte': teinteDe(link.host) } as React.CSSProperties}
       href={link.url}
       target="_blank"

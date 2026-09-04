@@ -2866,10 +2866,17 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--text-muted);
 }
 
+/*
+ * Une rangee de logos, et non une grille de cartes.
+ *
+ * Chaque pastille ne porte que le dessin du service : le nom ecrit a cote
+ * doublait ce que le logo dit deja, forcait une carte large, et se faisait
+ * souligner par le reglage d'accessibilite. Six services tiennent desormais
+ * sur une ligne ou deux au lieu de trois.
+ */
 .profile__comptes {
-  display: grid;
-  /* Deux par ligne quand la place le permet, une seule sinon. */
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 0;
   padding: 0;
@@ -2877,11 +2884,11 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 }
 
 .profile__compte {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
   border: 1px solid color-mix(in oklab, var(--teinte) 72%, transparent);
   border-radius: var(--radius-md);
   /*
@@ -2937,39 +2944,11 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
  * eclaircit donc d'un cote et assombrit de l'autre, sans qu'on ait a l'ecrire
  * deux fois — ni a oublier la seconde.
  */
-.profile__compte-marque {
-  display: flex;
-  flex-shrink: 0;
-  color: color-mix(in oklab, var(--teinte) 65%, var(--text-primary));
+.profile__compte svg {
+  color: color-mix(in oklab, var(--teinte) 60%, var(--text-primary));
 }
 
-/* Une seule ligne : le nom du service, a la couleur du service. */
-.profile__compte-service {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  color: color-mix(in oklab, var(--teinte) 55%, var(--text-primary));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* La fleche ne s'allume qu'au survol : elle dit « ca sort », pas « regarde-moi ». */
-.profile__compte svg:last-child {
-  flex-shrink: 0;
-  color: var(--text-muted);
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out);
-}
-
-.profile__compte:hover svg:last-child,
-.profile__compte:focus-visible svg:last-child {
-  opacity: 1;
-}
-
-[data-motion='reduced'] .profile__compte,
-[data-motion='reduced'] .profile__compte svg:last-child {
+[data-motion='reduced'] .profile__compte {
   transition: none;
 }
 

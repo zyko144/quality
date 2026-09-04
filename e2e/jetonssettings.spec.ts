@@ -97,6 +97,30 @@ test.describe('Jetons de style', () => {
     expect(manquants, 'jetons cites mais jamais definis').toEqual([]);
   });
 
+  test('le soulignement des liens epargne les cartes', () => {
+    /*
+     * Le reglage d'accessibilite « souligner les liens » existe parce que la
+     * couleur seule ne doit pas dire « ceci est un lien ». Une CARTE en donne
+     * trois indices — bordure, fond, logo — et le trait n'y ajoute rien : il
+     * barre un intitule court et donne l'impression d'un defaut d'affichage.
+     *
+     * Ce cas verifie les deux moities. Retirer `:not(.lien-carte)` de la regle
+     * ferait revenir le trait ; retirer la classe des composants aussi, et
+     * cette seconde faute-la ne se verrait que le reglage active — c'est-a-dire
+     * jamais, chez qui ne l'active pas.
+     */
+    const regle = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8');
+    expect(regle).toContain("a:not(.lien-carte)");
+
+    for (const chemin of [
+      '../src/features/profile/ProfileCard.tsx',
+      '../src/features/messages/LinkPreview.tsx',
+    ]) {
+      const source = readFileSync(new URL(chemin, import.meta.url), 'utf8');
+      expect(source, `${chemin} doit marquer ses cartes`).toContain('lien-carte');
+    }
+  });
+
   test('les jetons poses par le code ne sont pas definis deux fois', () => {
     /*
      * Une valeur ecrite dans le CSS pour une variable que le code pose aussi
