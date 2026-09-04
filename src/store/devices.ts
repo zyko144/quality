@@ -564,10 +564,46 @@ export function cameraBitrate(media: MediaPreferences): number {
  * quand la negociation n'est pas terminee. On abandonne alors sans bruit :
  * la qualite reste celle par defaut, ce qui est desagreable mais pas casse.
  */
+/**
+ * Hauteur voulue a l'emission, ou `null` pour « la source telle quelle ».
+ *
+ * `SCREEN_SIZES` sert deja a contraindre `getDisplayMedia`. La capture NATIVE,
+ * elle, ne recoit que la source et la cadence — jamais une taille : voir
+ * `demarrer_image(source, images)` cote Rust. Elle rend donc toujours l'ecran
+ * entier, quelle que soit la definition demandee.
+ */
+export function screenTargetHeight(media: MediaPreferences): number | null {
+  return SCREEN_SIZES[media.screenQuality]?.height ?? null;
+}
+
+/**
+ * De combien reduire une source pour arriver a la definition demandee.
+ *
+ * Rend `1` — c'est-a-dire « n'y touche pas » — quand la source est deja a la
+ * bonne taille ou plus petite, et quand aucune taille n'est demandee. Agrandir
+ * n'aurait aucun sens : on inventerait des pixels que la source n'a pas, au
+ * prix exact de ceux qu'on aurait pu encoder proprement.
+ */
+export function reductionVoulue(hauteurReelle: number, hauteurVoulue: number | null): number {
+  if (hauteurVoulue === null || hauteurVoulue <= 0) return 1;
+  if (!Number.isFinite(hauteurReelle) || hauteurReelle <= hauteurVoulue) return 1;
+
+  return hauteurReelle / hauteurVoulue;
+}
+
 export async function applyEncoding(
   sender: RTCRtpSender,
   bitrate: number,
   priority: 'motion' | 'detail',
+  /**
+   * Hauteur visee, si la source peut la depasser. `null` laisse la source.
+   *
+   * Sur un ecran 1440p regle en 1080p, la capture native envoyait 3,7 millions
+   * de pixels avec un budget calcule pour 2,07 millions — et l'interdiction de
+   * reduire (ci-dessous) ne laissait a l'encodeur qu'un seul levier : la
+   * cadence. Les traces montrent le resultat, une image par seconde en 1080p.
+   */
+  hauteurVoulue: number | null = null,
 ): Promise<boolean> {
   try {
     const parameters = sender.getParameters();
@@ -597,12 +633,28 @@ export async function applyEncoding(
        * rien ne le dise, et sans jamais y revenir tant que la source bougeait.
        * On corrigeait une saccade en rendant l'image meconnaissable.
        *
-       * `1` interdit toute reduction. Sous contrainte, le moteur repond
-       * desormais par ce que `degradationPreference` autorise : des images
-       * perdues en fluidite, une definition tenue en nettete. Les deux se
-       * voient, mais aucune des deux ne transforme un 1080p en bouillie.
+       * `1` interdisait toute reduction. Sous contrainte, le moteur repondait
+       * par ce que `degradationPreference` autorise : des images perdues en
+       * fluidite, une definition tenue en nettete.
+       *
+       * C'etait juste, et c'etait trop absolu. Sur un ecran 1440p regle en
+       * 1080p, la capture native rend l'ecran ENTIER — elle ne recoit pas de
+       * taille — soit 1,78 fois les pixels prevus, avec le budget de debit
+       * calcule pour 1080p. Interdire la reduction ne laissait alors qu'un seul
+       * levier au moteur : la cadence. Les traces d'un partage de ce soir
+       * montrent une a sept images par seconde, et le passage force de la
+       * capture a douze pour cause de processeur.
+       *
+       * On ne demande donc plus « ne reduis rien », mais « reduis JUSTE ce
+       * qu'il faut pour arriver a la definition demandee ». Un rapport explicite
+       * plutot qu'une main libre : le moteur ne peut toujours pas s'effondrer a
+       * 540p de son propre chef, mais il n'a plus a encoder des pixels que
+       * personne n'a demandes.
        */
-      encoding.scaleResolutionDownBy = 1;
+      encoding.scaleResolutionDownBy = reductionVoulue(
+        sender.track?.getSettings().height ?? 0,
+        hauteurVoulue,
+      );
     }
 
     parameters.degradationPreference =
@@ -628,13 +680,14 @@ export async function applyEncodingWithRetry(
   sender: RTCRtpSender,
   bitrate: number,
   priority: 'motion' | 'detail',
+  hauteurVoulue: number | null = null,
 ): Promise<boolean> {
   for (const attente of [0, 120, 400, 1200, 3000]) {
     if (attente > 0) await new Promise((resoudre) => setTimeout(resoudre, attente));
 
     // Une piste retiree entre-temps n'a plus rien a regler.
     if (!sender.track) return false;
-    if (await applyEncoding(sender, bitrate, priority)) return true;
+    if (await applyEncoding(sender, bitrate, priority, hauteurVoulue)) return true;
   }
   return false;
 }

@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.9
+
+- Le partage d'ecran retrouve ses images. Sur un ecran plus grand que la
+  definition choisie, on encodait l'ecran entier avec le budget de la
+  definition demandee, sans droit de reduire : il ne restait a l'encodeur
+  qu'a jeter des images. La source est desormais ramenee a la definition
+  reglee.
+- Le releve de la capture disait douze images par seconde dans toutes les
+  traces, sur toutes les machines : il divisait la cadence DEMANDEE par le
+  temps ecoule. Il compte maintenant les images recues.
+
 ## 9.6.8
 
 - Les liens envoyes dans les messages s'ouvrent enfin dans le navigateur.

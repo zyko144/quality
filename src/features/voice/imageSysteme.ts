@@ -182,13 +182,27 @@ export async function capturerSource(
     }
   })();
 
-  // Un releve unique, le temps que la cadence se stabilise.
+  /*
+   * Un releve unique, le temps que la cadence se stabilise.
+   *
+   * `parSeconde` se calculait sur `images` — la cadence DEMANDEE, un parametre
+   * de cette fonction — et non sur `recues`, le compteur ecrit juste au-dessus
+   * pour cela. Soixante divise par cinq secondes donne douze, toujours : la
+   * ligne rendait la meme valeur dans toutes les traces, sur quatre versions et
+   * deux machines, sans jamais rien mesurer.
+   *
+   * C'est le seul chiffre qui dise si les images manquantes se perdent a la
+   * CAPTURE ou a l'ENCODAGE — les deux se decrivent « ca rame » et se corrigent
+   * a l'oppose l'un de l'autre. On garde donc les deux nombres cote a cote :
+   * ce qu'on a demande, et ce qui est arrive.
+   */
   window.setTimeout(() => {
     journal.info('partage', 'Capture native', {
       source,
       definition: `${flux.largeur}x${flux.hauteur}`,
-      images,
-      parSeconde: Math.round(images / ((performance.now() - depart) / 1000)),
+      demandees: images,
+      recues,
+      parSeconde: Math.round(recues / ((performance.now() - depart) / 1000)),
     });
   }, 5000);
 

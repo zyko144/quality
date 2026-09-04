@@ -13,6 +13,7 @@ import {
   applyAudioEncoding,
   ameliorerOpus,
   applyEncodingWithRetry,
+  screenTargetHeight,
   preferVideoCodec,
 } from '@/store/devices';
 import { useChat } from '@/store/chat';
@@ -1713,6 +1714,7 @@ let cadenceCapture = 0;
         peer.screenSender,
         screenBitrate(useDevices.getState().media),
         useDevices.getState().media.screenPriority,
+        screenTargetHeight(useDevices.getState().media),
       );
 
       /*
@@ -2881,7 +2883,12 @@ let cadenceCapture = 0;
             .find((t) => t.sender === peer.screenSender);
           if (transceiver) preferVideoCodec(transceiver);
 
-          void applyEncodingWithRetry(peer.screenSender, screenBitrate(media), media.screenPriority);
+          void applyEncodingWithRetry(
+            peer.screenSender,
+            screenBitrate(media),
+            media.screenPriority,
+            screenTargetHeight(media),
+          );
 
           if (audioTrack) {
             peer.screenAudioSender = peer.connection.addTrack(audioTrack, display);
