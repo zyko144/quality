@@ -2607,7 +2607,7 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
 .badge-trophee__rang {
   padding: 1px 7px;
   border-radius: var(--radius-full);
-  background: color-mix(in oklab, var(--teinte) 30%, transparent);
+  background: color-mix(in oklab, var(--teinte) 22%, transparent);
   color: var(--teinte);
   font-size: 11px;
   font-weight: var(--weight-semibold);
@@ -2793,33 +2793,123 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--text-muted);
 }
 
-/* Les comptes lies, en pastilles. */
+/*
+ * Les comptes lies, en cartes aux couleurs du service.
+ *
+ * Ils etaient des pastilles etroites dans la colonne de gauche : un logo, un
+ * nom coupe a cent quatre-vingts pixels, et rien qui dise a quel service on
+ * avait affaire quand le logo ne suffisait pas. Dans « A propos » la place ne
+ * manque pas, et deux lignes valent mieux qu'une moitie de nom.
+ *
+ * La couleur reste celle de la marque. C'est elle qui fait la reconnaissance
+ * avant toute lecture — le vert ne veut dire que Spotify — et une teinte du
+ * theme dirait seulement « lien », ce qu'on savait deja. Elle est diluee en
+ * fond et franche en trait : assez pour se reconnaitre d'un coup d'oeil, pas
+ * assez pour que trois comptes fassent une guirlande.
+ */
+.profile__bloc {
+  margin-top: var(--space-4);
+}
+
+.profile__bloc-titre {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
 .profile__comptes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: var(--space-3) 0 0;
+  display: grid;
+  /* Deux par ligne quand la place le permet, une seule sinon. */
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .profile__compte {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  max-width: 180px;
-  padding: 3px 9px;
-  border: 1px solid color-mix(in oklab, var(--teinte) 42%, transparent);
-  border-radius: var(--radius-full);
-  background: color-mix(in oklab, var(--teinte) 12%, transparent);
-  color: var(--teinte);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in oklab, var(--teinte) 72%, transparent);
+  border-radius: var(--radius-md);
+  /*
+     * Le fond est la couleur du service, DILUEE dans du transparent.
+     *
+     * Il etait melange a `--bg-raised`, c'est-a-dire a du gris tres sombre :
+     * dix pour cent de vert dans du presque-noir donne du presque-noir, et les
+     * quatre cartes formaient une rangee de rectangles noirs identiques. La
+     * couleur ne servait plus a rien — or c'est elle qui fait reconnaitre un
+     * service sans le lire.
+     *
+     * Sur du transparent, la teinte se pose sur le fond de la fiche et reste
+     * une teinte. Vingt-deux pour cent : franc sur fond sombre comme sur fond
+     * clair, sans que le nom du compte cesse d'etre lisible par-dessus.
+     */
+  background: color-mix(in oklab, var(--teinte) 30%, transparent);
+  color: var(--text);
   text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .profile__compte:hover {
-  background: color-mix(in oklab, var(--teinte) 22%, transparent);
+  background: color-mix(in oklab, var(--teinte) 45%, transparent);
+  border-color: var(--teinte);
+}
+
+.profile__compte:focus-visible {
+  outline: 2px solid var(--teinte);
+  outline-offset: 2px;
+}
+
+/* Le logo porte la couleur pleine ; le texte reste lisible sur le fond. */
+.profile__compte-marque {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--teinte);
+}
+
+.profile__compte-corps {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+
+.profile__compte-service {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  color: var(--teinte);
+}
+
+.profile__compte-nom {
+  font-size: var(--text-xs);
+  color: var(--text);
+}
+
+/* La fleche ne s'allume qu'au survol : elle dit « ca sort », pas « regarde-moi ». */
+.profile__compte svg:last-child {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.profile__compte:hover svg:last-child,
+.profile__compte:focus-visible svg:last-child {
+  opacity: 1;
+}
+
+[data-motion='reduced'] .profile__compte,
+[data-motion='reduced'] .profile__compte svg:last-child {
+  transition: none;
 }
 
 /* --------------------------------------------------------------------------

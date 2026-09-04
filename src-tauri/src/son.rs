@@ -415,18 +415,185 @@ pub fn demarrer_son_systeme(
 #[cfg(windows)]
 fn processus_de_la_fenetre(source: &str) -> Option<u32> {
     let poignee: isize = source.strip_prefix("fenetre:")?.parse().ok()?;
+    let fenetre = windows::Win32::Foundation::HWND(poignee as *mut std::ffi::c_void);
 
     let mut pid: u32 = 0;
     unsafe {
         windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(
-            windows::Win32::Foundation::HWND(poignee as *mut std::ffi::c_void),
+            fenetre,
             Some(&mut pid),
         )
     };
 
     // Zero signifie que la fenetre n'existe plus : mieux vaut l'autre mode
     // qu'une capture attachee a un processus qui n'est pas la.
-    (pid != 0).then_some(pid)
+    if pid == 0 {
+        return None;
+    }
+
+    // Deux corrections, chacune sans effet quand elle ne s'applique pas.
+    let pid = pid_reel_dune_fenetre_hebergee(fenetre, pid);
+    Some(racine_applicative(pid))
+}
+
+/// Le vrai processus derriere une fenetre hebergee par le systeme.
+///
+/// Les applications du Microsoft Store — Spotify en fait partie selon la façon
+/// dont il a ete installe — ne possedent pas leur propre fenetre. Le systeme
+/// leur en prete une, de classe `ApplicationFrameWindow`, qui appartient a
+/// `ApplicationFrameHost.exe`. `GetWindowThreadProcessId` rend donc le
+/// processus de CE cadre, jamais celui de l'application.
+///
+/// Une capture attachee a ce processus-la reussit, ne rend aucune erreur, et
+/// n'entend rien : le cadre ne joue pas de musique. C'est le defaut rapporte,
+/// « le son ne marche pas meme en partageant juste la fenetre ».
+///
+/// L'application se trouve dans une fenetre fille de classe
+/// `Windows.UI.Core.CoreWindow`. On rend le pid de depart si l'on ne trouve
+/// rien : au pire on ne fait pas mieux qu'avant.
+#[cfg(windows)]
+fn pid_reel_dune_fenetre_hebergee(
+    fenetre: windows::Win32::Foundation::HWND,
+    pid: u32,
+) -> u32 {
+    use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        EnumChildWindows, GetClassNameW, GetWindowThreadProcessId,
+    };
+
+    let mut classe = [0u16; 64];
+    let lus = unsafe { GetClassNameW(fenetre, &mut classe) };
+    let classe = String::from_utf16_lossy(&classe[..lus.max(0) as usize]);
+
+    if classe != "ApplicationFrameWindow" {
+        return pid;
+    }
+
+    /// Ce que le parcours des filles remonte : le cadre, et ce qu'on a trouve.
+    struct Recherche {
+        cadre: u32,
+        trouve: Option<u32>,
+    }
+
+    unsafe extern "system" fn visiter(fille: HWND, donnees: LPARAM) -> BOOL {
+        let recherche = unsafe { &mut *(donnees.0 as *mut Recherche) };
+
+        let mut classe = [0u16; 64];
+        let lus = unsafe { GetClassNameW(fille, &mut classe) };
+        let classe = String::from_utf16_lossy(&classe[..lus.max(0) as usize]);
+
+        if classe != "Windows.UI.Core.CoreWindow" {
+            return true.into();
+        }
+
+        let mut pid: u32 = 0;
+        unsafe { GetWindowThreadProcessId(fille, Some(&mut pid)) };
+
+        // La fille peut appartenir au cadre lui-meme : ce n'est pas ce qu'on
+        // cherche, et le retenir ne changerait rien au probleme.
+        if pid != 0 && pid != recherche.cadre {
+            recherche.trouve = Some(pid);
+            return false.into();
+        }
+
+        true.into()
+    }
+
+    let mut recherche = Recherche { cadre: pid, trouve: None };
+    let _ = unsafe {
+        EnumChildWindows(
+            fenetre,
+            Some(visiter),
+            LPARAM(&mut recherche as *mut Recherche as isize),
+        )
+    };
+
+    recherche.trouve.unwrap_or(pid)
+}
+
+/// Remonte jusqu'au processus de tete de la meme application.
+///
+/// Les applications faites de plusieurs processus — Spotify, les navigateurs,
+/// tout ce qui repose sur Chromium — montrent une fenetre qui appartient
+/// souvent a un processus ENFANT, pendant que le son sort d'un autre.
+/// `PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE` prend bien un arbre,
+/// mais l'arbre de l'enfant : le frere qui joue la musique n'en fait pas
+/// partie, et l'on capture un silence parfait.
+///
+/// On remonte donc tant que le parent porte le MEME nom d'executable. C'est ce
+/// qui distingue « un autre morceau de la meme application » de « ce qui l'a
+/// lancee » : sans cette condition on arriverait a l'explorateur de fichiers,
+/// et l'on capturerait tout l'ordinateur en croyant capturer une fenetre.
+///
+/// Rend le pid de depart des que quelque chose manque. Le pire cas est le
+/// comportement d'avant.
+#[cfg(windows)]
+fn racine_applicative(depart: u32) -> u32 {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+
+    let Ok(instantane) = (unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }) else {
+        return depart;
+    };
+
+    let mut entree = PROCESSENTRY32W {
+        dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+        ..Default::default()
+    };
+
+    // (pid, parent, nom) pour tout le monde : l'instantane ne se parcourt
+    // qu'une fois, et l'on doit remonter plusieurs crans.
+    let mut processus: Vec<(u32, u32, String)> = Vec::new();
+
+    if unsafe { Process32FirstW(instantane, &mut entree) }.is_ok() {
+        loop {
+            let fin = entree
+                .szExeFile
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(entree.szExeFile.len());
+
+            processus.push((
+                entree.th32ProcessID,
+                entree.th32ParentProcessID,
+                String::from_utf16_lossy(&entree.szExeFile[..fin]).to_lowercase(),
+            ));
+
+            if unsafe { Process32NextW(instantane, &mut entree) }.is_err() {
+                break;
+            }
+        }
+    }
+
+    let _ = unsafe { CloseHandle(instantane) };
+
+    let nom = |pid: u32| processus.iter().find(|(p, _, _)| *p == pid).map(|(_, _, n)| n.clone());
+    let parent = |pid: u32| processus.iter().find(|(p, _, _)| *p == pid).map(|(_, pere, _)| *pere);
+
+    let Some(voulu) = nom(depart) else { return depart };
+
+    let mut courant = depart;
+
+    // Huit crans : de quoi couvrir n'importe quelle application reelle, et de
+    // quoi ne jamais tourner en rond si un pid recycle formait un cycle.
+    for _ in 0..8 {
+        let Some(pere) = parent(courant) else { break };
+        if pere == 0 || pere == courant {
+            break;
+        }
+
+        // Un pid recycle par un processus sans rapport porterait un autre nom :
+        // c'est aussi ce test qui nous en protege.
+        match nom(pere) {
+            Some(ref n) if *n == voulu => courant = pere,
+            _ => break,
+        }
+    }
+
+    courant
 }
 
 /// Arrete la capture. Sans effet si elle ne tourne pas.

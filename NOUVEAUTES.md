@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.7.1
+
+- Le son d'une seule application se prend enfin sur Spotify et les
+  navigateurs : on remonte a l'application qui joue vraiment, la ou l'on
+  s'arretait au cadre de fenetre prete par Windows ou a un processus enfant.
+- Les comptes lies passent dans « A propos », en cartes aux couleurs du
+  service. Ils etaient coinces sous l'avatar dans une bande trop etroite.
+- Le son d'arrivee en vocal se joue au clic, plus a la fin de la connexion.
+- On peut deposer quelqu'un sur un salon vocal pour l'y deplacer, y compris
+  sur les salons ranges dans une categorie — ou rien ne se deposait.
+
 ## 9.7.0
 
 - Partager son ecran ne devrait plus couter des images a son propre jeu.

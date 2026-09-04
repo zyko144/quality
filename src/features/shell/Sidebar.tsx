@@ -15,6 +15,21 @@ import { useContextMenu } from '@/components/ContextMenu';
 import { Modal } from '@/components/Modal';
 import type { Channel, UUID } from '@/types/db';
 
+/*
+ * Ce qu'un glisser transporte quand c'est une PERSONNE, et non un salon.
+ *
+ * Un type a nous, distinct de `text/plain`. Le rangement des salons se sert
+ * deja de `text/plain` pour y mettre un identifiant de salon : sans type
+ * distinct, relacher quelqu'un sur un salon aurait ete lu comme « range ce
+ * salon ici », avec un identifiant de personne. Le depot aurait echoue en
+ * silence, ou pire, deplace un salon au hasard.
+ *
+ * Le navigateur ne laisse pas LIRE les donnees pendant le survol — seulement
+ * les types. C'est exactement pourquoi l'information doit etre dans le type :
+ * c'est la seule chose sur laquelle on puisse decider d'accepter ou non.
+ */
+const TRANSFERT_MEMBRE = 'application/x-echow-membre';
+
 export function Sidebar() {
   const activeSpaceId = useUI((state) => state.activeSpaceId);
   const activeChannelId = useUI((state) => state.activeChannelId);
@@ -29,6 +44,7 @@ export function Sidebar() {
   const readStates = useChat((state) => state.readStates);
   const profiles = useChat((state) => state.profiles);
   const ranks = useChat((state) => state.ranks);
+  const deplacerVocal = useVoice((state) => state.deplacer);
 
   // Le rang decide des outils affiches. La base revalide de toute facon chaque
   // action : ce test ne sert qu'a ne pas montrer un bouton qui echouerait.
@@ -55,6 +71,20 @@ export function Sidebar() {
    * renumeroter une seule categorie decalerait les autres sans qu'on l'ait
    * demande.
    */
+  /*
+   * Deposer quelqu'un sur un salon vocal l'y deplace.
+   *
+   * On ne demande rien quand la personne y est deja : le message partirait, le
+   * client vise se verrait demander de rejoindre le salon ou il se trouve, et
+   * `join` rendrait la main sans rien faire. Autant ne pas l'envoyer.
+   */
+  const deplacerMembre = (userId: UUID, salon: UUID) => {
+    const dedans = useVoice.getState().participantsByChannel[salon] ?? [];
+    if (dedans.some((participant) => participant.user_id === userId)) return;
+
+    deplacerVocal(userId, salon);
+  };
+
   const relacher = (idDeplace: string, cible: UUID) => {
     setDeplace(null);
     setSurvole(null);
@@ -270,6 +300,7 @@ export function Sidebar() {
                   onDragStart={setDeplace}
                   onDragOver={setSurvole}
                   onDrop={relacher}
+                  onDeplacerMembre={deplacerMembre}
                   onDragEnd={() => {
                     setDeplace(null);
                     setSurvole(null);
@@ -314,6 +345,7 @@ export function Sidebar() {
                       onSelect={selectChannel}
                       profiles={profiles}
                       canManage={myRank >= 2}
+                      onDeplacerMembre={deplacerMembre}
                     />
                   ))}
                 </ul>
@@ -351,6 +383,7 @@ function ChannelItem({
   onDragStart,
   onDragOver,
   onDrop,
+  onDeplacerMembre,
   onDragEnd,
 }: {
   channel: Channel;
@@ -366,6 +399,8 @@ function ChannelItem({
   onDragStart?: (id: UUID) => void;
   onDragOver?: (id: UUID) => void;
   onDrop?: (deplace: string, cible: UUID) => void;
+  /** Deposer quelqu'un sur un salon vocal l'y deplace. */
+  onDeplacerMembre?: (userId: UUID, salon: UUID) => void;
   onDragEnd?: () => void;
 }) {
   const participants = useVoice((state) =>
@@ -423,6 +458,19 @@ function ChannelItem({
       }}
       onDragOver={(event) => {
         if (!canManage) return;
+
+        /*
+         * Une personne ne se depose que sur un salon VOCAL.
+         *
+         * Pendant le survol, le navigateur interdit de lire les donnees
+         * transportees — on ne connait que leurs types. D'ou le type dedie :
+         * c'est la seule chose sur laquelle on puisse decider ici, et il faut
+         * decider ici, car refuser au relachement arrive trop tard : le curseur
+         * aurait annonce un depot possible tout du long.
+         */
+        const membre = event.dataTransfer.types.includes(TRANSFERT_MEMBRE);
+        if (membre && channel.kind !== 'voice') return;
+
         // Sans `preventDefault`, le navigateur refuse le depot : c'est lui qui
         // decide, et son defaut est de tout refuser.
         event.preventDefault();
@@ -432,6 +480,15 @@ function ChannelItem({
       onDrop={(event) => {
         if (!canManage) return;
         event.preventDefault();
+
+        const membre = event.dataTransfer.getData(TRANSFERT_MEMBRE);
+        if (membre) {
+          // Deposer quelqu'un sur le salon ou il se trouve deja ne veut rien
+          // dire : on ne demande rien plutot que d'envoyer un ordre vide.
+          if (channel.kind === 'voice') onDeplacerMembre?.(membre, channel.id);
+          return;
+        }
+
         onDrop?.(event.dataTransfer.getData('text/plain'), channel.id);
       }}
       onDragEnd={() => onDragEnd?.()}
@@ -586,6 +643,27 @@ function ChannelItem({
             return (
               <li
                 key={participant.user_id}
+                /*
+                  On peut la saisir pour la deposer sur un autre salon vocal.
+
+                  Le deplacement existait deja, mais seulement au clic droit,
+                  puis dans une liste de salons. Or ce qu'on veut faire est
+                  litteralement « prends cette personne et mets-la la », et
+                  c'est le geste qu'on essaie en premier.
+
+                  Reserve aux moderateurs, comme l'entree du menu : pour les
+                  autres, une personne qui suit le curseur promettrait un
+                  pouvoir qu'ils n'ont pas.
+                */
+                draggable={canManage}
+                onDragStart={(event) => {
+                  if (!canManage) return;
+                  event.dataTransfer.setData(TRANSFERT_MEMBRE, participant.user_id);
+                  event.dataTransfer.effectAllowed = 'move';
+                  // Sans quoi le glisser remonte a la ligne du salon, qui
+                  // croirait qu'on la range ailleurs.
+                  event.stopPropagation();
+                }}
                 /*
                   Le clic droit sur une personne parle d'elle, pas du salon.
                   La liste des participants vit a l'interieur de la ligne du

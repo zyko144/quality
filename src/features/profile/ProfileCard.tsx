@@ -361,27 +361,6 @@ export function ProfileCard({ userId }: { userId: UUID }) {
               </a>
             ) : null}
 
-            {/* Ou retrouver la personne ailleurs, si elle a choisi de le dire. */}
-            {sesComptes.length > 0 ? (
-              <ul className="profile__comptes">
-                {sesComptes.map((compte) => (
-                  <li key={compte.service}>
-                    <a
-                      className="profile__compte"
-                      style={{ '--teinte': SERVICES[compte.service].teinte } as React.CSSProperties}
-                      href={SERVICES[compte.service].profil(compte.identifiant)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={`${SERVICES[compte.service].nom} · ${compte.nom_affiche}`}
-                    >
-                      <LogoService service={compte.service} taille={15} />
-                      <span className="truncate">{compte.nom_affiche}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-
             {isMe ? (
               <button
                 type="button"
@@ -501,6 +480,58 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                         : "Cette personne n'a rien ecrit sur elle."}
                     </p>
                   )}
+
+                  {/*
+                    Les comptes lies vivent ici, et non plus dans la colonne.
+
+                    Ils y etaient coinces sous l'avatar, dans une bande etroite
+                    qui coupait les noms a cent quatre-vingts pixels et les
+                    posait sous le bouton d'action, la ou l'oeil ne va pas. « A
+                    propos » est l'endroit ou l'on cherche qui est quelqu'un —
+                    c'est la meme question que « ou le retrouver ailleurs ».
+
+                    Ils passent AVANT les liens libres : un compte verifie vaut
+                    mieux qu'une adresse tapee a la main, et l'ordre le dit.
+                  */}
+                  {sesComptes.length > 0 ? (
+                    <section className="profile__bloc">
+                      <h4 className="profile__bloc-titre">Comptes lies</h4>
+
+                      <ul className="profile__comptes">
+                        {sesComptes.map((compte) => (
+                          <li key={compte.service}>
+                            <a
+                              className="profile__compte"
+                              style={
+                                {
+                                  '--teinte': SERVICES[compte.service].teinte,
+                                } as React.CSSProperties
+                              }
+                              href={SERVICES[compte.service].profil(compte.identifiant)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Ouvrir le profil ${SERVICES[compte.service].nom} de ${compte.nom_affiche}`}
+                            >
+                              <span className="profile__compte-marque" aria-hidden="true">
+                                <LogoService service={compte.service} taille={18} />
+                              </span>
+
+                              <span className="profile__compte-corps">
+                                <span className="profile__compte-service">
+                                  {SERVICES[compte.service].nom}
+                                </span>
+                                <span className="profile__compte-nom truncate">
+                                  {compte.nom_affiche}
+                                </span>
+                              </span>
+
+                              <Icon name="link" size={13} aria-hidden="true" />
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ) : null}
 
                   {links.length > 0 ? (
                     <ul className="profile__links">

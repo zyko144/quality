@@ -2269,6 +2269,25 @@ let cadenceCapture = 0;
       set({ connecting: true, error: null });
 
       /*
+       * Le son part MAINTENANT, pas quand tout est pret.
+       *
+       * Il etait joue a la toute fin de la jonction, apres l'ouverture du
+       * micro, l'interrogation des serveurs de decouverte et la souscription
+       * au canal — une demi-seconde a une seconde apres le clic, selon la
+       * machine et le reseau. On l'entendait donc comme un retard, alors qu'il
+       * est censé confirmer le clic.
+       *
+       * Un son de confirmation ne raconte pas la fin d'une operation, il
+       * accuse reception d'un geste. C'est aussi ce que fait `leave`, qui le
+       * joue avant de commencer a demonter quoi que ce soit.
+       *
+       * Si la jonction echoue ensuite, on aura confirme un clic pour rien —
+       * et c'est le bon compromis : l'echec s'annonce par un message, pas par
+       * l'absence d'un son que personne n'attend consciemment.
+       */
+      playCue('join');
+
+      /*
        * On enchaine sans pause.
        *
        * Une attente de cent vingt millisecondes se tenait ici, le temps que le
@@ -2399,8 +2418,6 @@ let cadenceCapture = 0;
       attachAnalyser(userId, localStream);
       startSpeechDetection();
       suivreReglagesMicro();
-
-      playCue('join');
 
       /*
        * On repasse sur les connexions toutes les trois secondes.

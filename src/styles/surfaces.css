@@ -323,28 +323,47 @@
   list-style: none;
 }
 
+/*
+ * Un lien ajoute a la main, taille comme un compte lie.
+ *
+ * Il portait `--bg-sunken`, le gris le plus sombre de la palette : une pilule
+ * noire posee sous des cartes colorees, qui ne se lisait pas comme la meme
+ * famille d'objet alors que c'en est une — « ou me trouver ailleurs ».
+ *
+ * Faute de service reconnu, il n'a pas de couleur propre : il prend celle de
+ * la fiche, que la personne a choisie. C'est le meme raisonnement que pour les
+ * comptes lies — une couleur qui veut dire quelque chose — applique au seul
+ * indice dont on dispose ici.
+ */
 .profile-link {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  max-width: 200px;
+  max-width: 100%;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-full);
-  background: var(--bg-sunken);
-  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--accent) 28%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent) 68%, transparent);
   font-size: var(--text-xs);
-  color: var(--text-secondary);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
   transition:
-    border-color var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--spring);
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.profile-link svg {
+  flex-shrink: 0;
+  color: var(--accent-text);
 }
 
 .profile-link:hover {
+  background: color-mix(in oklab, var(--accent) 34%, transparent);
   border-color: var(--accent);
-  color: var(--accent-text);
-  transform: translateY(-2px);
   text-decoration: none;
 }
+
+[data-motion='reduced'] .profile-link { transition: none; }
 
 /* --------------------------------------------------------------------------
    Espaces en commun

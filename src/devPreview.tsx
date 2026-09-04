@@ -10,6 +10,7 @@ import { RetourScreen } from '@/features/maintenance/RetourScreen';
 import { MaintenanceScreen } from '@/features/maintenance/MaintenanceScreen';
 import { BadgesPage } from '@/features/badges/BadgesPage';
 import { useBadges, type Badge } from '@/store/badges';
+import { useComptesLies } from '@/store/comptesLies';
 
 /**
  * Apercu d'un ecran isole, en developpement seulement.
@@ -150,6 +151,29 @@ export function devPreview(name: string): ReactNode | null {
         ],
       },
       chargement: false,
+      charger: async () => {},
+    });
+
+    /*
+     * Des comptes lies, sinon le bloc « A propos » se verifie a vide.
+     *
+     * C'est leur mise en page qu'on regarde ici : comment plusieurs cartes se
+     * rangent sous la bio, et ce que devient un nom de compte trop long.
+     */
+    useComptesLies.setState({
+      parProfil: {
+        [faux.id]: [
+          { service: 'twitch', identifiant: 'lumine', nom_affiche: 'lumine', visible: true },
+          { service: 'spotify', identifiant: 'lumine', nom_affiche: 'Lumine', visible: true },
+          { service: 'github', identifiant: 'lumine', nom_affiche: 'lumine-dev', visible: true },
+          {
+            service: 'steam',
+            identifiant: 'lumine',
+            nom_affiche: 'un nom de compte vraiment tres long',
+            visible: true,
+          },
+        ],
+      },
       charger: async () => {},
     });
 
