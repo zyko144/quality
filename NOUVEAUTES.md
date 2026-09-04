@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.2
+
+- Spotify et Twitch se connectent pour de vrai : on part chez le service,
+  il demande votre accord, et il rend lui-meme votre identifiant. Plus de
+  pseudo tape a la main qu'on pouvait ecrire de travers.
+- Les autres services gardent la saisie manuelle, et l'ecran le dit.
+
 ## 9.8.1
 
 - Votre fiche peut montrer ce que vous ecoutez : pochette, titre, artiste
