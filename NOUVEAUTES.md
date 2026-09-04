@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.7
+
+- Les salons vocaux ne se coupent plus toutes les quinze secondes. Le serveur
+  fermait le salon parce que l'application y annoncait sa presence trop
+  souvent ; elle se tient desormais a la cadence qu'il accepte.
+- On se voit de nouveau dans un salon ou l'on s'entend : la liste des
+  participants ne se vidait que parce que le salon venait d'etre ferme.
+
 ## 9.6.6
 
 ### Vocal

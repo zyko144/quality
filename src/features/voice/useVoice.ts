@@ -23,6 +23,7 @@ import { journal } from '@/lib/journal';
 import { decider, etatPairsVide } from './pairs';
 import { noter, etatMartelementVide } from './martelement';
 import { ajuster } from './cadence';
+import { attenteAvantAnnonce, retenirAnnonce, REPUBLICATION_PRESENCE } from './annonces';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -449,6 +450,35 @@ const fluxAnalyses = new Map<UUID, MediaStream>();
  */
 const INTERVALLE_PUBLICATION = 200;
 
+/**
+ * Ce que Realtime accepte d'annonces de presence, et ce qu'on s'autorise.
+ *
+ * Les bornes, leur mesure et la raison d'une fenetre glissante plutot que d'un
+ * seau a jetons vivent dans `annonces.ts`. Elles y sont testables sans salon,
+ * sans micro et sans reseau — ce qui compte pour une regle dont la violation ne
+ * se voit qu'au bout de quinze secondes, sur la machine de quelqu'un d'autre.
+ */
+
+/** Dates des annonces encore comptees par le serveur, la plus ancienne en tete. */
+const envoisDePresence: number[] = [];
+let dernierEnvoiPresence = 0;
+
+/**
+ * Oublie la derniere annonce, sans vider la fenetre.
+ *
+ * Quitter un salon pour un autre doit permettre de s'annoncer aussitot dans le
+ * nouveau — d'ou l'oubli de la date. Mais PAS de vider la fenetre : rien ne dit
+ * que le serveur compte par canal. Une mesure de la soiree suggere le
+ * contraire — deux essais sur deux canaux differents, dans deux processus
+ * differents, ou le second est mort de ce que le premier avait consomme.
+ *
+ * Entre supposer que la dette s'efface et la laisser s'eteindre d'elle-meme en
+ * trente secondes, le second choix ne coute qu'une attente et ne peut pas
+ * refermer le salon qu'on vient d'ouvrir.
+ */
+function reinitialiserPresence(): void {
+  dernierEnvoiPresence = 0;
+}
 let publicationDifferee: number | null = null;
 let etatEnAttente = false;
 let publicationEnVol = false;
@@ -672,6 +702,23 @@ export const useVoice = create<VoiceState>((set, get) => {
     const courant = get();
     if (!room || !courant.channelId || !courant.userId) return;
 
+    /*
+     * La fenetre decide, et elle peut faire attendre.
+     *
+     * Rien n'est perdu quand elle est pleine : `etatEnAttente` reste leve et
+     * c'est l'etat COURANT — pas celui d'il y a trente secondes — qui partira
+     * des qu'une place se libere. Une rafale de bascules se resume donc au seul
+     * envoi qui dit ou l'on en est.
+     */
+    const attente = attenteAvantAnnonce(envoisDePresence, Date.now());
+    if (attente > 0) {
+      publicationDifferee = window.setTimeout(() => void emettre(), attente);
+      return;
+    }
+
+    dernierEnvoiPresence = Date.now();
+    retenirAnnonce(envoisDePresence, dernierEnvoiPresence);
+
     etatEnAttente = false;
     publicationEnVol = true;
 
@@ -893,18 +940,19 @@ export const useVoice = create<VoiceState>((set, get) => {
       /*
        * Retirer un observateur sur le salon ou l'on parle serait une faute.
        *
-       * Les traces montrent le canal du salon ferme neuf secondes apres sa
-       * souscription, avant toute reconstruction. Quatre chemins appellent
-       * `removeChannel` ; celui de l'ouverture est deja journalise et n'apparait
-       * pas, celui de la reconstruction vient APRES la premiere fermeture. Reste
-       * celui-ci — le seul qui tourne periodiquement, donc le seul capable de
-       * fermer a intervalle regulier.
+       * Ce ne serait pas la meme faute que celle qu'on a cherchee ici.
        *
-       * Il efface aussi `participantsByChannel[id]`, ce qui correspond mot pour
-       * mot a « on s'entend mais on ne se voit plus ».
+       * Cette trace a ete posee en soupconnant ce chemin d'etre celui qui
+       * fermait le salon toutes les quinze secondes : c'etait le seul des
+       * quatre a tourner periodiquement, et il efface `participantsByChannel`,
+       * ce qui collait mot pour mot a « on s'entend mais on ne se voit pas ».
+       * Elle n'a jamais paru — cent cinquante fermetures dans les traces, pas
+       * une ligne ici. Le canal n'etait ferme par aucun de nos chemins : c'est
+       * le serveur qui le fermait, pour cadence de presence depassee.
        *
-       * `rejoint` devrait deja l'ecarter. Si cette ligne parait, c'est que non,
-       * et elle dira avec quoi `rejoint` avait ete calcule.
+       * On la garde quand meme. Retirer un observateur sur le salon ou l'on
+       * parle reste une faute — juste une autre — et une trace qui ne parait
+       * pas ne coute rien, alors qu'elle a coute une nuit a ne pas exister.
        */
       if (id === rejoint) {
         journal.alerte('vocal', 'Observateur retire sur le salon rejoint', {
@@ -1111,8 +1159,21 @@ let derniereFoisVu = 0;
 /** Un canal se rebatit a la fois. */
 let reconstructionEnCours = false;
 
-/** Silence au-dela duquel on considere le canal perdu. */
-const SILENCE_CANAL = 12_000;
+/**
+ * Silence au-dela duquel on considere le canal perdu.
+ *
+ * Cette borne doit rester bien AU-DESSUS de la cadence a laquelle on se
+ * re-annonce, sans quoi elle mesure notre propre retenue et non la sante du
+ * canal. A douze secondes pour une republication toutes les vingt, elle
+ * declencherait une reconstruction a chaque tour — la boucle d'avant, avec une
+ * autre cause.
+ *
+ * Quarante-cinq secondes : plus du double de la republication, de quoi laisser
+ * passer un envoi perdu et le suivant, et assez court pour qu'un canal
+ * reellement mort soit repris avant qu'on ait fini de se demander pourquoi
+ * plus personne ne repond.
+ */
+const SILENCE_CANAL = 45_000;
 
 /**
  * Definition et cause de limitation du dernier releve, pour ce partage.
@@ -2390,12 +2451,22 @@ let cadenceCapture = 0;
          * sans que rien ici ne s'en apercoive. On reste alors invisible dans
          * son propre salon, ce qui est exactement le defaut rapporte.
          *
-         * Republier coute un message toutes les trois secondes, et c'est le
-         * meme message que celui qu'on emet en changeant d'etat : cela ne
-         * peut pas diverger de l'etat courant, puisque c'est l'etat courant
-         * qui est envoye.
+         * Republier envoie le meme message que celui d'un changement d'etat :
+         * cela ne peut pas diverger de l'etat courant, puisque c'est l'etat
+         * courant qui part.
+         *
+         * Ce filet etait tendu toutes les TROIS secondes, et c'est lui qui
+         * coupait le vocal : au sixieme envoi, Realtime fermait le canal pour
+         * depassement de cadence sur la presence. La liste des participants se
+         * vidait — « on s'entend mais on ne se voit pas » — la surveillance
+         * rebatissait, et l'on recommencait quinze secondes plus tard, cent
+         * fois de suite dans les traces d'un seul appel.
+         *
+         * Le compteur repart a chaque envoi, d'ou qu'il vienne : dans un appel
+         * anime, les changements d'etat suffisent et ce battement ne s'ajoute
+         * jamais par-dessus.
          */
-        publishState();
+        if (Date.now() - dernierEnvoiPresence >= REPUBLICATION_PRESENCE) publishState();
       }, 3000);
 
       // Le canal, ses ecouteurs et sa reprise vivent dans `ouvrirCanal` : il
@@ -2429,6 +2500,7 @@ let cadenceCapture = 0;
       derniereFoisVu = 0;
       reconstructionsDeSuite = 0;
       echecsPublication = 0;
+      reinitialiserPresence();
       reconstructionEnCours = false;
 
       if (battementPairs !== null) {
