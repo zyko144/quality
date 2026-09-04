@@ -1662,6 +1662,33 @@ let cadenceCapture = 0;
    * retirer une piste de partage d'ecran suffit alors a relancer la
    * negociation, sans code specifique a chaque cas.
    */
+  /*
+   * L'ordre des codecs est repose a CHAQUE negociation, des deux cotes.
+   *
+   * Il ne l'etait qu'une fois, sur le transceiver du partage, au moment de
+   * l'ajouter. Or dans un maillage, n'importe lequel des deux pairs peut
+   * relancer la negociation — une camera qu'on allume, une piste qu'on retire —
+   * et c'est l'offre qui fixe l'ordre. Quand elle vient d'en face, notre
+   * preference n'a jamais ete exprimee : le navigateur met VP9 ou VP8 devant,
+   * et Chrome retombe sur `libvpx`, en logiciel.
+   *
+   * Les traces montrent exactement cela : la meme machine, un soir, une session
+   * en `NVIDIA H.264 Encoder MFT` et la suivante en `libvpx`. Encoder du 1440p
+   * en logiciel occupe tous les coeurs — c'est ce qui fait perdre des images au
+   * JEU de celui qui partage, pas seulement au partage.
+   *
+   * Sans effet quand la negociation est deja engagee : `preferVideoCodec` avale
+   * le refus et l'on garde l'ordre en cours plutot que d'interrompre l'appel.
+   */
+  function poserLesCodecs(connection: RTCPeerConnection): void {
+    for (const transceiver of connection.getTransceivers()) {
+      const genre =
+        transceiver.sender.track?.kind ?? transceiver.receiver.track?.kind ?? null;
+
+      if (genre === 'video') preferVideoCodec(transceiver);
+    }
+  }
+
   function createPeer(peerId: UUID, localStream: MediaStream): Peer {
     const existing = peers.get(peerId);
     if (existing) return existing;
@@ -1821,6 +1848,7 @@ let cadenceCapture = 0;
     connection.onnegotiationneeded = async () => {
       try {
         peer.makingOffer = true;
+        poserLesCodecs(connection);
         await connection.setLocalDescription();
         const self = get().userId;
         if (self && connection.localDescription?.sdp) {
@@ -1905,6 +1933,7 @@ let cadenceCapture = 0;
         await connection.setRemoteDescription(description);
 
         if (signal.kind === 'offer') {
+          poserLesCodecs(connection);
           await connection.setLocalDescription();
           const self = get().userId;
           if (self && connection.localDescription?.sdp) {

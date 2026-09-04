@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.7.0
+
+- Partager son ecran ne devrait plus couter des images a son propre jeu.
+  Selon le sens de la negociation, l'appel retombait sur un encodage
+  LOGICIEL — tous les coeurs occupes a comprimer du 1440p — la ou la carte
+  graphique sait le faire seule. La preference est desormais exprimee des
+  deux cotes, a chaque negociation.
+
 ## 9.6.9
 
 - Le partage d'ecran retrouve ses images. Sur un ecran plus grand que la
