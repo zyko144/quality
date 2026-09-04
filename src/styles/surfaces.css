@@ -280,8 +280,16 @@
   white-space: nowrap;
 }
 
+/*
+ * Le rouge est pose en dur, et non pris dans la palette.
+ *
+ * `--danger` sert a dire « attention, ceci se defait mal » : supprimer,
+ * bannir, quitter. L'employer ici ferait lire un avertissement la ou il n'y a
+ * qu'un titre, et le jour ou l'on retouchera le rouge des avertissements, ce
+ * badge suivrait sans raison.
+ */
 .profile-badge--owner {
-  background: var(--gradient-accent);
+  background: linear-gradient(135deg, #e0245e, #c81e4e);
   color: #fff;
   box-shadow: var(--shadow-xs);
 }

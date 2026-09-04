@@ -346,7 +346,14 @@ export type VoiceSignal =
 export const RANK = { member: 0, moderator: 1, admin: 2, owner: 3 } as const;
 
 export const ROLE_LABEL: Record<SpaceRole, string> = {
-  owner: 'Proprietaire',
+  /*
+   * « C.E.O » plutot que « Proprietaire ».
+   *
+   * Le mot est le meme partout — fiche de profil, panneau de moderation — et
+   * c'est voulu : un role qui change de nom selon l'ecran oblige a deviner que
+   * les deux designent la meme chose.
+   */
+  owner: 'C.E.O',
   admin: 'Administrateur',
   moderator: 'Moderateur',
   member: 'Membre',

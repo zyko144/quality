@@ -12,6 +12,11 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.8
+
+- Le role de proprietaire s'appelle desormais « C.E.O », et son badge passe
+  au rouge.
+
 ## 9.8.7
 
 - C'est bien Spotify qui s'affiche, et non l'onglet de navigateur ouvert a
