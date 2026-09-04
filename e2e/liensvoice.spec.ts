@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { lireArrivee } from '../src/lib/lienDArrivee';
 
 /**
@@ -100,5 +101,33 @@ test.describe('Liens d arrivee', () => {
       genre: 'invitation',
       code: 'abc123',
     });
+  });
+});
+
+/**
+ * Les liens qui partent vers l'exterieur.
+ *
+ * Dans l'application de bureau, un clic sur un lien ne faisait RIEN. Ni erreur,
+ * ni fenetre, ni navigation : rien. La cause tenait a une permission Tauri, et
+ * elle est de celles qu'on ne voit pas en lisant le code qui l'utilise.
+ *
+ * `opener:allow-open-url` autorise la COMMANDE et ne dit rien des adresses. Sa
+ * portee, laissee vide, les refusait donc toutes. Il y manquait
+ * `opener:allow-default-urls`, qui ouvre `http` et `https`.
+ *
+ * Ce cas lit le fichier de permissions plutot que le code : c'est la que vivait
+ * le defaut, et une permission retiree par megarde redonnerait exactement le
+ * meme silence.
+ */
+test.describe('Liens sortants', () => {
+  test('la permission d ouvrir un lien porte aussi sur les adresses', () => {
+    const permissions: string[] = JSON.parse(
+      readFileSync(new URL('../src-tauri/capabilities/default.json', import.meta.url), 'utf8'),
+    ).permissions;
+
+    expect(permissions).toContain('opener:allow-open-url');
+
+    // Sans celle-ci, la precedente n'ouvre rien du tout.
+    expect(permissions).toContain('opener:allow-default-urls');
   });
 });

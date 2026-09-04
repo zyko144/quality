@@ -30,6 +30,12 @@ export interface Profile {
   accent: string;
   avatar_url: string | null;
   banner_url: string | null;
+  /**
+   * Cadrage de la banniere, `{ x, y, zoom }`, ou `null` pour centre et sans
+   * grossissement. Type large a dessein : la colonne est du `jsonb` libre, et
+   * `lireCadrage` est seul a savoir en tirer quelque chose d'affichable.
+   */
+  banner_frame: unknown;
   bio: string | null;
   pronouns: string | null;
   links: ProfileLink[];

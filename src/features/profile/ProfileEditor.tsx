@@ -7,6 +7,14 @@ import { uploadProfileImage } from '@/lib/upload';
 import { supabase, errorMessage } from '@/lib/supabase';
 import { LIMITS } from '@/constants';
 import type { ProfileLink } from '@/types/db';
+import { CadrageBanniere } from './CadrageBanniere';
+import {
+  CADRAGE_PAR_DEFAUT,
+  lireCadrage,
+  estLeCadrageParDefaut,
+  styleDeCadrage,
+  type Cadrage,
+} from './cadrage';
 
 /** Teintes proposees pour personnaliser sa carte. */
 const HUES = [
@@ -33,6 +41,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
   const [hue, setHue] = useState<number | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [cadrage, setCadrage] = useState<Cadrage>(CADRAGE_PAR_DEFAUT);
   const [username, setUsername] = useState('');
   const [etatPseudo, setEtatPseudo] = useState<
     'inchange' | 'invalide' | 'verification' | 'libre' | 'pris'
@@ -56,6 +65,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
     setHue(profile.theme_hue);
     setAvatarUrl(profile.avatar_url);
     setBannerUrl(profile.banner_url);
+    setCadrage(lireCadrage(profile.banner_frame));
     setUsername(profile.username);
     setEtatPseudo('inchange');
     setError(null);
@@ -110,8 +120,22 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
       setError(result.error);
       return;
     }
-    if (kind === 'avatar') setAvatarUrl(result.url);
-    else setBannerUrl(result.url);
+    if (kind === 'avatar') {
+      setAvatarUrl(result.url);
+      return;
+    }
+
+    setBannerUrl(result.url);
+
+    /*
+     * Une nouvelle image repart d'un cadrage neuf.
+     *
+     * Le cadrage designe un endroit dans une image precise. Le garder pour la
+     * suivante appliquerait a une photo de vacances le cadre choisi pour un
+     * dessin, et l'on ouvrirait l'editeur sur une image deja mal placee sans
+     * comprendre pourquoi.
+     */
+    setCadrage(CADRAGE_PAR_DEFAUT);
   };
 
   const updateLink = (index: number, patch: Partial<ProfileLink>) => {
@@ -149,11 +173,35 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
       }
     }
 
+    /*
+     * Le cadrage n'est envoye que s'il a change, et c'est une precaution.
+     *
+     * `banner_frame` est une colonne neuve. Tant que la migration n'est pas
+     * appliquee, PostgREST refuse l'ecriture ENTIERE des qu'elle nomme une
+     * colonne inconnue : envoyer la cle a chaque enregistrement casserait donc
+     * la modification de profil pour tout le monde, y compris pour ceux qui
+     * n'ont jamais touche au cadrage.
+     *
+     * Ne l'envoyer qu'au changement ramene le risque a ceux qui se servent de
+     * la fonction, et le fait disparaitre pour les autres.
+     *
+     * `null` plutot que le cadrage par defaut : ne rien dire est plus juste que
+     * dire « centre », et cela laisse la colonne vide pour qui n'y a jamais
+     * touche.
+     */
+    const cadrageVoulu = bannerUrl && !estLeCadrageParDefaut(cadrage) ? cadrage : null;
+    const cadrageActuel = estLeCadrageParDefaut(lireCadrage(profile.banner_frame))
+      ? null
+      : lireCadrage(profile.banner_frame);
+
     await updateProfile({
       display_name: displayName.trim() || profile.username,
       bio: bio.trim() || null,
       avatar_url: avatarUrl,
       banner_url: bannerUrl,
+      ...(JSON.stringify(cadrageVoulu) === JSON.stringify(cadrageActuel)
+        ? {}
+        : { banner_frame: cadrageVoulu }),
       pronouns: pronouns.trim() || null,
       links: cleanLinks,
       theme_hue: hue,
@@ -198,7 +246,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
       >
         <div className="editor-preview__banner">
           {bannerUrl ? (
-            <img src={bannerUrl} alt="" />
+            <img src={bannerUrl} alt="" style={styleDeCadrage(cadrage)} />
           ) : (
             <span className="editor-preview__banner-fallback" aria-hidden="true" />
           )}
@@ -291,6 +339,25 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
           </button>
         ) : null}
       </div>
+
+      {/*
+        Le cadrage ne parait qu'avec une banniere.
+
+        Sans image, ces commandes n'auraient rien a montrer et rien a regler :
+        un cadre vide qu'on peut faire glisser est une promesse qui ne tient
+        pas. Elles apparaissent donc avec l'image, la ou elles ont un sens.
+      */}
+      {bannerUrl ? (
+        <div className="field">
+          <span className="field__label">Cadrage de la banniere</span>
+          <CadrageBanniere url={bannerUrl} cadrage={cadrage} onChange={setCadrage} />
+          <p className="field__hint">
+            Glissez l’image pour choisir ce qu’on en voit, et la glissiere pour
+            grossir. La banniere est rognee differemment selon les ecrans : ce
+            reglage designe le point qui reste toujours visible.
+          </p>
+        </div>
+      ) : null}
 
       <p className="field__hint">
         Photo et banniere acceptent les images animees — GIF, WebP, APNG. La

@@ -12,6 +12,15 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.6.8
+
+- Les liens envoyes dans les messages s'ouvrent enfin dans le navigateur.
+  Sur l'application de bureau, cliquer dessus ne faisait rien du tout : il
+  manquait une permission, et l'echec etait muet.
+- La banniere du profil se cadre. Glissez l'image pour choisir ce qu'on en
+  voit, et la glissiere pour grossir — une photo dont le sujet n'est pas au
+  milieu n'est plus coupee sans recours.
+
 ## 9.6.7
 
 - Les salons vocaux ne se coupent plus toutes les quinze secondes. Le serveur

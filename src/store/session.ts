@@ -335,6 +335,7 @@ interface SessionState {
         | 'bio'
         | 'avatar_url'
         | 'banner_url'
+        | 'banner_frame'
         | 'pronouns'
         | 'links'
         | 'theme_hue'

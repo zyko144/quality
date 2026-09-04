@@ -14,6 +14,8 @@
  * serait a la fois oublie quelque part et paye mille fois.
  */
 
+import { journal } from './journal';
+
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 /**
@@ -55,10 +57,35 @@ export function suivreLesLiens(): () => void {
 
     void import('@tauri-apps/plugin-opener')
       .then(({ openUrl }) => openUrl(lien.href))
-      .catch(() => {
-        // Greffon absent ou permission refusee : mieux vaut ne rien faire que
-        // detourner la fenetre de l'application vers un site tiers.
-        console.error('Impossible d’ouvrir le lien dans le navigateur :', lien.href);
+      .catch((cause: unknown) => {
+        /*
+         * L'echec est journalise, et il l'a ete trop tard.
+         *
+         * Il ne l'etait pas : un `console.error` dans une vue web sans outils
+         * de developpement ne se lit nulle part. Le clic ne faisait donc rien,
+         * en silence, et l'application paraissait simplement cassee — c'est
+         * exactement ainsi que le defaut a ete rapporte, sans qu'aucune trace
+         * n'existe pour le nommer.
+         *
+         * La cause etait une permission : `opener:allow-open-url` autorise la
+         * COMMANDE mais ne dit rien des adresses, et sa portee vide les
+         * refusait toutes. Il y manquait `opener:allow-default-urls`. Une ligne
+         * ici l'aurait dit tout de suite.
+         *
+         * On ne se rabat pas sur une navigation dans la fenetre : cela
+         * remplacerait l'application par le site vise, sans barre d'adresse ni
+         * retour possible.
+         */
+        journal.erreur('interface', 'Lien externe refuse par le systeme', {
+          hote: (() => {
+            try {
+              return new URL(lien.href).host;
+            } catch {
+              return 'illisible';
+            }
+          })(),
+          cause: String(cause),
+        });
       });
   };
 

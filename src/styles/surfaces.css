@@ -1935,3 +1935,121 @@
   color: var(--success);
   border-color: color-mix(in oklab, var(--success) 45%, transparent);
 }
+
+/* ==========================================================================
+   Le cadrage de la banniere
+
+   Une image qu'on tire a la main, et une glissiere pour grossir. Le cadre a
+   les proportions de la banniere du profil — trois pour un environ — pour que
+   ce qu'on y voit soit ce qui paraitra, et non une version plus haute ou plus
+   large qui cadrerait autre chose.
+   ========================================================================== */
+
+.cadrage__cadre {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 1;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+
+  /* La main dit que ca se tire ; sans elle, rien ne le laisse deviner. */
+  cursor: grab;
+
+  /* Sur telephone, sans cela, le geste fait defiler la fenetre au lieu de
+     cadrer — et l'on ne peut plus rien regler du tout. */
+  touch-action: none;
+
+  /* Un glissement qui selectionne du texte au passage donne l'impression que
+     la commande derape. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cadrage__cadre:active {
+  cursor: grabbing;
+}
+
+.cadrage__cadre:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cadrage__cadre img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+
+  /* Le navigateur propose de « deplacer l'image » vers un autre onglet, ce qui
+     interrompt le cadrage a chaque fois qu'on part un peu vite. */
+  -webkit-user-drag: none;
+}
+
+.cadrage__indice {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(transparent, rgb(0 0 0 / 55%));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.cadrage__cadre:hover .cadrage__indice,
+.cadrage__cadre:focus-visible .cadrage__indice {
+  opacity: 1;
+}
+
+/* L'indice ne sert qu'a la souris : au doigt, on tire l'image d'instinct, et
+   un bandeau de plus mange une bonne part d'un cadre deja petit. */
+@media (hover: none) {
+  .cadrage__indice { display: none; }
+}
+
+.cadrage__reglages {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.cadrage__zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  color: var(--text-muted);
+}
+
+.cadrage__zoom input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.cadrage__reset {
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cadrage__reset:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.cadrage__reset:not(:disabled):hover {
+  border-color: var(--accent);
+}
+
+[data-motion='reduced'] .cadrage__indice { transition: none; }

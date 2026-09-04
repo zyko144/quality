@@ -182,7 +182,16 @@ export function devPreview(name: string): ReactNode | null {
       username: 'zyko682',
       display_name: 'ex',
       avatar_url: null,
-      banner_url: null,
+      /*
+       * Une banniere, ici, plutot que `null`.
+       *
+       * Le reglage de cadrage n'apparait qu'avec une image — sans elle, il n'a
+       * rien a montrer ni rien a regler. Un apercu sans banniere ne permettrait
+       * donc jamais de le voir, ce qui est precisement l'inverse de ce que cet
+       * ecran sert a faire.
+       */
+      banner_url: '/quality_logo.png',
+      banner_frame: null,
       bio: null,
       pronouns: null,
       custom_status: null,

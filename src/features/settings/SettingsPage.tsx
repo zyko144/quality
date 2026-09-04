@@ -15,6 +15,7 @@ import { useMajEtat, relancerApplication } from '@/features/shell/MiseAJour';
 
 import { RechercheReglages } from './RechercheReglages';
 import { ReglageRaccourcis } from './ReglageRaccourcis';
+import { lireCadrage, styleDeCadrage } from '@/features/profile/cadrage';
 import {
   permissionState,
   requestPermission,
@@ -308,7 +309,12 @@ function AccountSection() {
           */}
           <div className="account__banner">
             {profile.banner_url ? (
-              <img src={profile.banner_url} alt="" className="account__banner-image" />
+              <img
+                src={profile.banner_url}
+                alt=""
+                className="account__banner-image"
+                style={styleDeCadrage(lireCadrage(profile.banner_frame))}
+              />
             ) : (
               <span className="account__banner-fallback" aria-hidden="true" />
             )}

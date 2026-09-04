@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 /**
  * Image qui ne s'anime qu'au survol.
@@ -29,11 +29,14 @@ export function AnimatedImage({
   className,
   /** `always` joue en continu, `never` fige, `hover` ne joue qu'au survol. */
   mode,
+  /** Cadrage, quand l'image est une banniere. Voir `profile/cadrage.ts`. */
+  style,
 }: {
   src: string;
   alt: string;
   className?: string;
   mode: 'always' | 'hover' | 'never';
+  style?: CSSProperties;
 }) {
   const [frozen, setFrozen] = useState<string | null>(null);
   const [hovered, setHovered] = useState(false);
@@ -84,6 +87,7 @@ export function AnimatedImage({
   return (
     <img
       className={className}
+      style={style}
       src={playing ? src : frozen}
       alt={alt}
       loading="lazy"

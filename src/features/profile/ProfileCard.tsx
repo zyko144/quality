@@ -15,6 +15,7 @@ import { ROLE_LABEL, type Profile, type ProfileStats, type SpaceRole, type UUID 
 import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
 import { BadgeVisual } from '@/components/BadgeVisual';
 import { MemberRoles } from './MemberRoles';
+import { lireCadrage, styleDeCadrage } from './cadrage';
 import { useFriends } from '@/store/friends';
 
 /**
@@ -164,6 +165,9 @@ export function ProfileCard({ userId }: { userId: UUID }) {
         { id: 'espaces', label: `Espaces (${espaces.length})` },
         { id: 'amis', label: `Amis (${amis.length})` },
       ] as const);
+  // Le meme calcul que dans l'editeur : ce qu'on y a cadre est ce qui parait ici.
+  const cadrage = lireCadrage(profile.banner_frame);
+
   const cardStyle =
     typeof hue === 'number' ? ({ '--hue-primary': hue } as React.CSSProperties) : undefined;
 
@@ -174,6 +178,13 @@ export function ProfileCard({ userId }: { userId: UUID }) {
         Elle donne sa couleur a l'ensemble sans jamais disputer la lecture :
         floutee a ce point, il n'en reste que des masses colorees. Le texte
         passe dessus sur un voile sombre, jamais sur l'image nette.
+
+        Le voile ne suit PAS le cadrage, et c'est voulu. Il porte un
+        `scale(1.35)` en feuille de style, la pour cacher le lisere pale que
+        laisse un flou de quarante-quatre pixels sur les quatre bords ; un
+        cadrage a 1,1 ecraserait ce grossissement et ferait reparaitre le
+        lisere. Rien n'est perdu : sous ce flou il ne reste que des masses
+        colorees, ou aucun cadrage ne se percoit.
       */}
       <div className="profile__wash" aria-hidden="true">
         {profile.banner_url ? (
@@ -193,6 +204,7 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                 src={profile.banner_url}
                 alt=""
                 className="profile__banner-image"
+                style={styleDeCadrage(cadrage)}
                 // Ouvrir une fiche est deja un geste delibere : la banniere
                 // s'anime sans qu'il faille en plus la survoler.
                 // « Jamais » reste respecte — c'est une demande, pas un
@@ -200,7 +212,12 @@ export function ProfileCard({ userId }: { userId: UUID }) {
                 mode={animate === 'never' ? 'never' : 'always'}
               />
                 ) : (
-              <img src={profile.banner_url} alt="" className="profile__banner-image" />
+              <img
+                src={profile.banner_url}
+                alt=""
+                className="profile__banner-image"
+                style={styleDeCadrage(cadrage)}
+              />
                 )
               ) : (
                 <span className="profile__banner-fallback" />
