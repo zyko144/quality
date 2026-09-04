@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.7.3
+
+- Twitch, Spotify et GitHub se connectent maintenant pour de vrai : on part
+  chez le service, il demande votre accord, et il rend lui-meme votre
+  identifiant. Plus de pseudo tape a la main qu'on pouvait ecrire de
+  travers — ou emprunter a quelqu'un d'autre.
+- YouTube, Steam et Roblox restent en saisie manuelle, et l'ecran le dit.
+
 ## 9.7.2
 
 - Echow consommait enormement sans que personne ne s'en serve : un
