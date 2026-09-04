@@ -708,15 +708,32 @@ a.attachment:hover {
 
 /* --------------------------------------------------------------- Carte */
 
+/*
+ * La carte porte la couleur du site, diluee dans du transparent.
+ *
+ * Elle portait `--bg-sunken`, le gris le plus sombre : trois liens dans une
+ * conversation donnaient trois rectangles noirs identiques, qu'il fallait lire
+ * un par un pour distinguer. La teinte vient de `marques.ts`, deduite du seul
+ * nom de domaine — aucune requete vers le site, donc rien qui lui annonce que
+ * quelqu'un vient de recevoir son lien.
+ *
+ * Sur du transparent et non sur un fond sombre : melangee a du presque-noir,
+ * une teinte redevient du presque-noir, et l'on aurait refait exactement ce
+ * qu'on corrige. Le trait de gauche reste, plus franc : c'est lui qui donne
+ * l'accroche quand plusieurs cartes se suivent.
+ */
 .preview-card {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--bg-sunken);
-  border: 1px solid var(--border-subtle);
-  border-left: 3px solid var(--border-strong);
+  /* Le FOND est pose plus bas, avec le verre : voir « Apercus : matiere et
+     relief ». Le definir ici aussi le ferait ecraser au repos et survivre au
+     survol, par difference de specificite — le genre d'incoherence qu'on ne
+     relie a rien en la voyant. */
+  border: 1px solid color-mix(in oklab, var(--teinte) 45%, transparent);
+  border-left: 3px solid var(--teinte);
   color: var(--text-secondary);
   text-decoration: none;
   transition:
@@ -725,8 +742,7 @@ a.attachment:hover {
 }
 
 .preview-card:hover {
-  background: var(--bg-hover);
-  border-left-color: var(--accent);
+  border-color: color-mix(in oklab, var(--teinte) 70%, transparent);
   text-decoration: none;
 }
 
@@ -739,8 +755,8 @@ a.attachment:hover {
   height: 34px;
   flex: none;
   border-radius: var(--radius-sm);
-  background: var(--accent-soft);
-  color: var(--accent-text);
+  background: color-mix(in oklab, var(--teinte) 30%, transparent);
+  color: var(--teinte);
   font-weight: var(--weight-bold);
   font-size: var(--text-sm);
 }
@@ -1025,6 +1041,36 @@ a.attachment:hover {
   box-shadow: var(--shadow-md), var(--edge-light);
   /* Souleve d'un pixel : la carte repond, sans deplacer le texte autour. */
   transform: translateY(-1px);
+}
+
+/*
+ * La teinte du site se pose PAR-DESSUS le verre, elle ne le remplace pas.
+ *
+ * Ici et nulle part ailleurs : c'est la derniere regle qui parle du fond de
+ * cette carte, donc la seule qui s'applique vraiment. En poser une deuxieme
+ * plus haut donnerait un fond gris au repos et colore au survol, par simple
+ * difference de specificite.
+ *
+ * Un degrade d'une seule couleur, parce que `background` n'empile que des
+ * images : c'est la facon habituelle de superposer un aplat a un fond
+ * existant sans le perdre.
+ */
+.preview-card {
+  background:
+    linear-gradient(
+      color-mix(in oklab, var(--teinte) 18%, transparent),
+      color-mix(in oklab, var(--teinte) 18%, transparent)
+    ),
+    var(--glass-bg);
+}
+
+.preview-card:hover {
+  background:
+    linear-gradient(
+      color-mix(in oklab, var(--teinte) 30%, transparent),
+      color-mix(in oklab, var(--teinte) 30%, transparent)
+    ),
+    var(--glass-bg);
 }
 
 .preview-card__mark {

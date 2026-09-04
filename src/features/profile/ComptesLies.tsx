@@ -7,7 +7,6 @@ import {
   comptesVisibles,
   type Service,
 } from '@/store/comptesLies';
-import { demarrerLiaison, identitesLiees, seLiePaeLuiMeme } from './liaisonOAuth';
 
 /**
  * Les comptes lies, dans les reglages.
@@ -17,20 +16,16 @@ import { demarrerLiaison, identitesLiees, seLiePaeLuiMeme } from './liaisonOAuth
  * a publier ce qu'on voulait seulement connecter — et ce genre de surprise ne
  * se repare pas apres coup.
  *
- * Deux facons de lier, et pourquoi les deux existent
- * ---------------------------------------------------
- * **Le service repond lui-meme.** On part chez lui, il demande son accord a la
- * personne, et il rend un identifiant qu'elle ne choisit pas. Twitch, Spotify
- * et GitHub savent le faire. C'est la bonne facon : le compte lie devient une
- * affirmation verifiable.
+ * Ce qui n'est pas fait ici
+ * -------------------------
+ * L'authentification aupres des services. Elle demande un compte developpeur
+ * chez chacun, une adresse de retour declaree, et un secret qui ne peut pas
+ * vivre dans une application de bureau. On enregistre donc l'identifiant que la
+ * personne donne, et l'on en fait un lien.
  *
- * **On tape son pseudo.** Pour les autres. Personne ne verifie rien — on peut
- * ecrire le pseudo d'un autre, ou une faute de frappe qui mene a une page
- * vide.
- *
- * Les deux sont proposees, et l'ecran dit laquelle est laquelle. Une seule
- * facon qui mentirait sur la moitie des cas serait pire que deux honnetes.
- * Voir `liaisonOAuth.ts` pour la liste et ses raisons.
+ * C'est moins que « connecter son compte », et le texte le dit plutot que de
+ * laisser croire a une synchronisation qui n'existe pas. Ce qui marche marche
+ * vraiment ; ce qui viendra plus tard n'est pas promis aujourd'hui.
  */
 export function ComptesLies() {
   const moi = useSession((etat) => etat.profile?.id);
@@ -43,70 +38,10 @@ export function ComptesLies() {
   const [ouvert, setOuvert] = useState<Service | null>(null);
   const [saisie, setSaisie] = useState('');
   const [refus, setRefus] = useState<string | null>(null);
-  const [enRoute, setEnRoute] = useState<Service | null>(null);
-
-  /*
-   * Part chez le service. La page s'en va si tout se passe bien.
-   *
-   * L'attente n'est donc jamais levee dans le cas nominal — c'est voulu : entre
-   * le clic et le depart il s'ecoule quelques centaines de millisecondes, et un
-   * bouton qui redevient cliquable pendant ce temps invite a cliquer deux fois.
-   */
-  const connecter = async (service: Service) => {
-    setRefus(null);
-    setEnRoute(service);
-
-    const probleme = await demarrerLiaison(service);
-    if (probleme) {
-      setRefus(probleme);
-      setEnRoute(null);
-    }
-  };
 
   useEffect(() => {
     if (moi) void charger([moi]);
   }, [moi, charger]);
-
-  /*
-   * Au retour du service, on enregistre ce qu'il a reconnu.
-   *
-   * `linkIdentity` quitte la page : rien de ce qui suit l'appel ne s'execute.
-   * L'identite existe donc cote Supabase quand on revient, mais notre table ne
-   * la connait pas encore — c'est ici que les deux se rejoignent.
-   *
-   * On n'ecrit que ce qui DIFFERE. Sans cette comparaison, chaque ouverture de
-   * la page reecrirait les memes lignes, pour une valeur qui ne change qu'une
-   * fois tous les deux ans.
-   */
-  useEffect(() => {
-    if (!moi) return;
-    let annule = false;
-
-    void (async () => {
-      const trouvees = await identitesLiees();
-      if (annule) return;
-
-      const deja = comptesVisibles(useComptesLies.getState().parProfil[moi], true);
-
-      for (const [service, lue] of Object.entries(trouvees) as [
-        Service,
-        { identifiant: string; nom: string },
-      ][]) {
-        const courant = deja.find((entree) => entree.service === service);
-        if (courant?.identifiant === lue.identifiant && courant.nom_affiche === lue.nom) {
-          continue;
-        }
-
-        await lier(service, lue.identifiant, lue.nom);
-      }
-
-      if (!annule) await charger([moi]);
-    })();
-
-    return () => {
-      annule = true;
-    };
-  }, [moi, lier, charger]);
 
   const miens = comptesVisibles(parProfil[moi ?? ''], true);
   const parService = new Map(miens.map((entree) => [entree.service, entree]));
@@ -222,27 +157,6 @@ export function ComptesLies() {
                     Lier
                   </button>
                 </span>
-              ) : seLiePaeLuiMeme(service) ? (
-                /*
-                  Un seul bouton, qui emmene chez le service.
-
-                  Pas de champ a cote : proposer les deux laisserait croire
-                  qu'ils font la meme chose, alors que l'un verifie et l'autre
-                  non. Quand le service sait repondre, c'est lui qui repond.
-                */
-                <button
-                  type="button"
-                  className="btn btn--sm btn--primary"
-                  disabled={enRoute === service}
-                  onClick={() => void connecter(service)}
-                >
-                  {enRoute === service ? (
-                    <span className="spinner" />
-                  ) : (
-                    <Icon name="link" size={14} />
-                  )}
-                  Connecter {info.nom}
-                </button>
               ) : (
                 <button
                   type="button"
@@ -251,9 +165,8 @@ export function ComptesLies() {
                     setOuvert(service);
                     setSaisie('');
                   }}
-                  title={`${info.nom} ne sait pas repondre de lui-meme : l'identifiant est saisi a la main.`}
                 >
-                  Lier a la main
+                  Lier
                 </button>
               )}
             </li>

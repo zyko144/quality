@@ -11,6 +11,7 @@ import { MaintenanceScreen } from '@/features/maintenance/MaintenanceScreen';
 import { BadgesPage } from '@/features/badges/BadgesPage';
 import { useBadges, type Badge } from '@/store/badges';
 import { useComptesLies } from '@/store/comptesLies';
+import { LinkPreviews } from '@/features/messages/LinkPreview';
 
 /**
  * Apercu d'un ecran isole, en developpement seulement.
@@ -39,6 +40,29 @@ export function devPreview(name: string): ReactNode | null {
   // L'ecran rouge, pour verifier que la mise en variables de sa palette ne l'a
   // pas abime : c'est la meme feuille qui sert aux deux.
   if (name === 'maintenance') return <MaintenanceScreen />;
+
+  /*
+   * Les apercus de liens, hors conversation.
+   *
+   * Leur couleur vient du domaine vise : la verifier demanderait sinon
+   * d'ecrire six messages dans un vrai salon, a chaque retouche de style.
+   */
+  if (name === 'apercus') {
+    const liens = [
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      'https://twitch.tv/zyko682',
+      'https://open.spotify.com/album/1234567890',
+      'https://github.com/zyko144/quality',
+      'https://fr.wikipedia.org/wiki/Echo',
+      'https://un-site-inconnu.example/page/interne',
+    ].join(' ');
+
+    return (
+      <div style={{ maxWidth: 520, margin: '32px auto' }}>
+        <LinkPreviews content={liens} limite={6} />
+      </div>
+    );
+  }
 
   if (name === 'badges') {
     /*

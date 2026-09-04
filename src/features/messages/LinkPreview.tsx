@@ -1,5 +1,7 @@
+import type React from 'react';
 import { useMemo, useState } from 'react';
 import { Icon } from '@/components/Icon';
+import { marqueDe, teinteDe } from '@/lib/marques';
 
 /**
  * Apercus de liens.
@@ -109,8 +111,16 @@ export function previewsFor(content: string, limit = 3): Preview[] {
   return previews;
 }
 
-export function LinkPreviews({ content }: { content: string }) {
-  const previews = useMemo(() => previewsFor(content), [content]);
+export function LinkPreviews({
+  content,
+  /** Combien d'apercus au plus. Trois dans une conversation ; l'apercu de
+      developpement en demande davantage pour comparer les couleurs. */
+  limite,
+}: {
+  content: string;
+  limite?: number;
+}) {
+  const previews = useMemo(() => previewsFor(content, limite), [content, limite]);
   if (previews.length === 0) return null;
 
   return (
@@ -189,13 +199,33 @@ function VideoPreview({
 }
 
 function LinkCard({ link }: { link: Parsed }) {
+  /*
+   * La carte prend la couleur du site, quand on la connait.
+   *
+   * Elle portait le gris le plus sombre de la palette : trois liens dans une
+   * conversation donnaient trois rectangles noirs identiques, et il fallait
+   * lire chacun pour savoir lequel menait a une video. Le rouge de YouTube se
+   * reconnait avant d'etre lu.
+   *
+   * Le nom du site remplace l'initiale quand il est connu — « YouTube » dit
+   * plus que « Y ». L'initiale reste pour tout le reste : c'est encore un
+   * repere, et cela ne demande toujours aucune requete au site vise.
+   */
+  const marque = marqueDe(link.host);
+
   return (
-    <a className="preview-card" href={link.url} target="_blank" rel="noopener noreferrer nofollow">
+    <a
+      className="preview-card"
+      style={{ '--teinte': teinteDe(link.host) } as React.CSSProperties}
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+    >
       <span className="preview-card__mark" aria-hidden="true">
         {link.host.charAt(0).toUpperCase()}
       </span>
       <span className="preview-card__body">
-        <span className="preview-card__host">{link.host}</span>
+        <span className="preview-card__host">{marque?.nom ?? link.host}</span>
         {link.path ? <span className="preview-card__path truncate">{link.path}</span> : null}
       </span>
       <Icon name="link" size={14} />
