@@ -196,15 +196,114 @@ pub async fn pochette_en_cours() -> String {
     .unwrap_or_default()
 }
 
-/// La seance de lecture en cours, telle que Windows la connait.
+/// Ce que vaut une seance, pour choisir entre plusieurs.
+///
+/// Windows peut en tenir cinq a la fois : un lecteur de musique, deux onglets,
+/// un jeu, une visioconference. `GetCurrentSession()` rend la plus RECEMMENT
+/// active — et un onglet qui demarre une video passe alors devant la musique
+/// qui joue depuis vingt minutes. C'est exactement ce qui a ete rapporte :
+/// « ca met ce que j'ecoute sur le navigateur mais pas Spotify ».
+///
+/// On note donc chaque seance, et l'on garde la meilleure :
+///
+/// - **Elle joue** pese plus que tout le reste. Un lecteur en pause n'est pas
+///   ce qu'on ecoute, quelle que soit l'application.
+/// - **Un lecteur de musique** passe devant un navigateur. Quand les deux
+///   jouent, c'est la musique qu'on veut montrer — un navigateur joue aussi les
+///   videos, les publicites et les sons d'interface.
+/// - **Un titre** est exige : une seance sans titre n'a rien a afficher.
+///
+/// La regle est une fonction ORDINAIRE, qui ne prend que deux valeurs. Elle
+/// pourrait lire la seance elle-meme ; elle ne le fait pas, pour pouvoir etre
+/// mise a l'epreuve sans qu'aucune musique ne joue.
+pub(crate) fn note_de_seance(joue: bool, source: &str) -> i32 {
+    let source = source.to_lowercase();
+
+    let musique = [
+        "spotify", "deezer", "tidal", "itunes", "applemusic", "musicbee", "foobar", "aimp",
+        "winamp", "vlc",
+    ]
+    .iter()
+    .any(|nom| source.contains(nom));
+
+    let navigateur = ["chrome", "msedge", "firefox", "brave", "opera"]
+        .iter()
+        .any(|nom| source.contains(nom));
+
+    let mut note = 0;
+    if joue {
+        note += 100;
+    }
+    if musique {
+        note += 20;
+    }
+    if navigateur {
+        note -= 10;
+    }
+
+    note
+}
+
+#[cfg(windows)]
+fn note_de_la_seance(
+    seance: &windows::Media::Control::GlobalSystemMediaTransportControlsSession,
+) -> i32 {
+    let joue = seance
+        .GetPlaybackInfo()
+        .and_then(|i| i.PlaybackStatus())
+        .map(|etat| etat.0 == 4)
+        .unwrap_or(false);
+
+    let source = seance
+        .SourceAppUserModelId()
+        .map(|t| t.to_string())
+        .unwrap_or_default();
+
+    note_de_seance(joue, &source)
+}
+
+/// La seance qu'on montre : celle qui joue, et de preference de la musique.
 #[cfg(windows)]
 fn seance_courante() -> Option<windows::Media::Control::GlobalSystemMediaTransportControlsSession> {
-    GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+    let gestionnaire = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
         .ok()?
         .get()
-        .ok()?
-        .GetCurrentSession()
-        .ok()
+        .ok()?;
+
+    let mut meilleure: Option<(
+        i32,
+        windows::Media::Control::GlobalSystemMediaTransportControlsSession,
+    )> = None;
+
+    if let Ok(seances) = gestionnaire.GetSessions() {
+        for seance in seances {
+            // Une seance sans titre n'a rien a montrer : certains lecteurs en
+            // declarent une des leur ouverture, avant d'avoir joue quoi que ce
+            // soit.
+            let a_un_titre = seance
+                .TryGetMediaPropertiesAsync()
+                .ok()
+                .and_then(|o| o.get().ok())
+                .and_then(|p| p.Title().ok())
+                .map(|t| !t.to_string().trim().is_empty())
+                .unwrap_or(false);
+
+            if !a_un_titre {
+                continue;
+            }
+
+            let note = note_de_la_seance(&seance);
+
+            if meilleure.as_ref().map(|(vue, _)| note > *vue).unwrap_or(true) {
+                meilleure = Some((note, seance));
+            }
+        }
+    }
+
+    // Le repli garde l'ancien comportement quand l'enumeration ne donne rien.
+    meilleure
+        .map(|(_, seance)| seance)
+        .or_else(|| gestionnaire.GetCurrentSession().ok())
 }
 
 #[cfg(windows)]
@@ -287,7 +386,7 @@ mod essais {
         let reponse = super::lire_maintenant();
         let duree = debut.elapsed();
 
-        println!("metadonnees en {duree:?} : {:?}", reponse.as_ref().map(|l| &l.titre));
+        println!("metadonnees en {duree:?} : {:?}", reponse.as_ref().map(|l| (&l.source, &l.titre)));
 
         assert!(
             duree < std::time::Duration::from_millis(500),
@@ -358,6 +457,48 @@ pub fn ouvrir_lien(url: String) -> Result<(), String> {
 #[cfg(not(windows))]
 pub fn ouvrir_lien(_url: String) -> Result<(), String> {
     Err("Disponible seulement sur Windows.".into())
+}
+
+#[cfg(test)]
+mod essais_choix {
+    use super::note_de_seance;
+
+    /// Ce qui joue passe avant tout le reste.
+    ///
+    /// Un lecteur en pause n'est pas ce qu'on ecoute, quelle que soit
+    /// l'application : Spotify en pause perd contre un onglet qui joue.
+    #[test]
+    fn ce_qui_joue_gagne() {
+        assert!(note_de_seance(true, "MSEdge") > note_de_seance(false, "Spotify.exe"));
+    }
+
+    /// A egalite, la musique passe devant le navigateur.
+    ///
+    /// C'est le defaut rapporte : `GetCurrentSession()` rend la seance la plus
+    /// RECEMMENT active, donc un onglet qui demarre une video passait devant la
+    /// musique qui jouait depuis vingt minutes.
+    ///
+    /// Mesure sur cette machine, les deux en lecture :
+    ///     Spotify.exe  note=120
+    ///     MSEdge       note=90
+    #[test]
+    fn la_musique_passe_devant_le_navigateur() {
+        assert!(note_de_seance(true, "Spotify.exe") > note_de_seance(true, "MSEdge"));
+        assert!(note_de_seance(true, "Deezer.exe") > note_de_seance(true, "chrome"));
+    }
+
+    /// Une application inconnue reste entre les deux.
+    ///
+    /// Elle ne merite ni la faveur d'un lecteur reconnu, ni la defiance faite
+    /// aux navigateurs — lesquels jouent aussi les publicites et les sons
+    /// d'interface.
+    #[test]
+    fn un_lecteur_inconnu_tient_le_milieu() {
+        let inconnu = note_de_seance(true, "UnLecteurQuelconque.exe");
+
+        assert!(inconnu < note_de_seance(true, "Spotify.exe"));
+        assert!(inconnu > note_de_seance(true, "firefox"));
+    }
 }
 
 #[cfg(all(test, windows))]

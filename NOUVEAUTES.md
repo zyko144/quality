@@ -12,6 +12,12 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.7
+
+- C'est bien Spotify qui s'affiche, et non l'onglet de navigateur ouvert a
+  cote. Windows rendait la lecture la plus recemment demarree ; on choisit
+  desormais celle qui joue, et la musique passe devant le navigateur.
+
 ## 9.8.6
 
 - L'etat — en ligne, ne pas deranger, invisible — retrouve sa place en bas
