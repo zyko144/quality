@@ -12,6 +12,16 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.1
+
+- Votre fiche peut montrer ce que vous ecoutez : pochette, titre, artiste
+  et minutage qui avance. A activer dans Confidentialite ; tant que c'est
+  eteint, rien n'est meme lu.
+- Un bouton « Ecouter avec » envoie le morceau en message prive.
+- Le degrade du profil ne coupe plus la carte d'un trait en travers du
+  texte. Les couleurs sont des lueurs, sans bord a placer au mauvais
+  endroit.
+
 ## 9.8.0
 
 - Les couleurs de votre carte se choisissent precisement, et de trois

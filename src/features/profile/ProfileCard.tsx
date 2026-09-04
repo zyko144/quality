@@ -12,11 +12,13 @@ import { useComptesLies, comptesVisibles, SERVICES } from '@/store/comptesLies';
 import { LogoService } from '@/features/profile/ComptesLies';
 import { hueFor } from '@/constants';
 import { ROLE_LABEL, type Profile, type ProfileStats, type SpaceRole, type UUID } from '@/types/db';
+import type { Activite } from '@/store/comptesLies';
 import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
 import { BadgeVisual } from '@/components/BadgeVisual';
 import { MemberRoles } from './MemberRoles';
 import { lireCadrage, styleDeCadrage } from './cadrage';
 import { lireCouleurs, styleDesCouleurs } from './couleursProfil';
+import { CarteEcoute } from './CarteEcoute';
 import { useFriends } from '@/store/friends';
 
 /**
@@ -190,6 +192,38 @@ export function ProfileCard({ userId }: { userId: UUID }) {
 
   const cardStyle = styleDesCouleurs(couleurs);
 
+  /*
+   * « Ecouter avec » ouvre la conversation et y depose le morceau.
+   *
+   * Pas de lecture synchronisee : commander le lecteur de quelqu'un d'autre
+   * demanderait la liaison OAuth qu'on a justement evitee. On fait donc en un
+   * geste ce qu'on ferait en quatre — ouvrir le message prive, coller le lien,
+   * dire de quoi il s'agit, envoyer.
+   */
+  const inviterAEcouter = (activite: Activite) => {
+    if (!activite.lien_url) return;
+
+    const morceau = activite.detail
+      ? `${activite.titre} — ${activite.detail}`
+      : activite.titre;
+
+    void (async () => {
+      const salon = await openDm(userId);
+      const moi = me?.id;
+      if (!salon || !moi) return;
+
+      await useChat.getState().sendMessage({
+        channelId: salon.id,
+        authorId: moi,
+        content: `On ecoute ca ensemble ? ${morceau}
+${activite.lien_url}`,
+      });
+
+      // La conversation est ouverte derriere : fermer la fiche y amene.
+      closeModal();
+    })();
+  };
+
   return (
     <div className="profile" data-teintes={couleurs.style} style={cardStyle}>
       <TiltCard className="profile__card" glare>
@@ -352,36 +386,16 @@ export function ProfileCard({ userId }: { userId: UUID }) {
             ) : null}
 
             {/*
-              Ce qui est ecoute ou diffuse en ce moment.
+              Ce qui est ecoute en ce moment.
 
-              Pose juste sous l'etat personnalise parce que c'en est un, en
+              Pose sous les roles parce que c'est un etat, comme le statut — en
               plus vrai : il n'a pas besoin d'etre tenu a jour a la main.
             */}
             {activite ? (
-              <a
-                className="profile__activite"
-                href={activite.lien_url ?? undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {activite.image_url ? (
-                  <img className="profile__activite-image" src={activite.image_url} alt="" />
-                ) : null}
-
-                <span className="profile__activite-corps">
-                  <span className="profile__activite-genre">
-                    {activite.genre === 'ecoute'
-                      ? 'Ecoute'
-                      : activite.genre === 'direct'
-                        ? 'En direct'
-                        : 'Joue a'}
-                  </span>
-                  <span className="profile__activite-titre truncate">{activite.titre}</span>
-                  {activite.detail ? (
-                    <span className="profile__activite-detail truncate">{activite.detail}</span>
-                  ) : null}
-                </span>
-              </a>
+              <CarteEcoute
+                activite={activite}
+                onInviter={isMe ? undefined : inviterAEcouter}
+              />
             ) : null}
 
             {isMe ? (

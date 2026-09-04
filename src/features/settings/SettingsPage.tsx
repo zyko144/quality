@@ -638,6 +638,8 @@ function ProfileSection() {
 /* ========================================================================== */
 
 function PrivacySection() {
+  const preferences = useSession((state) => state.preferences);
+  const setPreference = useSession((state) => state.setPreference);
   const blocked = useFriends((state) => state.blocked);
   const profiles = useFriends((state) => state.profiles);
   const unblock = useFriends((state) => state.unblock);
@@ -652,6 +654,26 @@ function PrivacySection() {
   return (
     <div className="settings__page">
       <h1 className="settings__title">Confidentialite</h1>
+
+      <section className="settings__group">
+        <h2 className="settings__group-title">Ce que vous ecoutez</h2>
+        <p className="settings__hint">
+          Votre fiche peut montrer le morceau en cours — pochette, titre,
+          artiste et minutage — a qui la consulte. C&rsquo;est Windows qui dit
+          ce qui joue, quel que soit le lecteur : rien n&rsquo;est a lier, rien
+          n&rsquo;est demande a Spotify. Tant que ce reglage est eteint, rien
+          n&rsquo;est meme lu.
+        </p>
+
+        <div className="settings__stack">
+          <SwitchRow
+            label="Montrer ce que j'ecoute"
+            hint="Uniquement dans l'application de bureau : un navigateur n'a pas acces a cette information."
+            checked={preferences.partagerEcoute}
+            onChange={(value) => setPreference('partagerEcoute', value)}
+          />
+        </div>
+      </section>
 
       <section className="settings__group">
         <h2 className="settings__group-title">Qui peut vous ecrire</h2>

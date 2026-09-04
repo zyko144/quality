@@ -77,6 +77,12 @@ windows = { version = "0.58", features = [
   "Win32_System_WinRT_Direct3D11",
   "Win32_System_WinRT_Graphics_Capture",
   "Foundation",
+  # Ce que Windows sait de la lecture en cours, quelle que soit l application
+  # qui joue. Voir `musique.rs` : c est ce qui remplace une liaison OAuth chez
+  # Spotify, laquelle demanderait un compte developpeur et un secret.
+  "Media_Control",
+  "Storage_Streams",
+  "Foundation_Collections",
 ] }
 
 [profile.release]

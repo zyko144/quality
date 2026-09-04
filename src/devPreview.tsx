@@ -205,6 +205,25 @@ export function devPreview(name: string): ReactNode | null {
           },
         ],
       },
+      /*
+       * Un morceau en cours, sinon la carte d'ecoute se verifie a vide.
+       *
+       * `debut_le` est pose dans le passe : c'est ce qui fait avancer la barre
+       * chez celui qui regarde, sans qu'aucun message ne circule.
+       */
+      activites: {
+        [faux.id]: {
+          profil_id: faux.id,
+          genre: 'ecoute',
+          service: 'Spotify',
+          titre: 'Un titre plutot long pour voir ou il se coupe',
+          detail: 'Un artiste au nom lui aussi assez long',
+          image_url: null,
+          lien_url: 'https://open.spotify.com/search/test',
+          debut_le: new Date(Date.now() - 83_000).toISOString(),
+          duree_ms: 180_000,
+        },
+      },
       charger: async () => {},
     });
 

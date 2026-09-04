@@ -1322,39 +1322,79 @@
  */
 .profile .tilt__inner {
   position: relative;
+
+  /*
+   * La couleur est une LUEUR, pas un aplat.
+   *
+   * Premiere tentative : un degrade lineaire sur toute la carte, et en « duo »
+   * une coupure franche a 42 %. Le resultat etait mauvais, et pour une raison
+   * qui ne se voit qu'a l'ecran : la carte a deux colonnes, la coupure les
+   * traversait toutes les deux d'un trait horizontal, en plein milieu du texte
+   * de droite. Cela ne se lisait pas comme un choix mais comme un defaut
+   * d'affichage — un bloc de peinture pose de travers.
+   *
+   * Une lueur n'a pas de bord, donc pas de trait a placer au mauvais endroit.
+   * Elle vient du haut, s'eteint vers le milieu, et laisse la carte etre une
+   * carte. C'est aussi ce qui la fait ressembler a du verre teinte plutot qu'a
+   * du papier peint.
+   *
+   * `120% 70%` deborde volontairement en largeur : une lueur qui s'arrete aux
+   * bords dessine un ovale visible, et l'on cherche une ambiance, pas une
+   * forme.
+   */
   background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--profil-a, var(--accent)) 22%, transparent) 0%,
-      color-mix(in oklab, var(--profil-b, var(--accent)) 22%, transparent) 100%
+    radial-gradient(
+      120% 70% at 50% 0%,
+      color-mix(in oklab, var(--profil-a, var(--accent)) 30%, transparent) 0%,
+      transparent 72%
     ),
     var(--bg-raised);
 }
 
 /*
- * En « duo », la coupure est franche, et elle tombe ou la fiche en a deja une.
+ * En « duo », deux lueurs qui se rencontrent sans se toucher.
  *
- * `42%` place la bascule sous la banniere, entre ce qui se regarde et ce qui
- * se lit. Deux arrets a la meme position font un bord net : c'est la facon
- * habituelle d'obtenir une separation avec un degrade, et cela evite d'ecrire
- * une seconde couche de fond.
+ * Le haut porte la premiere couleur, le bas la seconde, et le milieu les laisse
+ * s'eteindre l'une vers l'autre. Deux zones se distinguent nettement, sans
+ * qu'aucun trait ne coupe le contenu.
  */
 .profile[data-teintes='duo'] .tilt__inner {
   background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--profil-a) 24%, transparent) 0%,
-      color-mix(in oklab, var(--profil-a) 24%, transparent) 42%,
-      color-mix(in oklab, var(--profil-b) 24%, transparent) 42%,
-      color-mix(in oklab, var(--profil-b) 24%, transparent) 100%
+    radial-gradient(
+      120% 62% at 50% 0%,
+      color-mix(in oklab, var(--profil-a) 34%, transparent) 0%,
+      transparent 68%
+    ),
+    radial-gradient(
+      120% 62% at 50% 100%,
+      color-mix(in oklab, var(--profil-b) 34%, transparent) 0%,
+      transparent 68%
     ),
     var(--bg-raised);
 }
 
-/* Le liseré de la carte suit la couleur du haut : c'est ce qu'on voit d'abord. */
-.profile .tilt__inner {
-  border-color: color-mix(in oklab, var(--profil-a, var(--accent)) 40%, var(--border-subtle));
+/*
+ * En « degrade », les deux couleurs se fondent sur toute la hauteur.
+ *
+ * C'est le seul des trois styles ou un degrade LINEAIRE a un sens : il n'a pas
+ * de bord parce qu'il n'a que des bords, chaque ligne differant a peine de la
+ * precedente. L'opacite reste basse — on teinte, on ne repeint pas.
+ */
+.profile[data-teintes='degrade'] .tilt__inner {
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in oklab, var(--profil-a) 30%, transparent) 0%,
+      color-mix(in oklab, var(--profil-b) 30%, transparent) 100%
+    ),
+    var(--bg-raised);
 }
+
+/* Le liseré suit la couleur du haut : c'est celle qu'on voit en premier. */
+.profile .tilt__inner {
+  border-color: color-mix(in oklab, var(--profil-a, var(--accent)) 35%, var(--border-subtle));
+}
+
 
 /*
  * `position` et `z-index` sont poses avec le reste de la grille, plus haut.
@@ -2324,18 +2364,16 @@
   background: var(--profil-a);
 }
 
+/* Deux lueurs, comme sur la carte : le bouton doit montrer ce qu'on aura. */
 .teintes-style__apercu[data-style='duo'] {
-  background: linear-gradient(
-    180deg,
-    var(--profil-a) 0%,
-    var(--profil-a) 50%,
-    var(--profil-b) 50%,
-    var(--profil-b) 100%
-  );
+  background:
+    radial-gradient(130% 70% at 50% 0%, var(--profil-a) 0%, transparent 72%),
+    radial-gradient(130% 70% at 50% 100%, var(--profil-b) 0%, transparent 72%),
+    var(--bg-sunken);
 }
 
 .teintes-style__apercu[data-style='degrade'] {
-  background: linear-gradient(180deg, var(--profil-a), var(--profil-b));
+  background: linear-gradient(170deg, var(--profil-a), var(--profil-b));
 }
 
 .teintes-choix {
@@ -2367,24 +2405,177 @@
 .teintes-choix__couleur input[type='color']::-webkit-color-swatch { border: none; border-radius: 3px; }
 
 /* L'apercu de l'editeur porte les memes couleurs que la carte. */
+/* L'apercu emploie les MEMES formules que la carte : voir `.profile`. */
 .editor-preview[data-teintes] {
   background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--profil-a) 22%, transparent),
-      color-mix(in oklab, var(--profil-b) 22%, transparent)
+    radial-gradient(
+      120% 70% at 50% 0%,
+      color-mix(in oklab, var(--profil-a) 30%, transparent) 0%,
+      transparent 72%
     ),
     var(--bg-raised);
 }
 
 .editor-preview[data-teintes='duo'] {
   background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--profil-a) 24%, transparent) 0%,
-      color-mix(in oklab, var(--profil-a) 24%, transparent) 42%,
-      color-mix(in oklab, var(--profil-b) 24%, transparent) 42%,
-      color-mix(in oklab, var(--profil-b) 24%, transparent) 100%
+    radial-gradient(
+      120% 62% at 50% 0%,
+      color-mix(in oklab, var(--profil-a) 34%, transparent) 0%,
+      transparent 68%
+    ),
+    radial-gradient(
+      120% 62% at 50% 100%,
+      color-mix(in oklab, var(--profil-b) 34%, transparent) 0%,
+      transparent 68%
     ),
     var(--bg-raised);
+}
+
+.editor-preview[data-teintes='degrade'] {
+  background:
+    linear-gradient(
+      170deg,
+      color-mix(in oklab, var(--profil-a) 30%, transparent) 0%,
+      color-mix(in oklab, var(--profil-b) 30%, transparent) 100%
+    ),
+    var(--bg-raised);
+}
+
+/* ==========================================================================
+   Ce qu'on ecoute
+
+   Une carte qui tient dans la colonne, pochette comprise. Elle ne depasse
+   jamais : `min-width: 0` sur le corps est ce qui autorise le texte a se
+   couper plutot qu'a pousser la carte hors de la fiche — sans lui, un titre
+   long elargit son parent, indefiniment.
+   ========================================================================== */
+
+.ecoute {
+  position: relative;
+  margin: var(--space-4) var(--space-5) 0;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--profil-a, var(--accent)) 40%, transparent);
+  background: color-mix(in oklab, var(--profil-a, var(--accent)) 14%, transparent);
+  overflow: hidden;
+}
+
+.ecoute__lien {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+a.ecoute__lien:hover {
+  background: color-mix(in oklab, var(--profil-a, var(--accent)) 22%, transparent);
+  text-decoration: none;
+}
+
+.ecoute__pochette {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-sunken);
+  color: var(--text-faint);
+}
+
+.ecoute__pochette img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ecoute__corps {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  /* Sans cela, un titre long elargit la carte au lieu de se couper. */
+  min-width: 0;
+  flex: 1;
+}
+
+.ecoute__source {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in oklab, var(--profil-a, var(--accent)) 55%, var(--text-primary));
+}
+
+.ecoute__titre {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.ecoute__artiste {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------ La minuterie */
+
+.ecoute__temps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ecoute__barre {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--text-primary) 18%, transparent);
+  overflow: hidden;
+}
+
+/*
+ * L'avance est une TRANSFORMATION, pas une largeur.
+ *
+ * Une largeur en pourcentage refait la mise en page a chaque seconde, dans
+ * chaque fiche ouverte. Une transformation ne touche qu'a la composition, que
+ * la carte graphique fait sans reflechir — et c'est une seconde sur soixante,
+ * indefiniment, tant que la fiche reste ouverte.
+ */
+.ecoute__barre-avance {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: color-mix(in oklab, var(--profil-a, var(--accent)) 70%, var(--text-primary));
+}
+
+.ecoute__chiffres {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  flex: none;
+}
+
+/* ------------------------------------------------------------ L'invitation */
+
+.ecoute__inviter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px;
+  border: none;
+  border-top: 1px solid color-mix(in oklab, var(--profil-a, var(--accent)) 30%, transparent);
+  background: color-mix(in oklab, var(--profil-a, var(--accent)) 10%, transparent);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.ecoute__inviter:hover {
+  background: color-mix(in oklab, var(--profil-a, var(--accent)) 26%, transparent);
+  color: var(--text-primary);
 }

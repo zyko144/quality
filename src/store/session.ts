@@ -100,6 +100,16 @@ export interface Preferences {
    */
   underlineLinks: boolean;
   /**
+   * Montrer ce qu'on ecoute sur son profil.
+   *
+   * Eteint par defaut, et ce n'est pas une precaution de facade : tant qu'il
+   * l'est, rien n'est meme LU. Lire sans publier serait deja de trop.
+   *
+   * Ne fonctionne que dans l'application de bureau : c'est Windows qui dit ce
+   * qui joue, et un navigateur n'a pas acces a cela.
+   */
+  partagerEcoute: boolean;
+  /**
    * Taille du texte, independante de la densite.
    *
    * La densite change l'espacement, pas la lisibilite des lettres : quelqu'un
@@ -160,6 +170,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   confirmDelete: true,
 
   underlineLinks: false,
+  partagerEcoute: false,
   textScale: 'normal',
   alwaysShowFocus: false,
   saturation: 100,

@@ -35,6 +35,7 @@ import { Support } from '@/features/support/Support';
 import { Conditions, CONDITIONS_VERSION } from '@/features/onboarding/Conditions';
 import { useFriends } from '@/store/friends';
 import { BATTEMENT } from '@/lib/presence';
+import { SuiviEcoute } from '@/features/profile/SuiviEcoute';
 import { Icon } from '@/components/Icon';
 import { useIsMobile } from '@/lib/useMediaQuery';
 import type { Profile } from '@/types/db';
@@ -430,6 +431,9 @@ export function Workspace() {
         (navOpen ? ' is-nav-open' : '')
       }
     >
+      {/* Sans rendu : il observe ce qui joue et l'annonce, si le reglage le veut. */}
+      <SuiviEcoute />
+
       {/* Reduire, agrandir, fermer — la barre du systeme est desactivee, ces
           commandes vivent maintenant dans l'application. Posees une seule fois
           et en position fixe : elles doivent rester atteignables quelle que

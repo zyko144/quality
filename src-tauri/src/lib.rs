@@ -79,6 +79,11 @@ mod clavier;
 /// Capture du son du systeme, par le bouclage de Windows. Voir `son.rs`.
 mod flux;
 mod image;
+
+/// Ce que l'ordinateur joue, lu chez Windows plutot que chez Spotify.
+/// Voir `musique.rs` : c'est ce qui evite une liaison OAuth.
+mod musique;
+
 mod son;
 
 /// Retire la fenetre de selection de partage imposee par WebView2.
@@ -222,6 +227,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            musique::lecture_en_cours,
             capture::sources_partageables,
             capture::zone_source,
             capture::masquer_barre_partage,
