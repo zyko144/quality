@@ -191,8 +191,24 @@
   transition: filter 0.2s ease;
 }
 
+/*
+ * Le halo prend la COULEUR du badge, a trente pour cent.
+ *
+ * Il etait noir : une ombre portee, qui detache le dessin du fond sans rien
+ * dire de plus. Or la couleur d'un badge est ce qui le range dans sa famille,
+ * et sur un badge a dessin elle n'apparaissait NULLE PART — la tuile s'efface
+ * justement pour laisser le dessin seul.
+ *
+ * Deux ombres superposees, et l'ordre compte : la noire d'abord, courte, qui
+ * detache ; la coloree ensuite, large et diffuse, qui rayonne. L'inverse
+ * poserait le noir par-dessus la couleur et l'eteindrait.
+ *
+ * Trente pour cent : assez pour reconnaitre la couleur d'un coup d'oeil, assez
+ * peu pour qu'une rangee de six badges ne devienne pas une guirlande.
+ */
 .echow-badge-icon--dessin .echow-badge-icon__dessin {
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 5px color-mix(in oklab, var(--badge-color) 30%, transparent));
 }
 
 .badge-glow--rare.echow-badge-icon--dessin .echow-badge-icon__dessin {

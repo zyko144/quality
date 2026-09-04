@@ -12,6 +12,13 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.1
+
+- Chaque badge rayonne desormais dans SA couleur. Sur un badge a dessin,
+  elle n'apparaissait nulle part : la tuile s'efface pour laisser le dessin
+  seul, et l'ombre portee etait noire.
+- Le badge C.E.O passe au rouge vif.
+
 ## 9.9.0
 
 - Un badge « C.E.O », avec son dessin. Il ne peut pas se gagner : seule la

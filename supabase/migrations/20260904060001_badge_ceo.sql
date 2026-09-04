@@ -40,7 +40,7 @@ values (
   'C.E.O',
   'Fondateur d''Echow.',
   'equipe',
-  '#e0245e',
+  '#ff2233',
   null,
   0,
   true

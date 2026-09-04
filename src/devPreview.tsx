@@ -164,7 +164,7 @@ export function devPreview(name: string): ReactNode | null {
      */
     useBadges.setState({
       catalogue: [
-        ['ceo', 'C.E.O', 'Fondateur d’Echow.', 'equipe', '#e0245e', null, 0],
+        ['ceo', 'C.E.O', 'Fondateur d’Echow.', 'equipe', '#ff2233', null, 0],
         ['pionnier', '100 premiers soutiens', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
         ['premiere-heure', 'Premiere heure', 'Present le jour de l’ouverture.', 'soutien', '#ec4899', null, 2],
         ['rapporteur', 'Bug Hunter', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
