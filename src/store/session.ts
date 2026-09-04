@@ -341,6 +341,7 @@ interface SessionState {
         | 'pronouns'
         | 'links'
         | 'theme_hue'
+        | 'profil_couleurs'
       >
     >,
   ) => Promise<void>;

@@ -47,8 +47,19 @@ export interface Profile {
   bio: string | null;
   pronouns: string | null;
   links: ProfileLink[];
-  /** Teinte choisie, appliquee a la carte de profil. `null` = teinte derivee. */
+  /**
+   * Ancienne teinte de carte, conservee mais inutilisee.
+   *
+   * Elle etait posee en `--hue-primary` et aucune regle ne la lisait : les
+   * huit teintes proposees ne changeaient rien. `profil_couleurs` la remplace.
+   */
   theme_hue: number | null;
+  /**
+   * Couleurs de la fiche : `{ a, b, style }`, ou `null` pour celles de
+   * l'application. Type large a dessein — la colonne est du `jsonb` libre, et
+   * `lireCouleurs` est seul a savoir en tirer quelque chose d'affichable.
+   */
+  profil_couleurs?: unknown;
   /** Couleur de la bulle de statut, `#rrggbb`. `null` = teinte de la fiche. */
   status_couleur?: string | null;
   /** Opacite du fond de la bulle, de 0,1 a 1. Jamais 0. */

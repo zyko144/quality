@@ -41,6 +41,8 @@ const POSES_PAR_LE_CODE = new Set([
   '--hue-primary',
   '--level',
   '--marque',
+  '--profil-a',
+  '--profil-b',
   '--saturation',
   '--teinte',
   '--tilt-x',

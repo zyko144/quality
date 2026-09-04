@@ -16,6 +16,7 @@ import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
 import { BadgeVisual } from '@/components/BadgeVisual';
 import { MemberRoles } from './MemberRoles';
 import { lireCadrage, styleDeCadrage } from './cadrage';
+import { lireCouleurs, styleDesCouleurs } from './couleursProfil';
 import { useFriends } from '@/store/friends';
 
 /**
@@ -142,7 +143,6 @@ export function ProfileCard({ userId }: { userId: UUID }) {
   // Ces champs viennent d'une migration qui peut ne pas encore etre appliquee :
   // `to_jsonb(profiles.*)` ne renvoie que les colonnes existantes, donc ils
   // arrivent alors en `undefined` plutot qu'en `null`.
-  const hue = profile.theme_hue ?? null;
   const links = profile.links ?? [];
   const mesBadges = badgesDe(userId, badgesParProfil, catalogue);
   const sesComptes = comptesVisibles(comptesParProfil[userId], isMe);
@@ -179,32 +179,19 @@ export function ProfileCard({ userId }: { userId: UUID }) {
   // Le meme calcul que dans l'editeur : ce qu'on y a cadre est ce qui parait ici.
   const cadrage = lireCadrage(profile.banner_frame);
 
-  const cardStyle =
-    typeof hue === 'number' ? ({ '--hue-primary': hue } as React.CSSProperties) : undefined;
+  /*
+   * Les couleurs choisies, posees sur la carte.
+   *
+   * `theme_hue` etait pose en `--hue-primary` et AUCUNE regle ne le lisait :
+   * les huit teintes proposees ne changeaient rien. On garde la colonne, on
+   * cesse de s'en servir.
+   */
+  const couleurs = lireCouleurs(profile.profil_couleurs);
+
+  const cardStyle = styleDesCouleurs(couleurs);
 
   return (
-    <div className="profile" style={cardStyle}>
-      {/*
-        La banniere, floue, en fond de toute la fiche.
-        Elle donne sa couleur a l'ensemble sans jamais disputer la lecture :
-        floutee a ce point, il n'en reste que des masses colorees. Le texte
-        passe dessus sur un voile sombre, jamais sur l'image nette.
-
-        Le voile ne suit PAS le cadrage, et c'est voulu. Il porte un
-        `scale(1.35)` en feuille de style, la pour cacher le lisere pale que
-        laisse un flou de quarante-quatre pixels sur les quatre bords ; un
-        cadrage a 1,1 ecraserait ce grossissement et ferait reparaitre le
-        lisere. Rien n'est perdu : sous ce flou il ne reste que des masses
-        colorees, ou aucun cadrage ne se percoit.
-      */}
-      <div className="profile__wash" aria-hidden="true">
-        {profile.banner_url ? (
-          <img src={profile.banner_url} alt="" className="profile__wash-image" />
-        ) : (
-          <span className="profile__wash-fallback" />
-        )}
-      </div>
-
+    <div className="profile" data-teintes={couleurs.style} style={cardStyle}>
       <TiltCard className="profile__card" glare>
         <div className="profile__grid">
           <div className="profile__aside">

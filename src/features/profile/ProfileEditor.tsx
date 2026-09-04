@@ -15,6 +15,14 @@ import {
   styleDeCadrage,
   type Cadrage,
 } from './cadrage';
+import {
+  COULEURS_PAR_DEFAUT,
+  estLeDefaut,
+  inverser,
+  lireCouleurs,
+  styleDesCouleurs,
+  type CouleursProfil,
+} from './couleursProfil';
 
 /**
  * Opacite du fond de la bulle de statut, et son plancher.
@@ -28,17 +36,6 @@ import {
 const OPACITE_MIN = 0.1;
 const OPACITE_DEFAUT = 0.85;
 
-/** Teintes proposees pour personnaliser sa carte. */
-const HUES = [
-  { hue: 275, name: 'Indigo' },
-  { hue: 295, name: 'Violet' },
-  { hue: 340, name: 'Rose' },
-  { hue: 20, name: 'Corail' },
-  { hue: 60, name: 'Ambre' },
-  { hue: 150, name: 'Vert' },
-  { hue: 195, name: 'Turquoise' },
-  { hue: 235, name: 'Bleu' },
-];
 
 export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
   const profile = useSession((state) => state.profile);
@@ -52,7 +49,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
   const [statutCouleur, setStatutCouleur] = useState<string | null>(null);
   const [statutOpacite, setStatutOpacite] = useState<number>(OPACITE_DEFAUT);
   const [links, setLinks] = useState<ProfileLink[]>([]);
-  const [hue, setHue] = useState<number | null>(null);
+  const [couleurs, setCouleurs] = useState<CouleursProfil>(COULEURS_PAR_DEFAUT);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [cadrage, setCadrage] = useState<Cadrage>(CADRAGE_PAR_DEFAUT);
@@ -78,7 +75,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
     setStatutCouleur(profile.status_couleur ?? null);
     setStatutOpacite(profile.status_opacite ?? OPACITE_DEFAUT);
     setLinks(profile.links ?? []);
-    setHue(profile.theme_hue);
+    setCouleurs(lireCouleurs(profile.profil_couleurs));
     setAvatarUrl(profile.avatar_url);
     setBannerUrl(profile.banner_url);
     setCadrage(lireCadrage(profile.banner_frame));
@@ -253,7 +250,18 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
         : { status_opacite: statutOpacite }),
       pronouns: pronouns.trim() || null,
       links: cleanLinks,
-      theme_hue: hue,
+
+      /*
+       * Meme precaution que pour le cadrage : colonne neuve.
+       *
+       * Tant que la migration n'est pas appliquee, PostgREST refuse l'ecriture
+       * ENTIERE des qu'elle nomme une colonne inconnue. Ne l'envoyer qu'au
+       * changement laisse la modification de profil fonctionner pour qui n'a
+       * pas touche a ses couleurs.
+       */
+      ...(JSON.stringify(couleurs) === JSON.stringify(lireCouleurs(profile.profil_couleurs))
+        ? {}
+        : { profil_couleurs: estLeDefaut(couleurs) ? null : couleurs }),
     });
 
     await setStatus(profile.status, customStatus.trim() || null);
@@ -291,7 +299,8 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
       {/* Apercu en direct : on voit le resultat avant d'enregistrer. */}
       <div
         className="editor-preview"
-        style={hue !== null ? ({ '--hue-primary': hue } as React.CSSProperties) : undefined}
+        data-teintes={couleurs.style}
+        style={styleDesCouleurs(couleurs)}
       >
         <div className="editor-preview__banner">
           {bannerUrl ? (
@@ -598,31 +607,103 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
       </div>
 
       <div className="field">
-        <span className="field__label">Couleur de votre carte</span>
-        <div className="hue-row">
-          <button
-            type="button"
-            className={'hue-dot hue-dot--auto' + (hue === null ? ' is-active' : '')}
-            onClick={() => setHue(null)}
-            title="Couleur automatique"
-            aria-label="Couleur automatique"
-            aria-pressed={hue === null}
-          >
-            <Icon name="sparkles" size={14} />
-          </button>
+        <span className="field__label">Couleurs de votre carte</span>
+        <p className="field__hint">
+          Une couleur, ou deux — le haut et le bas — au choix nettes ou fondues.
+        </p>
 
-          {HUES.map((option) => (
+        {/*
+          Le style d'abord, les couleurs ensuite.
+
+          C'est l'ordre dans lequel on decide : on sait si l'on veut une ou deux
+          couleurs avant de savoir lesquelles. Poser les nuanciers en premier
+          obligerait a choisir une seconde couleur pour decouvrir ensuite qu'on
+          n'en voulait pas.
+        */}
+        <div className="teintes-styles" role="group" aria-label="Style des couleurs">
+          {(
+            [
+              { id: 'unique', nom: 'Une couleur' },
+              { id: 'duo', nom: 'Deux, nettes' },
+              { id: 'degrade', nom: 'Degrade' },
+            ] as const
+          ).map((choix) => (
+            <button
+              key={choix.id}
+              type="button"
+              className={
+                'teintes-style' + (couleurs.style === choix.id ? ' is-active' : '')
+              }
+              aria-pressed={couleurs.style === choix.id}
+              onClick={() => setCouleurs({ ...couleurs, style: choix.id })}
+            >
+              <span
+                className="teintes-style__apercu"
+                data-style={choix.id}
+                style={
+                  {
+                    '--profil-a': couleurs.a,
+                    '--profil-b': couleurs.b,
+                  } as React.CSSProperties
+                }
+                aria-hidden="true"
+              />
+              {choix.nom}
+            </button>
+          ))}
+        </div>
+
+        <div className="teintes-choix">
+          <label className="teintes-choix__couleur">
+            <input
+              type="color"
+              value={couleurs.a}
+              onChange={(event) => setCouleurs({ ...couleurs, a: event.target.value })}
+              aria-label={couleurs.style === 'unique' ? 'Couleur de la carte' : 'Couleur du haut'}
+            />
+            <span>{couleurs.style === 'unique' ? 'Couleur' : 'Haut'}</span>
+          </label>
+
+          {/*
+            La seconde couleur ne parait qu'en duo ou en degrade.
+
+            En « unique » elle est conservee mais inutilisee : la montrer
+            laisserait croire qu'elle agit, et la remettre a zero ferait perdre
+            le couple choisi des qu'on essaie l'autre style une seconde.
+          */}
+          {couleurs.style !== 'unique' ? (
+            <>
+              <label className="teintes-choix__couleur">
+                <input
+                  type="color"
+                  value={couleurs.b}
+                  onChange={(event) => setCouleurs({ ...couleurs, b: event.target.value })}
+                  aria-label="Couleur du bas"
+                />
+                <span>Bas</span>
+              </label>
+
+              <button
+                type="button"
+                className="btn btn--sm btn--ghost"
+                onClick={() => setCouleurs(inverser(couleurs))}
+                title="Echanger le haut et le bas"
+              >
+                <Icon name="refresh" size={14} />
+                Inverser
+              </button>
+            </>
+          ) : null}
+
+          {!estLeDefaut(couleurs) ? (
             <button
               type="button"
-              key={option.hue}
-              className={'hue-dot' + (hue === option.hue ? ' is-active' : '')}
-              style={{ background: `oklch(65% 0.2 ${option.hue})` }}
-              onClick={() => setHue(option.hue)}
-              title={option.name}
-              aria-label={option.name}
-              aria-pressed={hue === option.hue}
-            />
-          ))}
+              className="btn btn--sm btn--ghost"
+              onClick={() => setCouleurs(COULEURS_PAR_DEFAUT)}
+            >
+              Par defaut
+            </button>
+          ) : null}
         </div>
       </div>
 

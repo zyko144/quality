@@ -12,6 +12,16 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.0
+
+- Les couleurs de votre carte se choisissent precisement, et de trois
+  facons : une seule couleur, deux nettement separees — le haut et le bas,
+  inversables — ou les deux fondues en degrade.
+- Le fond flou repris de la banniere disparait. Il imposait la palette de
+  votre image a toute la fiche, et floutait une photo entiere en permanence.
+- Les huit teintes d'avant ne servaient a rien : elles etaient posees dans
+  une variable que rien ne lisait.
+
 ## 9.7.6
 
 - Les comptes lies deviennent des pastilles portant le seul logo du
