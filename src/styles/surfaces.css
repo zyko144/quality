@@ -1332,7 +1332,18 @@
   position: relative;
   /* Le fond appartient desormais a CHAQUE colonne : voir plus bas. */
   background: var(--profil-panneau, var(--bg-raised));
-  border-color: color-mix(in oklab, var(--profil-a, var(--accent)) 30%, var(--border-subtle));
+
+  /*
+   * Le bord ne prend PAS la couleur de la fiche.
+   *
+   * Il la prenait, a trente pour cent, et cela dessinait un cerne tout autour
+   * de la carte — un trait vif qui suivait le contour et qu'on lisait comme une
+   * bordure ajoutee, pas comme une carte coloree. Sur une teinte saturee, il
+   * ressortait plus que le degrade lui-meme.
+   *
+   * La couleur est DANS la carte, elle n'a pas a en souligner le pourtour.
+   */
+  border-color: var(--border-subtle);
 }
 
 /*

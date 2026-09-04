@@ -12,6 +12,15 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.9
+
+- Un badge retire depuis la console ne se redonne plus tout seul au
+  demarrage suivant.
+- Le cerne colore qui entourait la fiche de profil disparait. La couleur est
+  DANS la carte, elle n'a pas a en souligner le pourtour.
+- La console retrouve un compte par son nom affiche autant que par son
+  pseudo.
+
 ## 9.8.8
 
 - Le role de proprietaire s'appelle desormais « C.E.O », et son badge passe

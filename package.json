@@ -1,7 +1,7 @@
 {
   "name": "echow",
   "private": true,
-  "version": "9.8.8",
+  "version": "9.8.9",
   "type": "module",
   "description": "Echow - plateforme de communication temps reel, moderne et legere",
   "scripts": {
