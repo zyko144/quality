@@ -12,6 +12,14 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.2
+
+- Le badge C.E.O reprend le logo d'origine, sans rien lui retoucher. Il est
+  plus grand que les autres et porte un neon.
+- La pastille C.E.O passe au meme rouge que lui : elle tirait sur le rose.
+- « Ce que j'ecoute » ne montre plus QUE Spotify. Un onglet de navigateur,
+  un jeu ou un appel en cours n'ont rien a faire sur une fiche.
+
 ## 9.9.1
 
 - Chaque badge rayonne desormais dans SA couleur. Sur un badge a dessin,

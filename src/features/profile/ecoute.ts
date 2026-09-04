@@ -10,8 +10,14 @@
  *
  * Windows sait deja tout cela : chaque lecteur declare sa lecture au systeme,
  * pour que les touches multimedia du clavier fonctionnent. `musique.rs` lit la
- * meme source. Rien a lier, rien a autoriser — et cela vaut aussi pour YouTube
- * dans un onglet ou un fichier local, pas seulement pour Spotify.
+ * meme source. Rien a lier, rien a autoriser.
+ *
+ * Seul SPOTIFY est retenu, et le filtre est pose cote natif — voir
+ * `est_spotify`. Windows dirait aussi ce que joue un onglet de navigateur, un
+ * jeu ou un appel en cours : « ce que j'ecoute » designe sa musique, pas le son
+ * que fait son ordinateur. Une publicite ou un extrait de video n'ont rien a
+ * faire sur une fiche, et diraient parfois quelque chose qu'on n'a pas choisi
+ * de dire.
  *
  * Ce fichier ne DECIDE de rien
  * ----------------------------
@@ -45,25 +51,15 @@ export interface Lecture {
 export const CADENCE_LECTURE = 10_000;
 
 /**
- * Le nom du lecteur, tel qu'on l'ecrit.
+ * Le nom du service, tel qu'on l'ecrit.
  *
- * Windows rend un identifiant d'application — `Spotify.exe`, `msedge` — qui
- * n'est pas fait pour etre lu. La table est courte a dessein : ce qui n'y est
- * pas s'affiche « Musique », ce qui reste vrai et n'invente rien.
+ * Une seule valeur possible : la partie native ne rend que des seances Spotify.
+ * La fonction reste plutot que d'ecrire « Spotify » en dur a l'affichage —
+ * c'est ici qu'on regarderait le jour ou un second lecteur serait accepte, et
+ * un litteral disperse dans l'interface ne se retrouve pas.
  */
-const LECTEURS: [RegExp, string][] = [
-  [/spotify/i, 'Spotify'],
-  [/deezer/i, 'Deezer'],
-  [/apple\s*music|itunes/i, 'Apple Music'],
-  [/tidal/i, 'Tidal'],
-  [/soundcloud/i, 'SoundCloud'],
-  [/chrome|msedge|firefox|brave|opera/i, 'le navigateur'],
-  [/vlc|foobar|winamp|aimp|musicbee/i, 'un lecteur local'],
-];
-
 export function nomDuLecteur(source: string): string {
-  for (const [motif, nom] of LECTEURS) if (motif.test(source)) return nom;
-  return 'Musique';
+  return /spotify/i.test(source) ? 'Spotify' : 'Musique';
 }
 
 /**
@@ -73,10 +69,10 @@ export function nomDuLecteur(source: string): string {
  * adresse. On construit donc une recherche, ce qui tombe juste dans la quasi
  * totalite des cas et ne pretend rien savoir de plus.
  *
- * Vers Spotify quand c'est Spotify qui joue, parce que celui qui regarde a
- * toutes les chances de l'avoir aussi. Sinon on ne devine pas : une recherche
- * Spotify pour un morceau joue depuis un fichier local menerait souvent a
- * autre chose.
+ * Vers Spotify, puisque c'est Spotify qui joue — et que celui qui regarde a
+ * toutes les chances de l'avoir aussi. La verification du service reste : la
+ * partie native pourrait un jour en accepter un autre, et une recherche
+ * Spotify pour un morceau venu d'ailleurs menerait souvent a autre chose.
  */
 export function lienDuMorceau(lecture: Lecture): string | null {
   const requete = `${lecture.artiste} ${lecture.titre}`.trim();

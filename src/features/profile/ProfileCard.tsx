@@ -350,11 +350,20 @@ ${activite.lien_url}`,
                           (obtenu.position !== null ? ` (n°${obtenu.position})` : '')
                         }
                       >
+                        {/*
+                          Le badge de tete est plus grand que les autres.
+
+                          La regle porte sur le RANG, pas sur une cle : c'est
+                          deja lui qui decide de l'ordre, et un badge de tete
+                          cree demain sera grand sans qu'on y touche. Nommer
+                          « ceo » ici aurait fait un cas particulier de plus a
+                          se rappeler.
+                        */}
                         <BadgeVisual
                           badgeCle={badge.cle}
                           nom={badge.nom}
                           teinte={badge.teinte}
-                          size={19}
+                          size={badge.rang === 0 ? 26 : 19}
                         />
                       </li>
                     ))}

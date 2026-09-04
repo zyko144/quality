@@ -289,7 +289,15 @@
  * badge suivrait sans raison.
  */
 .profile-badge--owner {
-  background: linear-gradient(135deg, #e0245e, #c81e4e);
+  /*
+   * Le meme rouge que le badge C.E.O, `#ff2233`.
+   *
+   * Le premier essai etait `#e0245e` : un cramoisi qui tire sur le rose des
+   * qu'on le pose a plat. Les deux objets disent la meme chose — l'un par une
+   * pastille, l'autre par une couronne — et deux rouges differents cote a cote
+   * se lisent comme deux rangs differents.
+   */
+  background: linear-gradient(135deg, #ff2233, #d81829);
   color: #fff;
   box-shadow: var(--shadow-xs);
 }

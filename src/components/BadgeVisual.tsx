@@ -199,6 +199,14 @@ export function BadgeVisual({ badgeCle, nom, teinte = '#6366f1', size = 24, clas
         width: `${size}px`,
         height: `${size}px`,
       } as React.CSSProperties}
+      /*
+       * La cle est portee par l'element, pour que la feuille de style puisse
+       * viser un badge en particulier.
+       *
+       * Une classe par badge aurait demande d'en ajouter une a chaque badge
+       * cree ; un attribut suit le catalogue tout seul.
+       */
+      data-badge={badgeCle}
       title={nom}
       aria-label={nom}
     >

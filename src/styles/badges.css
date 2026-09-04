@@ -344,3 +344,39 @@
  * l'essentiel, et leur infobulle nomme celui qu'on survole. Deux presentations
  * du meme fait demandaient de regarder deux fois pour n'apprendre qu'une chose.
  */
+
+/* ==========================================================================
+   Le neon du badge de tete
+
+   Un badge de rang zero n'a pas de concurrent : il merite d'etre vu de loin.
+   Trois ombres de rayons croissants font un halo qui s'eteint progressivement,
+   la ou une seule ferait un cerne net — un contour, pas une lueur.
+
+   La couleur vient de `--badge-color`, donc du catalogue : le neon suit le
+   badge, il n'est pas rouge parce que celui d'aujourd'hui l'est.
+   ========================================================================== */
+
+.echow-badge-icon--dessin[data-badge='ceo'] .echow-badge-icon__dessin {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 3px color-mix(in oklab, var(--badge-color) 70%, transparent))
+    drop-shadow(0 0 8px color-mix(in oklab, var(--badge-color) 45%, transparent))
+    drop-shadow(0 0 16px color-mix(in oklab, var(--badge-color) 30%, transparent));
+  animation: neon-badge 3.2s ease-in-out infinite;
+}
+
+/*
+ * Le neon respire, lentement.
+ *
+ * Trois secondes deux : assez lent pour qu'on ne le suive pas des yeux, assez
+ * present pour qu'on le remarque en arrivant sur la fiche. Une pulsation rapide
+ * attirerait le regard en permanence, ce qui est le contraire d'un ornement.
+ */
+@keyframes neon-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.82; }
+}
+
+/* Une animation qui respire n'a rien d'essentiel : elle s'arrete si on la refuse. */
+[data-motion='reduced'] .echow-badge-icon--dessin[data-badge='ceo'] .echow-badge-icon__dessin {
+  animation: none;
+}

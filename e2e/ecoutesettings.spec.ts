@@ -62,9 +62,18 @@ test.describe('Ce qu on ecoute', () => {
   });
 
   test('le nom du lecteur se lit, celui de Windows non', () => {
+    /*
+     * Windows rend un identifiant d'application — `Spotify.exe`,
+     * `SpotifyAB.SpotifyMusic_...!Spotify` — qui n'est pas fait pour etre lu.
+     *
+     * Une seule valeur est attendue en pratique : la partie native ne rend que
+     * des seances Spotify, et le filtre y est pose parce qu'une page ne peut
+     * pas le contourner. Le repli reste pour le jour ou un second lecteur
+     * serait accepte.
+     */
     expect(nomDuLecteur('Spotify.exe')).toBe('Spotify');
-    expect(nomDuLecteur('Microsoft.YourPhone_8wekyb3d8bbwe!App')).toBe('Musique');
-    expect(nomDuLecteur('msedge')).toBe('le navigateur');
+    expect(nomDuLecteur('SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify')).toBe('Spotify');
+    expect(nomDuLecteur('msedge')).toBe('Musique');
   });
 
   test('le lien n est propose que pour un lecteur reconnu', () => {
