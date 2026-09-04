@@ -705,6 +705,43 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
             </button>
           ) : null}
         </div>
+
+        {/*
+          Le panneau de droite, en neutre seulement.
+
+          C'est la colonne qui se LIT — bio, comptes, listes. Une couleur y
+          dispute la lisibilite du texte a longueur de fiche, la ou a gauche
+          elle habille un visage et un nom. Trois valeurs neutres reglent le
+          contraste sans jamais gener la lecture.
+        */}
+        <span className="field__label field__label--sous">Fond du panneau de droite</span>
+
+        <div className="teintes-styles" role="group" aria-label="Fond du panneau">
+          {(
+            [
+              { id: 'noir', nom: 'Noir' },
+              { id: 'gris', nom: 'Gris' },
+              { id: 'blanc', nom: 'Blanc' },
+            ] as const
+          ).map((choix) => (
+            <button
+              key={choix.id}
+              type="button"
+              className={
+                'teintes-style' + (couleurs.panneau === choix.id ? ' is-active' : '')
+              }
+              aria-pressed={couleurs.panneau === choix.id}
+              onClick={() => setCouleurs({ ...couleurs, panneau: choix.id })}
+            >
+              <span
+                className="teintes-style__apercu"
+                data-fond={choix.id}
+                aria-hidden="true"
+              />
+              {choix.nom}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="field">

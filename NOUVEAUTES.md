@@ -12,6 +12,15 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.8.3
+
+- Un vrai noir et un vrai blanc sont enfin possibles sur la fiche. La
+  couleur etait diluee a trente pour cent dans un fond sombre : blanc ou
+  noir, on obtenait le meme gris.
+- La couleur habille la colonne de gauche seulement. Le panneau de droite,
+  celui qui se lit, se regle en noir, gris ou blanc.
+- Les degrades sont de vrais degrades, sans contour sur les cotes.
+
 ## 9.8.2
 
 - Spotify et Twitch se connectent pour de vrai : on part chez le service,

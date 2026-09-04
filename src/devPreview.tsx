@@ -146,7 +146,7 @@ export function devPreview(name: string): ReactNode | null {
         { label: 'Mon portfolio', url: 'https://lumine.example', couleur: '#f59e0b' },
         { url: 'https://exemple.fr/une/page/assez/longue' },
       ],
-      profil_couleurs: { a: '#2563eb', b: '#16a34a', style: 'duo' },
+      profil_couleurs: { a: '#2563eb', b: '#16a34a', style: 'duo', panneau: 'noir' },
       status_couleur: '#5865f2',
       status_opacite: 0.85,
       username_chosen: true,
