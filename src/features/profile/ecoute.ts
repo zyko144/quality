@@ -51,6 +51,21 @@ export interface Lecture {
 export const CADENCE_LECTURE = 10_000;
 
 /**
+ * A quel rythme une fiche ouverte relit ce que la personne ecoute.
+ *
+ * Trois fois plus lent que la lecture locale, et pour une bonne raison : celui
+ * qui ecoute interroge Windows, ce qui ne coute rien a personne d'autre. Celui
+ * qui REGARDE interroge la base, et cette requete-la se paie — en egress, pour
+ * chaque fiche ouverte et pour toute la duree ou elle le reste.
+ *
+ * Trente secondes : un morceau dure quelques minutes, et suivre de plus pres
+ * ne montrerait rien de plus qu'un decalage d'une demi-minute au changement de
+ * titre. La barre de progression, elle, avance toute seule entre deux tours —
+ * c'est l'horloge de celui qui regarde qui fait ce travail, pas le reseau.
+ */
+export const RAFRAICHISSEMENT_ECOUTE = 30_000;
+
+/**
  * Le nom du service, tel qu'on l'ecrit.
  *
  * Une seule valeur possible : la partie native ne rend que des seances Spotify.

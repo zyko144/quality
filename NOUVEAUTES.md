@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.7
+
+- Vous revoyez ce que vous ecoutez sur votre fiche. La version precedente
+  n'affichait plus rien tant que la base refusait l'annonce : le morceau
+  joue, c'est vrai, et le cacher n'aidait personne.
+- Quand l'annonce n'a atteint personne, la carte le dit — au lieu de laisser
+  croire qu'elle est partie. C'est ce qui manquait depuis le debut.
+- Une fiche ouverte se met a jour toutes les trente secondes : le morceau
+  suivant s'affiche sans avoir a refermer et rouvrir. Seulement quand la
+  fenetre est visible, et sans redemander les comptes lies.
+
 ## 9.9.6
 
 - Ce que vous ecoutez se voit enfin des autres. L'annonce n'atteignait jamais

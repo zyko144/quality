@@ -125,7 +125,7 @@ export function devPreview(name: string): ReactNode | null {
     return <BadgesPage />;
   }
 
-  if (name === 'profil' || name === 'profil:moi') {
+  if (name === 'profil' || name === 'profil:moi' || name === 'profil:muet') {
     // Un profil rempli, pose directement dans le magasin : la carte se lit mal
     // a vide, or c'est justement la version pleine — banniere, bio, liens,
     // espaces en commun — qu'il faut regarder quand on retouche sa mise en
@@ -224,9 +224,24 @@ export function devPreview(name: string): ReactNode | null {
           lien_url: 'https://open.spotify.com/search/test',
           debut_le: new Date(Date.now() - 83_000).toISOString(),
           duree_ms: 180_000,
+
+          /*
+           * `?preview=profil:muet` montre l'annonce qui n'est pas partie.
+           *
+           * Cet etat-la a existe des semaines sans que rien ne le montre : la
+           * base refusait la ligne, la fiche l'affichait quand meme, et l'on
+           * croyait partager ce que personne ne voyait. Il merite un apercu
+           * autant que le cas ordinaire — c'est le seul moyen de verifier
+           * qu'il se voit sans se voir trop.
+           */
+          partagee: !name.endsWith(':muet'),
         },
       },
       charger: async () => {},
+      // La fiche relit l'ecoute toutes les trente secondes tant qu'elle est
+      // ouverte. Sans ce leurre, l'apercu irait interroger une base a laquelle
+      // il n'est pas connecte, et effacerait le morceau qu'il sert a montrer.
+      rafraichirActivites: async () => {},
     });
 
     /*
@@ -237,7 +252,9 @@ export function devPreview(name: string): ReactNode | null {
      * chemin n'etait couvert par aucun apercu, et c'est precisement celui que
      * l'on voit tous les jours.
      */
-    if (name.endsWith(':moi')) useSession.setState({ profile: faux as never });
+    if (name.endsWith(':moi') || name.endsWith(':muet')) {
+      useSession.setState({ profile: faux as never });
+    }
 
     // La largeur de la boite qui l'accueille dans l'application : sans elle,
     // la carte s'etale sur tout l'ecran et sa mise en page n'a plus rien a

@@ -18,6 +18,7 @@ import { BadgeVisual } from '@/components/BadgeVisual';
 import { MemberRoles } from './MemberRoles';
 import { lireCadrage, styleDeCadrage } from './cadrage';
 import { lireCouleurs, styleDesCouleurs } from './couleursProfil';
+import { RAFRAICHISSEMENT_ECOUTE } from './ecoute';
 import { CarteEcoute } from './CarteEcoute';
 import { useFriends } from '@/store/friends';
 
@@ -87,11 +88,49 @@ export function ProfileCard({ userId }: { userId: UUID }) {
   const comptesParProfil = useComptesLies((etat) => etat.parProfil);
   const activites = useComptesLies((etat) => etat.activites);
   const chargerComptes = useComptesLies((etat) => etat.charger);
+  const rafraichirActivites = useComptesLies((etat) => etat.rafraichirActivites);
 
   useEffect(() => {
     void chargerBadges();
     void chargerComptes([userId]);
   }, [userId, chargerBadges, chargerComptes]);
+
+  /*
+   * Tant que la fiche est ouverte, ce qui joue se remet a jour.
+   *
+   * Sans cela, l'ecoute etait lue une fois a l'ouverture et gelee : le morceau
+   * changeait, la fiche continuait d'afficher le precedent, et la barre de
+   * progression — qui avance toute seule — finissait pleine sans plus rien
+   * decrire. Il fallait refermer et rouvrir.
+   *
+   * Trois bornes, parce que cette requete se paie a chaque tour :
+   *
+   *  - seulement l'activite, pas les comptes lies, qui ne changent pas d'une
+   *    minute a l'autre ;
+   *  - seulement quand la fenetre est VISIBLE. Une fiche laissee ouverte
+   *    derriere une autre fenetre interrogeait la base indefiniment pour une
+   *    reponse que personne ne regardait ;
+   *  - toutes les trente secondes. Un morceau dure quelques minutes ; suivre
+   *    de plus pres ne montrerait rien de plus, et le quota d'egress est la ou
+   *    il est.
+   */
+  useEffect(() => {
+    const relire = () => {
+      if (document.visibilityState !== 'visible') return;
+      void rafraichirActivites([userId]);
+    };
+
+    const minuterie = window.setInterval(relire, RAFRAICHISSEMENT_ECOUTE);
+
+    // Revenir sur la fenetre ne doit pas faire attendre le tour suivant : on
+    // rattrape ce qui a change pendant l'absence.
+    document.addEventListener('visibilitychange', relire);
+
+    return () => {
+      window.clearInterval(minuterie);
+      document.removeEventListener('visibilitychange', relire);
+    };
+  }, [userId, rafraichirActivites]);
   const profile = profiles[userId] ?? (userId === me?.id ? me : undefined);
 
   useEffect(() => {

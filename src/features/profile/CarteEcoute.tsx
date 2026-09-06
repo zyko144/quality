@@ -84,6 +84,24 @@ export function CarteEcoute({
         {activite.detail ? <span className="ecoute__artiste truncate">{activite.detail}</span> : null}
 
         {/*
+          L'annonce n'est pas partie, et on le dit.
+
+          Ce cas a existe pendant des semaines sans que rien ne le montre : la
+          base refusait la ligne, l'interface l'affichait quand meme, et l'on
+          croyait donc partager ce que personne ne voyait. Se taire ici serait
+          reproduire exactement le defaut qu'on vient de corriger.
+
+          Seul l'interesse le lit : c'est sa fiche, c'est son annonce, et
+          personne d'autre n'a cette ligne dans son etat.
+        */}
+        {activite.partagee === false ? (
+          <span className="ecoute__prive">
+            <Icon name="alert-triangle" size={11} />
+            Vous seul le voyez : l&rsquo;annonce a ete refusee.
+          </span>
+        ) : null}
+
+        {/*
           La barre et les deux temps.
 
           Cachee aux lecteurs d'ecran : elle redit ce que les chiffres a cote

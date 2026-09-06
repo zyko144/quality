@@ -2701,3 +2701,20 @@ a.ecoute__lien:hover {
   margin-left: auto;
   color: var(--accent-text);
 }
+
+/*
+ * L'annonce d'ecoute qui n'est pas partie.
+ *
+ * Discrete, mais pas invisible : elle ne concerne que celui qui regarde sa
+ * propre fiche, et elle lui apprend la seule chose qu'il ne peut pas deviner —
+ * que les autres, eux, ne voient rien.
+ */
+.ecoute__prive {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: var(--warning);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-normal);
+}

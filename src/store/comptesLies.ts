@@ -47,6 +47,24 @@ export interface Activite {
    * qu'une annonce sans date vaut mieux que pas d'annonce.
    */
   vu_le?: string;
+
+  /**
+   * Faux quand la base a refuse l'annonce. N'existe que chez soi.
+   *
+   * Ce champ repare une erreur que j'ai commise en corrigeant la precedente.
+   * L'ecriture n'aboutissait pas — une contrainte de longueur — et l'interface
+   * posait quand meme l'activite dans son etat local : on voyait donc sa
+   * propre fiche a jour pendant que personne d'autre ne voyait rien.
+   *
+   * J'ai d'abord conditionne l'affichage a la reussite de l'ecriture. C'etait
+   * pire : on ne voyait plus rien du tout, y compris ce qu'on ecoutait
+   * VRAIMENT, et l'echec restait tout aussi muet.
+   *
+   * Les deux moities sont vraies separement : ce morceau joue bien — donc on
+   * le montre — et il n'a atteint personne — donc on le dit. Les confondre
+   * oblige a choisir entre mentir et se taire.
+   */
+  partagee?: boolean;
 }
 
 /**
@@ -98,6 +116,16 @@ interface EtatComptes {
   activites: Record<UUID, Activite>;
 
   charger: (profils: UUID[]) => Promise<void>;
+
+  /**
+   * Relit la seule activite de ces profils.
+   *
+   * `charger` lit aussi les comptes lies, qui ne changent pas d'une minute a
+   * l'autre : les redemander a chaque tour ferait payer une deuxieme requete
+   * pour une reponse toujours identique. Une fiche ouverte tourne en boucle,
+   * et c'est la seule difference qui compte a ce rythme-la.
+   */
+  rafraichirActivites: (profils: UUID[]) => Promise<void>;
   lier: (service: Service, identifiant: string, nomAffiche: string) => Promise<boolean>;
   delier: (service: Service) => Promise<void>;
   basculerVisibilite: (service: Service, visible: boolean) => Promise<void>;
@@ -147,7 +175,18 @@ export const useComptesLies = create<EtatComptes>((set, get) => ({
      */
     const suite: Record<UUID, Activite> = { ...get().activites };
 
-    for (const id of profils) delete suite[id];
+    /*
+     * On efface avant de reposer, pour que ce qui a disparu disparaisse.
+     *
+     * Fusionner sans effacer gardait une annonce arretee jusqu'a la fin de la
+     * session. Une exception : ce qu'on a annonce SANS que la base le prenne.
+     * Le serveur ne le rendra jamais — il ne l'a pas — et l'effacer reviendrait
+     * a cacher a quelqu'un le morceau qu'il est en train d'ecouter.
+     */
+    for (const id of profils) {
+      if (suite[id]?.partagee === false) continue;
+      delete suite[id];
+    }
 
     for (const ligne of activites.data ?? []) {
       const activite = ligne as Activite;
@@ -208,6 +247,36 @@ export const useComptesLies = create<EtatComptes>((set, get) => ({
       .eq('service', service);
   },
 
+  rafraichirActivites: async (profils) => {
+    if (profils.length === 0) return;
+
+    const { data, error } = await supabase
+      .from('activites')
+      .select('*')
+      .in('profil_id', profils);
+
+    // Un tour rate n'efface rien : la fiche garde ce qu'elle montrait, et le
+    // tour suivant corrigera. Vider sur une erreur reseau ferait clignoter la
+    // carte a chaque hoquet.
+    if (error) return;
+
+    set((etat) => {
+      const suite = { ...etat.activites };
+
+      for (const id of profils) {
+        if (suite[id]?.partagee === false) continue;
+        delete suite[id];
+      }
+
+      for (const ligne of data ?? []) {
+        const trouvee = ligne as Activite;
+        if (estFraiche(trouvee.vu_le)) suite[trouvee.profil_id] = trouvee;
+      }
+
+      return { activites: suite };
+    });
+  },
+
   annoncer: async (activite) => {
     const moi = (await supabase.auth.getUser()).data.user?.id;
     if (!moi) return;
@@ -248,11 +317,20 @@ export const useComptesLies = create<EtatComptes>((set, get) => ({
         // Ce qui pese, et donc ce qu'on soupconne en premier.
         pochette: activite.image_url?.length ?? 0,
       });
-      return;
     }
 
+    /*
+     * On montre le morceau meme quand l'ecriture a echoue.
+     *
+     * Il joue : c'est vrai, et le cacher ne rend service a personne. Ce qui
+     * n'est pas vrai, c'est que quelqu'un d'autre le voie — et cela, le
+     * drapeau le dit. Voir `partagee`.
+     */
     set((etat) => ({
-      activites: { ...etat.activites, [moi as UUID]: { ...activite, profil_id: moi as UUID } },
+      activites: {
+        ...etat.activites,
+        [moi as UUID]: { ...activite, profil_id: moi as UUID, partagee: !error },
+      },
     }));
   },
 }));
