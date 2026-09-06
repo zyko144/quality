@@ -12,6 +12,22 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.9
+
+- Le partage coute nettement moins cher a celui qui partage. Chaque image
+  etait recopiee une fois de trop avant d'etre envoyee : en 1080p a soixante
+  images, cinq cents megaoctets par seconde deplaces pour rien, sur la machine
+  de quelqu'un qui joue en meme temps.
+- Et il s'adapte a chaque spectateur SEPAREMENT. Une machine qui n'arrive pas
+  a decoder demande moins, et ne recoit moins qu'elle : personne d'autre ne
+  perd en qualite. Elle retrouve sa definition d'elle-meme quand elle peut la
+  tenir.
+- La definition baisse avant la cadence : elle divise le travail par quatre la
+  ou la cadence ne le divise que par deux, et une image un peu douce se suit
+  mieux qu'une image nette qui saccade.
+- Les pseudos d'une lettre deviennent possibles, mais ne se prennent pas : ils
+  se donnent. Deux caracteres restent le minimum a l'inscription.
+
 ## 9.9.8
 
 - La pastille « C.E.O » disparait de la fiche de profil : elle disait la meme

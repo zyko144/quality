@@ -32,6 +32,7 @@ import {
   RELANCES_MAX,
   type AttentePartage,
 } from './relance';
+import { PALIERS, prochainPalier } from './allegement';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -122,7 +123,33 @@ interface Reoffre {
   to: UUID;
 }
 
-type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion | Refus | Deplacement | Reoffre;
+/**
+ * « Ta definition est trop lourde pour moi. »
+ *
+ * Emise par celui qui REGARDE : lui seul sait ce que sa machine encaisse. Vu
+ * de l'emetteur, un partage que personne n'arrive a decoder ressemble trait
+ * pour trait a un partage qui se passe bien.
+ *
+ * En maillage, chacun a son propre emetteur vers chacun : la reduction ne
+ * touche donc que celui qui la demande. Voir `allegement.ts` pour l'echelle et
+ * pourquoi la definition baisse avant la cadence.
+ */
+interface Allegement {
+  kind: 'allegement';
+  from: UUID;
+  to: UUID;
+  /** Indice dans `PALIERS`. Zero veut dire « rien a alleger ». */
+  palier: number;
+}
+
+type VoiceMessage =
+  | VoiceSignal
+  | StreamInfo
+  | Deconnexion
+  | Refus
+  | Deplacement
+  | Reoffre
+  | Allegement;
 
 /**
  * Salons vocaux en WebRTC maille.
@@ -499,6 +526,21 @@ const attentesPartage = new Map<UUID, AttentePartage>();
 
 /** Derniere relance honoree, par pair. Voir `REPOS_REOFFRE`. */
 const derniereReoffre = new Map<UUID, number>();
+
+/**
+ * Ce que notre machine demande a chaque emetteur, et depuis combien de mesures
+ * elle est au calme. Voir `allegement.ts`.
+ */
+const allegementDemande = new Map<UUID, { palier: number; calmes: number }>();
+
+/** Dernier releve de decodage, par pair : les compteurs sont cumulatifs. */
+const decodagePrecedent = new Map<
+  UUID,
+  { images: number; secondes: number; perdues: number }
+>();
+
+/** Ce que chaque spectateur nous a demande d'alleger. */
+const allegementApplique = new Map<UUID, number>();
 let audioContext: AudioContext | null = null;
 let speechTimer: number | null = null;
 const analysers = new Map<UUID, AnalyserNode>();
@@ -1528,6 +1570,12 @@ let cadenceCapture = 0;
 
     analysers.delete(peerId);
     fluxAnalyses.delete(peerId);
+
+    // Ce qu'on savait de sa machine ne vaut plus rien : une connexion refaite
+    // repart d'une image pleine, et le cran se redecide sur des mesures neuves.
+    allegementDemande.delete(peerId);
+    decodagePrecedent.delete(peerId);
+    allegementApplique.delete(peerId);
     set((state) => (state.speaking[peerId] ? { speaking: retirer(state.speaking, peerId) } : {}));
   }
 
@@ -1551,6 +1599,101 @@ let cadenceCapture = 0;
    * On repasse donc a chaque changement de presence et au battement : ce sont
    * exactement les moments ou la reponse a pu arriver.
    */
+  /**
+   * Mesure ce que NOTRE machine encaisse, et demande a alleger si besoin.
+   *
+   * Les compteurs de WebRTC sont cumulatifs : `framesDecoded` et
+   * `totalDecodeTime` montent depuis le debut. Ce qui nous interesse est la
+   * derniere tranche, pas la moyenne depuis l'ouverture — une machine qui a
+   * peine maintenant a peut-etre tenu dix minutes tres bien, et la moyenne le
+   * cacherait. On garde donc le releve precedent et l'on travaille sur la
+   * difference.
+   *
+   * Seuls les partages qu'on REGARDE comptent : ailleurs, la piste est
+   * desactivee et rien n'est decode. Mesurer y verrait un decodage nul et
+   * conclurait au confort, ce qui ferait remonter l'echelle d'un partage
+   * qu'on n'affiche pas — pour la faire redescendre a la seconde ou on
+   * l'ouvre.
+   */
+  async function mesurerDecodage(): Promise<void> {
+    const etat = get();
+    const moi = etat.userId;
+    if (!moi) return;
+
+    for (const [peerId, pair] of peers) {
+      const flux = etat.remoteScreens[peerId];
+
+      if (!flux || etat.watchedShares[peerId] !== true) {
+        decodagePrecedent.delete(peerId);
+        continue;
+      }
+
+      const piste = flux.getVideoTracks()[0];
+      if (!piste) continue;
+
+      let rapport: RTCStatsReport;
+      try {
+        rapport = await pair.connection.getStats();
+      } catch {
+        continue;
+      }
+
+      for (const entree of rapport.values()) {
+        if (entree.type !== 'inbound-rtp' || entree.kind !== 'video') continue;
+
+        /*
+         * La bonne piste, pas la premiere venue.
+         *
+         * Quelqu'un qui partage son ecran ET sa camera envoie deux flux video
+         * sur la meme connexion. Prendre le premier ferait mesurer la camera —
+         * quelques milliers de pixels — et conclure que tout va bien pendant
+         * qu'un jeu en 1440p ecrase la machine.
+         */
+        const identifiant = (entree as { trackIdentifier?: string }).trackIdentifier;
+        if (identifiant !== undefined && identifiant !== piste.id) continue;
+
+        const images = (entree as { framesDecoded?: number }).framesDecoded ?? 0;
+        const secondes = (entree as { totalDecodeTime?: number }).totalDecodeTime ?? 0;
+        const perdues = (entree as { framesDropped?: number }).framesDropped ?? 0;
+
+        const avant = decodagePrecedent.get(peerId);
+        decodagePrecedent.set(peerId, { images, secondes, perdues });
+
+        if (!avant) break;
+
+        const nouvelles = images - avant.images;
+        if (nouvelles <= 0) break;
+
+        const constat = {
+          msParImage: ((secondes - avant.secondes) * 1000) / nouvelles,
+          imagesParSeconde: Math.round(
+            (entree as { framesPerSecond?: number }).framesPerSecond ?? 0,
+          ),
+          perdues: (perdues - avant.perdues) / nouvelles,
+        };
+
+        const suivi = allegementDemande.get(peerId) ?? { palier: 0, calmes: 0 };
+        const suite = prochainPalier(suivi.palier, suivi.calmes, constat);
+        allegementDemande.set(peerId, suite);
+
+        if (suite.palier !== suivi.palier) {
+          journal.info('partage', 'Allegement demande', {
+            pair: peerId,
+            de: suivi.palier,
+            a: suite.palier,
+            msParImage: Math.round(constat.msParImage * 10) / 10,
+            images: constat.imagesParSeconde,
+            perdues: Math.round(constat.perdues * 100),
+          });
+
+          send({ kind: 'allegement', from: moi, to: peerId, palier: suite.palier });
+        }
+
+        break;
+      }
+    }
+  }
+
   /**
    * Redemande une offre pour un partage annonce dont rien n'arrive.
    *
@@ -1657,6 +1800,67 @@ let cadenceCapture = 0;
       if (get().partagesSansReponse[pair]) {
         set((etat) => ({ partagesSansReponse: retirer(etat.partagesSansReponse, pair) }));
       }
+    }
+  }
+
+  /**
+   * Pose le cran d'allegement sur l'emetteur d'UN spectateur.
+   *
+   * Le reglage du partage est repose en meme temps — debit, priorite,
+   * definition voulue — parce que `applyEncoding` ecrit la liste d'encodages
+   * entiere : la rejouer partiellement effacerait ce qu'elle avait pose.
+   *
+   * La reduction du palier MULTIPLIE celle du partage. Un partage 1440p
+   * ramene a 1080p vaut deja 1,33 ; le premier cran le porte a 2. Remplacer
+   * plutot que multiplier renverrait ce spectateur en 1440p au moment precis
+   * ou il demande moins.
+   */
+  async function appliquerAllegement(
+    emetteur: RTCRtpSender,
+    palier: number,
+    media: ReturnType<typeof useDevices.getState>['media'],
+  ): Promise<void> {
+    const cran = PALIERS[palier] ?? PALIERS[0]!;
+
+    await applyEncodingWithRetry(
+      emetteur,
+      screenBitrate(media),
+      media.screenPriority,
+      screenTargetHeight(media),
+    );
+
+    try {
+      const parametres = emetteur.getParameters();
+      if (!parametres.encodings || parametres.encodings.length === 0) return;
+
+      for (const encodage of parametres.encodings) {
+        encodage.scaleResolutionDownBy = (encodage.scaleResolutionDownBy ?? 1) * cran.reduction;
+
+        /*
+         * `undefined` plutot que la cadence du partage.
+         *
+         * Poser explicitement soixante ferait de nous l'autorite sur la
+         * cadence de cet emetteur, y compris quand le moteur voudrait
+         * legitimement descendre en dessous. On ne veut poser qu'un PLAFOND,
+         * et seulement quand il y en a un.
+         */
+        encodage.maxFramerate = cran.images ?? undefined;
+
+        /*
+         * Le debit suit la surface.
+         *
+         * Garder le debit d'une image quatre fois plus grande ne soulagerait
+         * pas le decodeur — il aurait moins de pixels a lire, mais autant
+         * d'octets — et gaspillerait la liaison. La reduction porte sur chaque
+         * cote, donc la surface varie comme son carre.
+         */
+        const budget = encodage.maxBitrate ?? screenBitrate(media);
+        encodage.maxBitrate = Math.round(budget / (cran.reduction * cran.reduction));
+      }
+
+      await emetteur.setParameters(parametres);
+    } catch {
+      // Etat transitoire : la prochaine demande du spectateur repassera par ici.
     }
   }
 
@@ -1786,6 +1990,12 @@ let cadenceCapture = 0;
     }
     analysers.delete(peerId);
     fluxAnalyses.delete(peerId);
+
+    // Ce qu'on savait de sa machine ne vaut plus rien : une connexion refaite
+    // repart d'une image pleine, et le cran se redecide sur des mesures neuves.
+    allegementDemande.delete(peerId);
+    decodagePrecedent.delete(peerId);
+    allegementApplique.delete(peerId);
 
     set((state) => {
       const remoteAudio = { ...state.remoteAudio };
@@ -2132,6 +2342,38 @@ let cadenceCapture = 0;
      * et il y a deux chemins a perdre : la piste et son role. Les renvoyer
      * tous les deux coute deux messages et evite d'avoir a deviner lequel.
      */
+    /*
+     * Quelqu'un nous dit que notre image est trop lourde pour lui.
+     *
+     * On applique a SON emetteur, et a lui seul : les autres continuent de
+     * recevoir ce qu'ils recevaient. C'est toute la raison d'ecouter cette
+     * demande plutot que de baisser pour tout le monde.
+     *
+     * La valeur est bornee ici, pas seulement chez l'emetteur : un client
+     * modifie pourrait demander un indice hors echelle, et `PALIERS[n]` rendrait
+     * alors `undefined` au moment de lire la reduction.
+     */
+    if (signal.kind === 'allegement') {
+      const palier = Math.min(Math.max(0, Math.round(signal.palier)), PALIERS.length - 1);
+
+      if (allegementApplique.get(signal.from) === palier) return;
+      allegementApplique.set(signal.from, palier);
+
+      const pair = peers.get(signal.from);
+      if (!pair?.screenSender) return;
+
+      journal.info('partage', 'Allegement applique pour un spectateur', {
+        pair: signal.from,
+        palier,
+        reduction: PALIERS[palier]?.reduction ?? 1,
+        images: PALIERS[palier]?.images ?? null,
+      });
+
+      const media = useDevices.getState().media;
+      await appliquerAllegement(pair.screenSender, palier, media);
+      return;
+    }
+
     if (signal.kind === 'reoffre') {
       const maintenant = Date.now();
       if (!peutReoffrir(derniereReoffre.get(signal.from), maintenant)) return;
@@ -2722,6 +2964,7 @@ let cadenceCapture = 0;
         syncPeers(get().participantsByChannel[salon] ?? []);
         reclasserEnAttente();
         surveillerPartages();
+        void mesurerDecodage();
 
         /*
          * Le canal donne-t-il encore signe de vie ?
@@ -2814,6 +3057,9 @@ let cadenceCapture = 0;
       pendingStreams.clear();
       attentesPartage.clear();
       derniereReoffre.clear();
+      allegementDemande.clear();
+      decodagePrecedent.clear();
+      allegementApplique.clear();
       etatPairs.absences.clear();
       etatPairs.attentes.clear();
 

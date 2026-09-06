@@ -157,12 +157,38 @@ fn retenir(maintenant_ns: u64, echeance_ns: u64, intervalle_ns: u64) -> Option<u
     Some((echeance_ns + intervalle_ns).max(maintenant_ns))
 }
 
-/// Une image capturee, ramenee en memoire centrale.
+/// Taille de l'en-tete pose devant chaque image : largeur, hauteur, octets.
+pub const ENTETE: usize = 12;
+
+/// Une image capturee, deja mise en forme pour le passage.
+///
+/// Pourquoi l'en-tete est reserve DES la lecture
+/// ---------------------------------------------
+/// Cette structure portait les seuls pixels, et l'envoi fabriquait ensuite un
+/// second tampon : douze octets d'en-tete, puis une copie complete des pixels.
+/// Une image 1080p pese 8,3 megaoctets ; a soixante par seconde, cette copie
+/// seule demandait cinq cents megaoctets par seconde de bande passante memoire
+/// — un coeur entier occupe a deplacer des octets qui etaient deja au bon
+/// format, sur la machine de quelqu'un qui joue en meme temps.
+///
+/// Reserver la place au moment ou l'on ecrit les pixels ne coute rien : on
+/// ecrit alors directement a leur place definitive, et l'envoi n'a plus qu'a
+/// remplir les douze premiers octets.
 pub struct Image {
     pub largeur: u32,
     pub hauteur: u32,
-    /// Octets BGRA, sans remplissage entre les lignes.
-    pub pixels: Vec<u8>,
+    /// Le paquet entier : douze octets d'en-tete, puis les octets BGRA.
+    ///
+    /// L'en-tete est deja rempli. Les pixels commencent a `ENTETE` et n'ont
+    /// aucun remplissage entre les lignes.
+    pub paquet: Vec<u8>,
+}
+
+impl Image {
+    /// Les seuls pixels, sans l'en-tete. Pour les essais et la lecture.
+    pub fn pixels(&self) -> &[u8] {
+        &self.paquet[ENTETE..]
+    }
 }
 
 /// Une capture en cours. Se referme en la laissant tomber.
@@ -475,7 +501,18 @@ fn lire(
     let mut vue = D3D11_MAPPED_SUBRESOURCE::default();
     unsafe { contexte.Map(copie, 0, D3D11_MAP_READ, 0, Some(&mut vue))? };
 
-    let mut pixels = Vec::with_capacity((largeur * hauteur * 4) as usize);
+    /*
+     * La place de l'en-tete est reservee AVANT les pixels.
+     *
+     * Elle est remplie tout de suite : la largeur et la hauteur sont connues,
+     * la taille se deduit de l'allocation. Le fil d'envoi n'aura donc plus rien
+     * a recopier — c'est tout l'objet de ce detour.
+     */
+    let octets = (largeur * hauteur * 4) as usize;
+    let mut paquet = Vec::with_capacity(ENTETE + octets);
+    paquet.extend_from_slice(&largeur.to_le_bytes());
+    paquet.extend_from_slice(&hauteur.to_le_bytes());
+    paquet.extend_from_slice(&(octets as u32).to_le_bytes());
 
     /*
      * Les lignes sont recopiees une a une.
@@ -496,12 +533,12 @@ fn lire(
          * On evite alors mille quatre-vingts appels par image.
          */
         let tout = unsafe { std::slice::from_raw_parts(vue.pData as *const u8, utile * hauteur as usize) };
-        pixels.extend_from_slice(tout);
+        paquet.extend_from_slice(tout);
     } else {
         for ligne in 0..hauteur {
             let depart =
                 unsafe { (vue.pData as *const u8).add((ligne as usize) * vue.RowPitch as usize) };
-            pixels.extend_from_slice(unsafe { std::slice::from_raw_parts(depart, utile) });
+            paquet.extend_from_slice(unsafe { std::slice::from_raw_parts(depart, utile) });
         }
     }
 
@@ -510,7 +547,7 @@ fn lire(
     Ok(Some(Image {
         largeur,
         hauteur,
-        pixels,
+        paquet,
     }))
 }
 
@@ -566,13 +603,13 @@ mod tests {
         assert!(image.largeur >= 640, "largeur : {}", image.largeur);
         assert!(image.hauteur >= 480, "hauteur : {}", image.hauteur);
         assert_eq!(
-            image.pixels.len(),
+            image.pixels().len(),
             (image.largeur * image.hauteur * 4) as usize,
             "les lignes doivent etre recopiees sans remplissage"
         );
 
-        let premier = &image.pixels[..4];
-        let varie = image.pixels.chunks_exact(4).any(|pixel| pixel != premier);
+        let premier = &image.pixels()[..4];
+        let varie = image.pixels().chunks_exact(4).any(|pixel| pixel != premier);
         assert!(varie, "l'image est uniforme : la lecture n'a rien rapporte");
     }
 }
@@ -629,20 +666,17 @@ pub fn demarrer_image(source: String, images: u32) -> Result<FluxImage, String> 
             };
 
             /*
-             * Chaque image porte sa taille.
+             * Rien a recopier : le paquet est deja forme.
              *
-             * Une fenetre change de taille pendant qu'on la partage, et la
-             * suivante n'a alors plus les memes dimensions. Sans cet en-tete,
-             * l'interface lirait la nouvelle image avec l'ancienne taille — une
-             * image penchee, puis n'importe quoi.
+             * Chaque image porte sa taille — une fenetre redimensionnee pendant
+             * qu'on la partage change de dimensions, et sans en-tete
+             * l'interface lirait la suivante avec les anciennes : une image
+             * penchee, puis n'importe quoi. Cet en-tete est desormais ecrit au
+             * moment ou les pixels sont rapatries, a leur place definitive.
+             *
+             * On envoie donc le tampon tel quel, sans le dupliquer.
              */
-            let mut paquet = Vec::with_capacity(12 + image.pixels.len());
-            paquet.extend_from_slice(&image.largeur.to_le_bytes());
-            paquet.extend_from_slice(&image.hauteur.to_le_bytes());
-            paquet.extend_from_slice(&(image.pixels.len() as u32).to_le_bytes());
-            paquet.extend_from_slice(&image.pixels);
-
-            let _ = expediteur.try_send(paquet);
+            let _ = expediteur.try_send(image.paquet);
         }
     });
 
