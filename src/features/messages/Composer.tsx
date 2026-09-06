@@ -74,6 +74,7 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
   const sendMessage = useChat((state) => state.sendMessage);
   const profiles = useChat((state) => state.profiles);
   const members = useChat((state) => state.members);
+  const dmParticipants = useChat((state) => state.dmParticipants);
   const channels = useChat((state) => state.channels);
   const messages = useChat((state) => state.messages);
   const ranks = useChat((state) => state.ranks);
@@ -165,14 +166,38 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
   const candidates = useMemo((): Profile[] => {
     if (!mention || !channel) return [];
 
-    const spaceMemberIds = new Set(
-      members.filter((item) => item.space_id === channel.space_id).map((item) => item.user_id),
-    );
+    /*
+     * En prive, ce sont les participants de la conversation.
+     *
+     * `members` ne porte que les appartenances a un ESPACE. Une conversation
+     * privee n'en a aucune : le filtre `space_id === null` ne trouvait rien,
+     * la liste ressortait vide, et taper `@` n'ouvrait donc rien du tout.
+     *
+     * A deux, cela se remarque a peine — on sait a qui l'on parle. Dans un
+     * groupe a cinq, nommer quelqu'un obligeait a taper son identifiant de
+     * memoire, sans meme savoir s'il s'ecrivait ainsi : c'est precisement la
+     * ou une liste sert le plus.
+     */
+    const atteignables = channel.space_id
+      ? new Set(
+          members
+            .filter((item) => item.space_id === channel.space_id)
+            .map((item) => item.user_id),
+        )
+      : new Set(dmParticipants[channel.id] ?? []);
 
     const term = mention.term.toLowerCase();
 
     return Object.values(profiles)
-      .filter((item) => spaceMemberIds.has(item.id))
+      .filter((item) => atteignables.has(item.id))
+      /*
+       * Sans soi.
+       *
+       * Se mentionner ne notifie personne — l'auteur d'un message est ecarte
+       * avant toute notification — et dans une conversation a deux, se voir
+       * proposer soi-meme sur une liste de deux noms est surtout deroutant.
+       */
+      .filter((item) => item.id !== profile?.id)
       .filter(
         (item) =>
           term.length === 0 ||
@@ -181,7 +206,7 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
       )
       .sort((a, b) => a.username.length - b.username.length)
       .slice(0, 6);
-  }, [mention, profiles, members, channel]);
+  }, [mention, profiles, members, dmParticipants, channel, profile?.id]);
 
   /** Ce que la liste propose, dans l'ordre : les globales, puis les personnes. */
   const suggestions = useMemo(

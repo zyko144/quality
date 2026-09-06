@@ -185,49 +185,84 @@ export function Support() {
             ))}
           </ol>
 
+          {/*
+            Une demande fermee n'a plus de champ de reponse.
+
+            Elle en avait un, et l'avis disait « Repondez pour la rouvrir » :
+            fermer ne fermait donc rien, cela rangeait la demande jusqu'a la
+            phrase suivante. Un echange qu'on croyait termine repartait des
+            semaines plus tard sur la meme ligne, et il fallait relire tout le
+            fil pour savoir ce qui etait encore d'actualite.
+
+            Desormais la base refuse l'ecriture — des deux cotes, l'equipe
+            comprise, et par un declencheur plutot qu'une politique pour que la
+            cle de service n'y echappe pas. Laisser un champ ici ne ferait donc
+            qu'annoncer un envoi qui sera rejete.
+
+            Ce qui reste a dire s'ecrit dans une nouvelle demande, avec son
+            propre sujet et sa propre date. C'est plus lisible qu'un fil rouvert
+            trois fois, et le bouton est juste la.
+          */}
           {demande.statut === 'resolue' ? (
-            <p className="support__close">
-              Cette demande est marquee comme resolue. Repondez pour la rouvrir.
-            </p>
-          ) : null}
-
-          <div className="support__repondre">
-            <label className="support__label" htmlFor="support-reponse">
-              Repondre
-            </label>
-            <textarea
-              id="support-reponse"
-              className="support__zone"
-              rows={4}
-              maxLength={REPONSE_MAX}
-              value={reponse}
-              placeholder="Ajoutez une precision, ou repondez a l’equipe."
-              onChange={(evenement) => setReponse(evenement.target.value)}
-            />
-
-            <div className="support__actions">
-              <button
-                type="button"
-                className="btn btn--primary"
-                disabled={reponse.trim().length === 0 || envoi}
-                onClick={() => void envoyerReponse()}
-              >
-                <Icon name="send" size={14} />
-                Envoyer
+            <div className="support__close">
+              <p>
+                Cette demande est fermee. Personne ne peut plus y ecrire, ni vous
+                ni l&rsquo;equipe.
+              </p>
+              {/* `fermer` referme la fiche et rend la liste, ou vit le
+                  formulaire de depot. Le mot dit ici « quitter cette
+                  demande-ci », pas « clore l'echange » — celui-la est deja
+                  clos. */}
+              <button type="button" className="btn" onClick={fermer}>
+                <Icon name="plus" size={14} />
+                Ouvrir une nouvelle demande
               </button>
+            </div>
+          ) : (
+            <div className="support__repondre">
+              <label className="support__label" htmlFor="support-reponse">
+                Repondre
+              </label>
+              <textarea
+                id="support-reponse"
+                className="support__zone"
+                rows={4}
+                maxLength={REPONSE_MAX}
+                value={reponse}
+                placeholder="Ajoutez une precision, ou repondez a l’equipe."
+                onChange={(evenement) => setReponse(evenement.target.value)}
+              />
 
-              {demande.statut === 'resolue' ? null : (
+              <div className="support__actions">
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  disabled={reponse.trim().length === 0 || envoi}
+                  onClick={() => void envoyerReponse()}
+                >
+                  <Icon name="send" size={14} />
+                  Envoyer
+                </button>
+
+                {/*
+                  Fermer, et le dire pour ce que c'est.
+
+                  « Je n'ai plus besoin d'aide » decrivait une mise de cote ;
+                  cela ferme maintenant l'echange pour de bon, et la phrase doit
+                  le dire avant le clic, pas apres.
+                */}
                 <button
                   type="button"
                   className="btn"
                   onClick={() => void resoudre(demande.id)}
+                  title="L’echange sera clos : plus personne ne pourra y ecrire."
                 >
                   <Icon name="check" size={14} />
-                  Je n&rsquo;ai plus besoin d&rsquo;aide
+                  Fermer la demande
                 </button>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </section>
       ) : (
         /* ------------------------------------------------------------------

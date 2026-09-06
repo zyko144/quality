@@ -12,6 +12,24 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.8
+
+- La pastille « C.E.O » disparait de la fiche de profil : elle disait la meme
+  chose que la couronne, a trois centimetres d'ecart. La couronne reste, un
+  peu plus discrete. La pastille est intacte partout ailleurs — moderation,
+  liste des membres — ou aucun badge ne s'affiche.
+- Repondre a quelqu'un le previent. Le fil de reponse existait, mais ne
+  comptait pour rien : sur un salon anime, on ne decouvrait jamais qu'on nous
+  avait repondu.
+- Taper `@` propose enfin quelqu'un dans une conversation privee. La liste
+  venait des membres d'un espace, et une conversation privee n'en a aucun :
+  elle ressortait vide, et dans un groupe a cinq il fallait taper
+  l'identifiant de memoire.
+- Une demande de support peut se fermer, et fermee veut dire fermee : plus
+  personne n'y ecrit, ni vous ni l'equipe. La regle est tenue par la base, pas
+  seulement par l'interface. La console peut rouvrir une demande fermee par
+  erreur.
+
 ## 9.9.7
 
 - Vous revoyez ce que vous ecoutez sur votre fiche. La version precedente

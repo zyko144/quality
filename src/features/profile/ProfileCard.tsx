@@ -187,6 +187,15 @@ export function ProfileCard({ userId }: { userId: UUID }) {
   const links = profile.links ?? [];
   const mesBadges = badgesDe(userId, badgesParProfil, catalogue);
   const sesComptes = comptesVisibles(comptesParProfil[userId], isMe);
+  /*
+   * `owner` est ecarte ici, et seulement ici.
+   *
+   * Le role existe toujours et vaut toujours ce qu'il vaut : il commande les
+   * droits, et le panneau de moderation le montre. C'est son AFFICHAGE sur la
+   * fiche qui faisait double emploi avec la couronne.
+   */
+  const roles = (stats?.roles ?? []).filter((role) => role !== 'owner');
+
   const activite = activites[userId] ?? null;
 
   const espaces = stats?.mutual_spaces ?? [];
@@ -402,7 +411,7 @@ ${activite.lien_url}`,
                           badgeCle={badge.cle}
                           nom={badge.nom}
                           teinte={badge.teinte}
-                          size={badge.rang === 0 ? 26 : 19}
+                          size={badge.rang === 0 ? 22 : 19}
                         />
                       </li>
                     ))}
@@ -431,9 +440,21 @@ ${activite.lien_url}`,
               </p>
             </div>
 
-            {stats && stats.roles.length > 0 ? (
+            {/*
+              Les roles, moins celui de proprietaire.
+
+              La fiche disait deja « C.E.O » deux fois a trois centimetres
+              d'ecart : une pastille rouge sous le pseudo, et la couronne dans
+              la vitrine juste au-dessus. Deux marques pour un seul fait, et la
+              plus voyante n'etait pas la plus belle.
+
+              La pastille reste partout ailleurs — panneau de moderation, liste
+              des membres — parce que ces ecrans-la ne montrent pas de badges :
+              c'est le seul endroit ou elle se repetait.
+            */}
+            {roles.length > 0 ? (
               <ul className="profile__badges">
-                {stats.roles.map((role) => (
+                {roles.map((role) => (
                   <li key={role} className={`profile-badge profile-badge--${role}`}>
                     <Icon name={ROLE_ICON[role]} size={13} />
                     {ROLE_LABEL[role]}

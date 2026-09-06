@@ -419,4 +419,47 @@ test.describe('Parcours authentifies', () => {
 
     await zone.fill('');
   });
+
+  /*
+   * La meme liste, en conversation privee.
+   *
+   * Elle n'y existait pas : les candidats venaient des appartenances a un
+   * ESPACE, et une conversation privee n'en a aucune. Le filtre ne trouvait
+   * rien, la liste ressortait vide, et taper `@` n'ouvrait donc rien.
+   *
+   * A deux, cela se remarque a peine. Dans un groupe a cinq, nommer quelqu'un
+   * obligeait a taper son identifiant de memoire — c'est la ou une liste sert
+   * le plus, et c'est la qu'elle manquait.
+   */
+  test('la liste des mentions existe aussi en prive', async ({ page }) => {
+    await openApp(page);
+
+    await page.getByRole('button', { name: 'Messages prives' }).click();
+
+    const conversation = page.locator('.dm-item, .conversation, [data-dm]').first();
+    if ((await conversation.count()) === 0) {
+      test.skip(true, 'Aucune conversation privee sur ce compte.');
+      return;
+    }
+
+    await conversation.click();
+
+    const zone = page.getByRole('textbox', { name: /message/i }).first();
+    await zone.click();
+    await zone.fill('@');
+
+    const liste = page.locator('.mention-list__item');
+    await expect(liste.first()).toBeVisible({ timeout: 5_000 });
+
+    /*
+     * Et pas soi-meme.
+     *
+     * Se mentionner ne notifie personne, et sur une liste de deux noms,
+     * s'y voir figurer est surtout deroutant.
+     */
+    const entrees = (await liste.allTextContents()).join(' ');
+    expect(entrees).not.toContain('everyone');
+
+    await zone.fill('');
+  });
 });

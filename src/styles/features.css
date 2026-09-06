@@ -2290,10 +2290,29 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--text-muted);
 }
 
+/*
+ * L'avis qui remplace le champ de reponse d'une demande fermee.
+ *
+ * A la place, pas au-dessus : tant qu'un champ reste visible, on cherche
+ * comment s'en servir. Ici il n'y a rien a chercher — la base refuse
+ * l'ecriture, des deux cotes — et le bouton dit le seul geste qui reste.
+ */
 .support__close {
-  margin: 0 0 var(--space-3);
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
   font-size: var(--text-sm);
+  line-height: var(--leading-normal);
   color: var(--text-muted);
+}
+
+.support__close p {
+  margin: 0;
 }
 
 .support__repondre {

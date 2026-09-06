@@ -86,6 +86,39 @@ function toMessage(raw: RawMessage, thread: Thread | null): Message {
 }
 
 /**
+ * Vrai si ce message repond a l'un des notres.
+ *
+ * Le message cite est cherche d'abord dans ce qui est deja charge : dans un
+ * salon ouvert, il y est presque toujours, et la question se tranche sans rien
+ * demander a personne.
+ *
+ * La requete de repli n'est pas un detail : le cas qui compte est justement
+ * celui ou l'on n'a PAS le salon ouvert. C'est la qu'on a besoin d'etre
+ * prevenu, et c'est la que le message cite manque. Elle ne lit qu'une colonne
+ * d'une ligne, et seulement pour un message qui repond a quelque chose.
+ */
+async function auteurRepondu(
+  raw: RawMessage,
+  moi: UUID,
+  etat: { messages: Record<string, Message[]> },
+): Promise<boolean> {
+  if (!raw.reply_to_id) return false;
+
+  for (const liste of Object.values(etat.messages)) {
+    const cite = liste.find((message) => message.id === raw.reply_to_id);
+    if (cite) return cite.author_id === moi;
+  }
+
+  const { data } = await supabase
+    .from('messages')
+    .select('author_id')
+    .eq('id', raw.reply_to_id)
+    .maybeSingle();
+
+  return data?.author_id === moi;
+}
+
+/**
  * Fusionne deux listes de messages en supprimant les doublons et en gardant
  * l'ordre chronologique.
  *
@@ -1060,9 +1093,28 @@ export const useChat = create<ChatState>((set, get) => ({
 
     if (raw.author_id !== currentUserId && !raw.thread_id) {
       const me = state.profiles[currentUserId];
-      const mentioned =
+      const nomme =
         me !== undefined &&
         new RegExp(`@(${me.username}|everyone|here|tous)\\b`, 'i').test(raw.content);
+
+      /*
+       * Repondre a quelqu'un, c'est s'adresser a lui.
+       *
+       * Le fil de reponse existait deja — la citation s'affiche au-dessus du
+       * message — mais il ne comptait pour rien dans la decision de prevenir.
+       * Une reponse a son propre message passait donc comme n'importe quel
+       * message d'un salon vif : pas de bulle, pas de son, pas de pastille, et
+       * l'on decouvrait qu'on nous avait repondu en remontant le salon plus
+       * tard. Sur un salon anime, on ne le decouvrait jamais.
+       *
+       * `repondu` vaut ensuite exactement ce que vaut `nomme` : meme bulle,
+       * meme son, meme pastille. Seul le titre de la notification les
+       * distingue, parce que « vous a repondu » et « vous a mentionne » ne
+       * decrivent pas le meme geste.
+       */
+      const repondu = await auteurRepondu(raw, currentUserId, state);
+      const mentioned = nomme || repondu;
+
       get().bumpUnread(raw.channel_id, mentioned);
 
       /*
@@ -1105,9 +1157,13 @@ export const useChat = create<ChatState>((set, get) => ({
         const author = state.profiles[raw.author_id];
         const channel = salon;
         void notify({
-          title: mentioned
-            ? `${author?.display_name ?? 'Quelqu’un'} vous a mentionne`
-            : (author?.display_name ?? 'Nouveau message'),
+          // « Repondu » et « mentionne » ne decrivent pas le meme geste : la
+          // bulle le dit, meme si le reste du traitement est identique.
+          title: repondu
+            ? `${author?.display_name ?? 'Quelqu’un'} vous a repondu`
+            : mentioned
+              ? `${author?.display_name ?? 'Quelqu’un'} vous a mentionne`
+              : (author?.display_name ?? 'Nouveau message'),
           body: `${channel ? `#${channel.name} · ` : ''}${preview(raw.content)}`,
           tag: raw.channel_id,
         });
