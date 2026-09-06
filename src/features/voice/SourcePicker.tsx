@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { Icon } from '@/components/Icon';
 import { useDevices } from '@/store/devices';
+import { SON_DE_L_APPLICATION } from './sonPartage';
 
 /**
  * Notre propre selecteur de partage.
@@ -111,6 +112,66 @@ export function SourcePicker({
 
   const visibles = (sources ?? []).filter((source) => source.genre === onglet);
   const selection = (sources ?? []).find((source) => source.id === choisie) ?? null;
+
+  /*
+   * Les applications ouvertes, pour le mode « une autre application ».
+   *
+   * Les fenetres reduites sont ecartees ici, alors qu'elles figurent bien dans
+   * la liste du haut. La difference tient a ce qu'on en fait : choisir une
+   * fenetre reduite la ROUVRE, et elle se met alors a jouer. Choisir son son
+   * ne la rouvre pas — on ecouterait une application rangee, qui se tait.
+   */
+  const ouvertes = (sources ?? []).filter(
+    (source) => source.genre === 'fenetre' && !source.reduite,
+  );
+
+  const modeChoisi: 'tout' | 'partagee' | 'autre' =
+    media.loopbackSource === null
+      ? 'tout'
+      : media.loopbackSource === SON_DE_L_APPLICATION
+        ? 'partagee'
+        : 'autre';
+
+  /*
+   * Trois facons de repondre a « qu'est-ce qu'on entend », et leur prix.
+   *
+   * L'ordre n'est pas indifferent : le premier est le defaut, et c'est celui
+   * qui marche toujours. Les deux autres sont plus fins et supposent quelque
+   * chose — une fenetre choisie, une application qui joue son son elle-meme.
+   */
+  const modes = [
+    {
+      id: 'tout' as const,
+      icone: 'monitor' as const,
+      titre: 'Tout l’ordinateur',
+      detail: 'Le jeu, la musique, les videos — tout ce qui joue.',
+      empeche: undefined as string | undefined,
+      valeur: () => null,
+    },
+    {
+      id: 'partagee' as const,
+      icone: 'square' as const,
+      titre: 'L’application partagee',
+      detail: 'Seulement ce que joue la fenetre choisie.',
+      // Un ecran entier n'a pas d'application derriere : il n'y a rien a suivre.
+      empeche:
+        onglet === 'fenetre'
+          ? undefined
+          : 'Il faut partager une application, pas un ecran entier.',
+      valeur: () => SON_DE_L_APPLICATION,
+    },
+    {
+      id: 'autre' as const,
+      icone: 'sliders' as const,
+      titre: 'Une autre application',
+      detail: 'Le son d’un programme, meme s’il n’est pas a l’image.',
+      empeche: ouvertes.length === 0 ? 'Aucune application ouverte.' : undefined,
+      // Deja dans ce mode : on garde l'application choisie plutot que de la
+      // remplacer par la premiere de la liste a chaque clic sur la pastille.
+      valeur: () =>
+        modeChoisi === 'autre' ? media.loopbackSource : (ouvertes[0]?.id ?? null),
+    },
+  ];
 
   return (
     <Modal
@@ -340,43 +401,86 @@ export function SourcePicker({
           </label>
 
           {/*
-            D'ou vient le son, quand on partage un ecran.
+            D'ou vient le son.
 
-            Ce reglage n'existe que la. Partager une FENETRE prend le son de
-            cette application, sans rien demander : c'est la seule reponse qui
-            ait du sens, et elle supprime l'echo au passage.
+            Ce reglage n'existait que pour le partage d'ECRAN : partager une
+            fenetre prenait le son de son application, sans rien demander.
+            C'etait le choix le plus juste — le jeu part, la conversation d'a
+            cote reste — et il laissait sans recours ceux pour qui il ne marche
+            pas.
 
-            Un ecran, lui, n'a pas d'application derriere : on prend alors tout
-            ce que joue l'ordinateur — sauf nous. Cela suffit tant qu'aucun
-            routeur audio virtuel ne tourne. Voicemeeter, VB-Cable et consorts
-            rejouent notre son depuis LEUR processus, que Windows capte a bon
-            droit : on s'entend en double, et rien de notre cote ne peut
-            l'empecher. Designer une application est la seule issue.
+            Car il suppose que l'application joue son son ELLE-MEME, ce que
+            Windows ne garantit pas : un navigateur confie le sien a un
+            processus de service, et partager l'onglet YouTube ouvrait une
+            capture parfaitement valide qui ne portait rien. Rien dans
+            l'interface ne permettait d'y remedier, ni meme de le comprendre.
+
+            Le choix est donc rendu, dans les deux cas.
           */}
-          {media.shareSystemAudio && onglet === 'ecran' ? (
+          {media.shareSystemAudio ? (
             <div className="picker__son-source">
-              <label className="picker__reglage">
-                <span className="picker__etiquette">Son a prendre</span>
-                <select
-                  className="picker__liste"
-                  value={media.loopbackSource ?? ''}
-                  onChange={(event) => setMedia('loopbackSource', event.target.value || null)}
-                >
-                  <option value="">Tout l&rsquo;ordinateur</option>
-                  {(sources ?? [])
-                    .filter((source) => source.genre === 'fenetre' && !source.reduite)
-                    .map((source) => (
+              <span className="picker__etiquette">Quel son faire entendre</span>
+
+              <div className="picker__sources">
+                {modes.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className={
+                      'picker__source-son' + (modeChoisi === mode.id ? ' is-active' : '')
+                    }
+                    aria-pressed={modeChoisi === mode.id}
+                    disabled={mode.empeche !== undefined}
+                    title={mode.empeche}
+                    onClick={() => setMedia('loopbackSource', mode.valeur())}
+                  >
+                    <span className="picker__source-son-icone" aria-hidden="true">
+                      <Icon name={mode.icone} size={16} />
+                    </span>
+                    <span className="picker__source-son-titre">{mode.titre}</span>
+                    <span className="picker__source-son-detail">
+                      {mode.empeche ?? mode.detail}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/*
+                La liste ne parait qu'au troisieme mode.
+
+                La montrer toujours ferait croire qu'il faut y choisir quelque
+                chose pour que les deux autres marchent, alors qu'ils s'en
+                passent entierement.
+              */}
+              {modeChoisi === 'autre' ? (
+                <label className="picker__reglage">
+                  <span className="picker__etiquette">L&rsquo;application a suivre</span>
+                  <select
+                    className="picker__liste"
+                    value={media.loopbackSource ?? ''}
+                    onChange={(event) => setMedia('loopbackSource', event.target.value || null)}
+                  >
+                    {ouvertes.length === 0 ? <option value="">Aucune application ouverte</option> : null}
+                    {ouvertes.map((source) => (
                       <option key={source.id} value={source.id}>
                         {source.titre}
                       </option>
                     ))}
-                </select>
-              </label>
+                  </select>
+                </label>
+              ) : null}
 
+              {/*
+                Le prix de chaque mode, dit avant qu'on le paie.
+
+                Se decouvrir muet — ou en double — au milieu d'un partage, sans
+                savoir lequel des deux reglages en est la cause, est
+                exactement ce qui a rendu ce defaut si long a nommer.
+              */}
               <p className="picker__note">
-                Choisissez l&rsquo;application si vous vous entendez en double :
-                un routeur audio comme Voicemeeter rejoue votre voix, et prendre
-                tout l&rsquo;ordinateur la reprend avec le reste.
+                {modeChoisi === 'tout'
+                  ? 'Tout ce qui joue part, y compris ce qui n’est pas partage a l’image. Si vous vous entendez en double — un routeur audio comme Voicemeeter rejoue votre voix — suivez plutot une application.'
+                  : 'Le son des autres programmes reste chez vous. Certaines applications, les navigateurs surtout, ne jouent pas leur son elles-memes : si rien ne s’entend au bout de quelques secondes, tout l’ordinateur est repris automatiquement.'}
               </p>
             </div>
           ) : null}

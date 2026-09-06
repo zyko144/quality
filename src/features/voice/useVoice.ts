@@ -20,6 +20,7 @@ import { useChat } from '@/store/chat';
 import { useSpacePrefs } from '@/store/spacePrefs';
 import { ouvrirPorte, type Porte } from './porte';
 import { capturerSonSysteme, type SonSysteme } from './sonSysteme';
+import { sourceDuSon } from './sonPartage';
 import { journal } from '@/lib/journal';
 import { decider, etatPairsVide } from './pairs';
 import { noter, etatMartelementVide } from './martelement';
@@ -586,24 +587,6 @@ async function capturer(contraintes: MediaStreamConstraints): Promise<MediaStrea
     await new Promise((resoudre) => setTimeout(resoudre, 500));
     return navigator.mediaDevices.getUserMedia(contraintes);
   }
-}
-
-/**
- * De quelle application prendre le son.
- *
- * Partager une fenetre ne laisse pas le choix, et c'est voulu : le son suit
- * l'application partagee. Prendre tout l'ordinateur emporterait la musique et
- * les notifications d'a cote, et surtout : cela rouvrirait la porte a l'echo,
- * qu'un routeur audio virtuel provoque en rejouant notre son depuis son propre
- * processus.
- *
- * Partager un ecran n'a pas d'application derriere. On prend alors ce que la
- * personne a choisi — tout l'ordinateur par defaut, une application si elle
- * s'entend en double.
- */
-function sourceDuSon(partage: string | undefined, choisie: string | null): string | null {
-  if (partage?.startsWith('fenetre:')) return partage;
-  return choisie;
 }
 
 /**
@@ -2862,6 +2845,15 @@ let cadenceCapture = 0;
            * comme un echec de capture : le partage est deja parti, et la piste
            * existe. Ce qu'on annonce n'est pas « pas de son » mais « du son
            * qui ne porte rien », ce qui appelle une autre reponse.
+           *
+           * Le conseil qu'il porte — changer de sortie — n'a de sens que si le
+           * silence tient APRES le repli sur tout l'ordinateur. Suivre une
+           * application peut se taire pour une raison qui n'a rien a voir avec
+           * la sortie : le navigateur qui confie son son a un processus de
+           * service en est le cas courant. On aurait alors renvoye quelqu'un
+           * dans ses reglages Windows pour un probleme qui n'y etait pas.
+           * `sonSysteme.ts` tente donc le repli d'abord, et n'appelle ceci que
+           * s'il n'a rien change.
            */
           const resultat = await capturerSonSysteme(media.loopbackDeviceId, (nom) => {
             if (!get().sharing) return;

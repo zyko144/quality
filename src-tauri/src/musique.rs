@@ -351,7 +351,9 @@ mod essais {
 /// --------------------------------------
 /// `tauri-plugin-opener` refuse la commande sur cette installation :
 ///
-///     Command plugin:opener|open_url not allowed by ACL
+/// ```text
+/// Command plugin:opener|open_url not allowed by ACL
+/// ```
 ///
 /// La permission est pourtant declaree, le greffon enregistre, le binaire a
 /// jour et la fenetre correctement nommee — la cause n'est pas trouvee. Ce qui

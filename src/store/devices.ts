@@ -79,17 +79,28 @@ export interface MediaPreferences {
   videoQuality: '480p' | '720p' | '1080p';
   /** Definition demandee au partage d'ecran. */
   /**
-   * De quelle application prendre le son en partageant un ECRAN.
+   * De quel programme prendre le son, quel que soit ce qu'on partage.
    *
-   * `null` veut dire tout l'ordinateur. Un identifiant de fenetre — `fenetre:N`
-   * — veut dire cette application seule, et c'est la seule facon d'echapper a
-   * l'echo quand un routeur audio virtuel tourne : Voicemeeter, VB-Cable et
-   * consorts rejouent notre son depuis leur propre processus, que Windows capte
-   * alors a bon droit. Exclure le notre n'y peut rien, puisque ce n'est pas le
-   * notre qui rejoue.
+   * Trois valeurs, et une seule d'entre elles n'est pas un identifiant :
    *
-   * Partager une FENETRE n'a pas ce reglage : le son suit l'application
-   * partagee, ce qui est la seule reponse qui ait du sens.
+   *  - `null` — tout l'ordinateur, sauf nous ;
+   *  - `SON_DE_L_APPLICATION` — celle dont on partage la fenetre, quelle qu'elle
+   *    soit ce jour-la. La valeur ne nomme donc personne : c'est une consigne,
+   *    et elle vaut encore au partage suivant ;
+   *  - `'fenetre:N'` — cette application-la, meme si l'on partage autre chose.
+   *
+   * Le reglage valait autrefois pour le seul partage d'ECRAN : partager une
+   * fenetre prenait le son de son application, sans rien demander. C'etait la
+   * reponse juste et elle laissait sans recours ceux pour qui elle ne marche
+   * pas — une page YouTube arrivait muette, et rien dans l'interface ne
+   * permettait d'y remedier, ni meme de comprendre pourquoi.
+   *
+   * Suivre une application reste ce qu'il y a de plus propre quand cela
+   * fonctionne : le jeu part, la conversation d'a cote reste. C'est aussi la
+   * seule facon d'echapper a l'echo quand un routeur audio virtuel tourne —
+   * Voicemeeter, VB-Cable et consorts rejouent notre son depuis leur propre
+   * processus, que Windows capte alors a bon droit, et exclure le notre n'y
+   * peut rien puisque ce n'est pas le notre qui rejoue.
    */
   loopbackSource: string | null;
 
@@ -149,8 +160,17 @@ const DEFAULTS: MediaPreferences = {
   outputVolume: 1,
   speakingThreshold: -50,
   videoQuality: '720p',
-  // Tout l'ordinateur : c'est ce qu'on attend d'un partage d'ecran, et cela
-  // n'ennuie que ceux qui ont un routeur audio virtuel.
+  /*
+   * Tout l'ordinateur, y compris en partageant une fenetre.
+   *
+   * C'est ce qu'on attend : partager, c'est faire entendre ce qu'on entend.
+   * Suivre l'application seule est plus fin, mais suppose qu'elle joue son son
+   * elle-meme — ce que beaucoup ne font pas, et le partage partait alors
+   * silencieux sans que rien ne le dise.
+   *
+   * Le defaut n'ennuie que ceux qui ont un routeur audio virtuel, et pour
+   * eux le reglage existe.
+   */
   loopbackSource: null,
 
   screenQuality: '1080p',

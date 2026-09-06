@@ -969,7 +969,7 @@ button.voice-tile__name:hover {
 }
 
 /*
- * D'ou vient le son, quand on partage un ecran.
+ * D'ou vient le son.
  *
  * Pose sous la bascule du son et en pleine largeur : il ne se lit qu'apres
  * elle, et n'a aucun sens sans elle.
@@ -977,8 +977,113 @@ button.voice-tile__name:hover {
 .picker__son-source {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   width: 100%;
+}
+
+/*
+ * Les trois modes, cote a cote et de meme largeur.
+ *
+ * Une liste deroulante les cachait derriere un clic : on ne pouvait pas
+ * comparer ce qu'on gagnait et ce qu'on perdait sans les ouvrir un a un. Ici
+ * les trois reponses, leur prix compris, se lisent d'un coup d'oeil.
+ *
+ * `1fr` chacune plutot que la largeur du texte : trois cartes inegales se
+ * liraient comme trois importances differentes, alors que ce sont trois
+ * reponses a la meme question.
+ */
+.picker__sources {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+@media (max-width: 620px) {
+  .picker__sources {
+    grid-template-columns: 1fr;
+  }
+}
+
+.picker__source-son {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'icone titre'
+    'icone detail';
+  /*
+   * Les trois titres sur la meme ligne, quoi qu'il arrive.
+   *
+   * Centrer verticalement paraissait plus soigne et faisait l'inverse : une
+   * carte dont la phrase tient sur une ligne remontait son titre par rapport
+   * aux deux autres. Trois reponses a la meme question doivent commencer a la
+   * meme hauteur.
+   */
+  align-content: start;
+  gap: 0 var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+  color: var(--text-primary);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.picker__source-son:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.picker__source-son.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/*
+ * Un mode empeche reste LISIBLE, il ne disparait pas.
+ *
+ * L'opacite basse habituelle effacerait la phrase qui dit ce qui manque —
+ * « il faut partager une application » — c'est-a-dire exactement ce qu'il faut
+ * lire pour pouvoir s'en servir.
+ */
+.picker__source-son:disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.picker__source-son-icone {
+  grid-area: icone;
+  align-self: start;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+}
+
+.picker__source-son.is-active .picker__source-son-icone {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.picker__source-son-titre {
+  grid-area: titre;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.picker__source-son-detail {
+  grid-area: detail;
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
 }
 
 .picker__liste {

@@ -12,6 +12,20 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.3
+
+- Le son d'un partage ne part plus muet. Partager une fenetre prenait le son
+  de son application, sans laisser le choix ; beaucoup ne jouent pas leur son
+  elles-memes — un navigateur confie le sien a un processus de service — et
+  la page YouTube ou Spotify partait alors sans un bruit.
+- Par defaut, tout l'ordinateur est desormais entendu, quoi qu'on partage.
+- Et si la capture d'une application ne porte rien au bout de quatre
+  secondes, tout l'ordinateur est repris automatiquement, sans que la piste
+  disparaisse pour ceux qui regardent.
+- Le choix du son est refait : trois cartes — tout l'ordinateur, l'application
+  partagee, une autre application — avec ce que chacune coute, au lieu d'une
+  liste deroulante visible seulement en partageant un ecran.
+
 ## 9.9.2
 
 - Le badge C.E.O reprend le logo d'origine, sans rien lui retoucher. Il est
