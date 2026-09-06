@@ -12,6 +12,17 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.4
+
+- « Connexion au partage… » ne tourne plus indefiniment. Si l'offre qui porte
+  l'image se perd — le canal se ferme et se rebatit — celui qui regarde
+  n'avait RIEN a rattraper, et celui qui partage ne voyait aucun probleme :
+  sa piste etait bien posee. Personne ne pouvait le corriger.
+- Celui qui attend redemande maintenant une offre, trois fois, puis renonce.
+- Et quand il renonce, il le dit : la vignette affiche « Le partage ne repond
+  pas » avec un bouton pour redemander, au lieu d'un rond qui tourne pour
+  toujours.
+
 ## 9.9.3
 
 - Le son d'un partage ne part plus muet. Partager une fenetre prenait le son

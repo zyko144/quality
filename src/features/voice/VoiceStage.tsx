@@ -551,6 +551,11 @@ function ScreenTile({
   /** Cette vignette etait-elle celle en plein ecran ? Voir l'ecouteur global. */
   const etaitPleinEcran = useRef(false);
 
+  // Vrai quand la surveillance a cesse de reclamer ce partage. Voir
+  // `relance.ts` : l'attente est bornee, et sa fin se dit.
+  const sansReponse = useVoice((etat) => (auteur ? etat.partagesSansReponse[auteur] === true : false));
+  const redemanderPartage = useVoice((etat) => etat.redemanderPartage);
+
   /** Ou poser le menu contextuel, ou `null` s'il est ferme. */
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -664,13 +669,48 @@ function ScreenTile({
           distinguer un partage qui arrive d'un partage noir, ou d'une panne. On
           restait devant du vide sans savoir s'il fallait attendre ou reessayer.
         */}
-        {!stream ? (
+        {/*
+          Tant qu'on espere encore, le rond tourne : une attente ordinaire se
+          supporte. L'echec, lui, est pose hors de cette surface — il porte un
+          bouton, et un bouton dans un bouton n'est pas du HTML.
+        */}
+        {!stream && !sansReponse ? (
           <div className="screen-tile__attente">
             <span className="screen-tile__attente-rond" aria-hidden="true" />
             Connexion au partage…
           </div>
         ) : null}
       </button>
+
+      {/*
+        L'attente a une fin, et elle se dit.
+
+        Un rond qui tourne devant une image qui ne viendra jamais est un
+        mensonge poli : on reste devant sans savoir s'il faut patienter ou
+        reessayer, et c'est exactement ce qui a ete rapporte — « des fois
+        connexion au partage a l'infini ». Voir `relance.ts` : la surveillance
+        redemande une offre trois fois, puis renonce, et c'est ici qu'elle le
+        dit.
+
+        Hors de la surface qui agrandit : le bouton doit pouvoir etre clique
+        sans mettre la vignette en avant au passage.
+      */}
+      {!stream && sansReponse ? (
+        <div className="screen-tile__echec" role="status">
+          <Icon name="alert-triangle" size={18} />
+          <span>Le partage ne repond pas.</span>
+          {auteur ? (
+            <button
+              type="button"
+              className="btn btn--ghost screen-tile__reprise"
+              onClick={() => redemanderPartage(auteur)}
+            >
+              <Icon name="refresh" size={13} />
+              Redemander
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <figcaption className="screen-tile__label">
         <Icon name="screen" size={13} />

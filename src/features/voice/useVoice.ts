@@ -26,6 +26,12 @@ import { decider, etatPairsVide } from './pairs';
 import { noter, etatMartelementVide } from './martelement';
 import { ajuster } from './cadence';
 import { attenteAvantAnnonce, retenirAnnonce, REPUBLICATION_PRESENCE } from './annonces';
+import {
+  decideRelance,
+  peutReoffrir,
+  RELANCES_MAX,
+  type AttentePartage,
+} from './relance';
 import { serveursIce, comporteUnRelais } from './reseau';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
@@ -98,7 +104,25 @@ interface Deplacement {
   salon: UUID;
 }
 
-type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion | Refus | Deplacement;
+/**
+ * « Je t'attends, renvoie-moi une offre. »
+ *
+ * Emise par celui qui REGARDE, pas par celui qui partage — lui seul sait qu'il
+ * n'a rien recu. Voir `relance.ts` pour ce qui la declenche et pourquoi elle
+ * existe : une offre perdue ne se rejoue pas toute seule, et le partage reste
+ * alors « en connexion » indefiniment.
+ *
+ * Elle ne porte rien d'autre que son intention. Ce qu'il faut renvoyer, celui
+ * qui partage le sait mieux que le demandeur : ses pistes sont deja posees sur
+ * la connexion.
+ */
+interface Reoffre {
+  kind: 'reoffre';
+  from: UUID;
+  to: UUID;
+}
+
+type VoiceMessage = VoiceSignal | StreamInfo | Deconnexion | Refus | Deplacement | Reoffre;
 
 /**
  * Salons vocaux en WebRTC maille.
@@ -194,6 +218,20 @@ interface VoiceState {
   remoteScreenAudio: Record<UUID, MediaStream>;
   /** Flux de partage d'ecran distants, indexes de la meme facon. */
   remoteScreens: Record<UUID, MediaStream>;
+
+  /**
+   * Partages qu'on a renonce a reclamer.
+   *
+   * Le voile « Connexion au partage… » tournait sans fin quand l'offre se
+   * perdait, et rien ne distinguait une image qui tarde d'une image qui ne
+   * viendra jamais. On attendait devant, indefiniment, sans savoir s'il
+   * fallait patienter ou reessayer — et sans meme pouvoir le decrire.
+   *
+   * `relance.ts` sait maintenant dire quand l'attente n'a plus de sens. La
+   * vignette le dit alors, et propose de redemander : une attente bornee et
+   * un geste valent mieux qu'un tourniquet.
+   */
+  partagesSansReponse: Record<UUID, boolean>;
   /** Personnes qui parlent, detectees par analyse du niveau sonore. */
   speaking: Record<UUID, boolean>;
 
@@ -259,6 +297,16 @@ interface VoiceState {
   deplacer: (userId: UUID, salon: UUID) => void;
   /** Ouvre ou ferme le partage de quelqu'un. Ferme, il n'est plus decode. */
   toggleWatch: (userId: UUID) => void;
+
+  /**
+   * Redemande un partage auquel on avait renonce.
+   *
+   * Remet le compteur a zero : la surveillance repart pour un cycle complet
+   * de relances au prochain battement. C'est le geste qu'on tente devant une
+   * vignette qui a abandonne, et il vaut mieux que de quitter le salon pour y
+   * revenir — ce qui etait, jusqu'ici, la seule chose a faire.
+   */
+  redemanderPartage: (userId: UUID) => void;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -437,6 +485,20 @@ const etatPairs = etatPairsVide();
 const streamPurposes = new Map<string, StreamPurpose>();
 /** Pistes recues avant leur annonce, a reclasser une fois celle-ci arrivee. */
 const pendingStreams = new Map<string, { peerId: UUID; stream: MediaStream }>();
+
+/**
+ * Partages annonces dont aucune piste n'est arrivee, et depuis quand.
+ *
+ * Une entree n'existe que tant qu'on attend vraiment : elle nait au premier
+ * battement qui constate le manque et disparait des que la piste arrive, que
+ * la personne cesse de partager, ou qu'on cesse de la regarder. C'est ce qui
+ * fait repartir le compteur a zero au partage suivant — sans quoi on
+ * renoncerait immediatement, sur la foi d'une attente vieille d'une heure.
+ */
+const attentesPartage = new Map<UUID, AttentePartage>();
+
+/** Derniere relance honoree, par pair. Voir `REPOS_REOFFRE`. */
+const derniereReoffre = new Map<UUID, number>();
 let audioContext: AudioContext | null = null;
 let speechTimer: number | null = null;
 const analysers = new Map<UUID, AnalyserNode>();
@@ -1489,6 +1551,167 @@ let cadenceCapture = 0;
    * On repasse donc a chaque changement de presence et au battement : ce sont
    * exactement les moments ou la reponse a pu arriver.
    */
+  /**
+   * Redemande une offre pour un partage annonce dont rien n'arrive.
+   *
+   * Appelee a chaque battement des pairs. Elle ne fait rien tant qu'une piste
+   * est en route, en attente de classement, ou deja rangee : elle ne vise que
+   * le cas ou il n'y a RIEN, c'est-a-dire une negociation perdue en chemin.
+   *
+   * Voir `relance.ts` pour les bornes et ce qu'elles coutent.
+   */
+  function surveillerPartages(): void {
+    const etat = get();
+    const salon = etat.channelId;
+    const moi = etat.userId;
+    if (!salon || !moi) return;
+
+    const maintenant = Date.now();
+    const attendus = new Set<UUID>();
+
+    for (const qui of etat.participantsByChannel[salon] ?? []) {
+      if (qui.user_id === moi || !qui.sharing) continue;
+
+      /*
+       * On ne relance que ce qu'on regarde.
+       *
+       * Un partage qu'on n'a pas ouvert n'a pas de vignette : personne
+       * n'attend devant, et rien ne justifie de faire renegocier une
+       * connexion pour une image qu'on ne demandera peut-etre jamais.
+       */
+      if (etat.watchedShares[qui.user_id] !== true) continue;
+      if (etat.remoteScreens[qui.user_id]) continue;
+
+      /*
+       * Une piste arrivee mais pas encore classee n'est pas une piste perdue.
+       *
+       * `reclasserEnAttente` s'en occupe, et il y arrive : la presence finit
+       * par lever l'ambiguite. Renegocier n'y changerait rien — la piste est
+       * deja la — et remplacerait un probleme resolu par une coupure.
+       */
+      let dejaLa = false;
+      for (const [, attente] of pendingStreams) {
+        if (attente.peerId === qui.user_id) {
+          dejaLa = true;
+          break;
+        }
+      }
+      if (dejaLa) continue;
+
+      attendus.add(qui.user_id);
+
+      const suivi = attentesPartage.get(qui.user_id) ?? {
+        depuis: maintenant,
+        relances: 0,
+        derniereRelance: 0,
+      };
+      attentesPartage.set(qui.user_id, suivi);
+
+      switch (decideRelance(suivi, maintenant)) {
+        case 'relancer':
+          suivi.relances += 1;
+          suivi.derniereRelance = maintenant;
+
+          journal.alerte('vocal', 'Partage attendu sans piste : on redemande une offre', {
+            pair: qui.user_id,
+            essai: suivi.relances,
+            attente: maintenant - suivi.depuis,
+          });
+
+          send({ kind: 'reoffre', from: moi, to: qui.user_id });
+          break;
+
+        case 'renoncer':
+          // Dit une fois, pas a chaque battement : c'est une trace, pas une
+          // alarme, et elle doit rester lisible dans le journal.
+          if (suivi.relances === RELANCES_MAX) {
+            suivi.relances += 1;
+            journal.erreur('vocal', 'Partage jamais recu malgre les relances', {
+              pair: qui.user_id,
+              attente: maintenant - suivi.depuis,
+            });
+
+            // La vignette cesse de faire croire que ca arrive.
+            set((etat) => ({
+              partagesSansReponse: { ...etat.partagesSansReponse, [qui.user_id]: true },
+            }));
+          }
+          break;
+
+        default:
+          break;
+      }
+    }
+
+    /*
+     * Ce qu'on n'attend plus s'oublie.
+     *
+     * Sans cela, le compteur d'un partage termine condamnerait le suivant a
+     * renoncer des le premier battement — et l'avertissement resterait
+     * affiche devant une image qui, entre-temps, marche tres bien.
+     */
+    for (const pair of [...attentesPartage.keys()]) {
+      if (attendus.has(pair)) continue;
+      attentesPartage.delete(pair);
+
+      if (get().partagesSansReponse[pair]) {
+        set((etat) => ({ partagesSansReponse: retirer(etat.partagesSansReponse, pair) }));
+      }
+    }
+  }
+
+  /**
+   * Renvoie une offre a un pair qui dit ne rien avoir recu.
+   *
+   * Deux etats appellent deux gestes differents, et les confondre ne repare
+   * rien :
+   *
+   *  - `stable` — notre offre precedente a ete repondue, ou n'est jamais
+   *    partie. On en refait une ; elle portera les pistes deja posees.
+   *  - `have-local-offer` — notre offre est partie et rien n'est revenu. En
+   *    refaire une est impossible, et inutile : c'est la MEME qu'il faut
+   *    renvoyer, puisque c'est elle qui s'est perdue. C'est le cas qu'on ne
+   *    savait pas traiter, et celui qui laissait le voile tourner pour
+   *    toujours.
+   *
+   * Tout autre etat veut dire qu'une negociation est deja en train
+   * d'aboutir : on la laisse faire.
+   */
+  async function renvoyerUneOffre(peer: Peer, peerId: UUID): Promise<void> {
+    const { connection } = peer;
+    const moi = get().userId;
+    if (!moi) return;
+
+    const media = useDevices.getState().media;
+
+    if (connection.signalingState === 'have-local-offer') {
+      const sdp = connection.localDescription?.sdp;
+      if (sdp) send({ kind: 'offer', from: moi, to: peerId, sdp: ameliorerOpus(sdp, media) });
+      return;
+    }
+
+    if (connection.signalingState !== 'stable' || peer.makingOffer) return;
+
+    try {
+      peer.makingOffer = true;
+      poserLesCodecs(connection);
+      await connection.setLocalDescription();
+
+      if (connection.localDescription?.sdp) {
+        send({
+          kind: 'offer',
+          from: moi,
+          to: peerId,
+          sdp: ameliorerOpus(connection.localDescription.sdp, media),
+        });
+      }
+    } catch {
+      // La relance suivante retentera : c'est tout l'interet d'en avoir plusieurs.
+    } finally {
+      peer.makingOffer = false;
+    }
+  }
+
   function reclasserEnAttente(): void {
     if (pendingStreams.size === 0) return;
 
@@ -1632,7 +1855,11 @@ let cadenceCapture = 0;
       const regarde = get().watchedShares[peerId] === true;
       for (const piste of stream.getVideoTracks()) piste.enabled = regarde;
 
-      set((state) => ({ remoteScreens: { ...state.remoteScreens, [peerId]: stream } }));
+      set((state) => ({
+        remoteScreens: { ...state.remoteScreens, [peerId]: stream },
+        // Elle est arrivee : plus rien a expliquer.
+        partagesSansReponse: retirer(state.partagesSansReponse, peerId),
+      }));
     } else {
       set((state) => ({ remoteCameras: { ...state.remoteCameras, [peerId]: stream } }));
     }
@@ -1890,6 +2117,41 @@ let cadenceCapture = 0;
         if (voix && voix.id === signal.streamId) placeAudioStream(signal.from, voix);
       }
 
+      return;
+    }
+
+    /*
+     * Quelqu'un dit ne rien recevoir de notre partage.
+     *
+     * On ne verifie pas sa parole : de notre cote, une offre perdue est
+     * indiscernable d'une offre aboutie — la piste est posee sur la connexion
+     * dans les deux cas, et c'est bien pour cela que le defaut etait
+     * invisible a l'emetteur.
+     *
+     * Les deux annonces repartent aussi. La demande ne dit pas CE qui manque,
+     * et il y a deux chemins a perdre : la piste et son role. Les renvoyer
+     * tous les deux coute deux messages et evite d'avoir a deviner lequel.
+     */
+    if (signal.kind === 'reoffre') {
+      const maintenant = Date.now();
+      if (!peutReoffrir(derniereReoffre.get(signal.from), maintenant)) return;
+      derniereReoffre.set(signal.from, maintenant);
+
+      const ecran = get().localScreen;
+      const camera = get().localCamera;
+
+      // Rien a renvoyer : la presence de l'autre est en retard sur la notre,
+      // et elle se corrigera d'elle-meme.
+      if (!ecran && !camera) return;
+
+      journal.alerte('vocal', 'Un pair redemande une offre', { pair: signal.from });
+
+      const pair = createPeer(signal.from, localStream);
+
+      if (ecran) announceStream(signal.from, ecran.id, 'screen');
+      if (camera) announceStream(signal.from, camera.id, 'camera');
+
+      await renvoyerUneOffre(pair, signal.from);
       return;
     }
 
@@ -2234,6 +2496,7 @@ let cadenceCapture = 0;
     remoteAudio: {},
     remoteScreenAudio: {},
     remoteScreens: {},
+    partagesSansReponse: {},
     remoteCameras: {},
     focusedShare: null,
     watchedShares: {},
@@ -2458,6 +2721,7 @@ let cadenceCapture = 0;
         if (!salon) return;
         syncPeers(get().participantsByChannel[salon] ?? []);
         reclasserEnAttente();
+        surveillerPartages();
 
         /*
          * Le canal donne-t-il encore signe de vie ?
@@ -2548,6 +2812,8 @@ let cadenceCapture = 0;
       window.setTimeout(reconcilierObservateurs, 800);
       streamPurposes.clear();
       pendingStreams.clear();
+      attentesPartage.clear();
+      derniereReoffre.clear();
       etatPairs.absences.clear();
       etatPairs.attentes.clear();
 
@@ -2594,6 +2860,7 @@ let cadenceCapture = 0;
           cameraOn: false,
           remoteAudio: {},
           remoteScreens: {},
+          partagesSansReponse: {},
           remoteCameras: {},
           focusedShare: null,
           speaking: {},
@@ -3121,6 +3388,20 @@ let cadenceCapture = 0;
      * processeur qui faisait ramer les machines modestes. Le rouvrir est
      * instantane, sans renegociation.
      */
+    redemanderPartage: (userId) => {
+      attentesPartage.delete(userId);
+      derniereReoffre.delete(userId);
+
+      set((etat) => ({ partagesSansReponse: retirer(etat.partagesSansReponse, userId) }));
+
+      journal.info('vocal', 'Partage redemande a la main', { pair: userId });
+
+      // Sans attendre le battement : le clic doit produire quelque chose tout
+      // de suite, meme si la premiere demande ne part qu'apres le delai de
+      // grace. Ce passage-ci recree l'attente et repart de zero.
+      surveillerPartages();
+    },
+
     toggleWatch: (userId) => {
       const suivant = !get().watchedShares[userId];
 
