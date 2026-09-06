@@ -26,6 +26,7 @@
  */
 
 import { journal } from '@/lib/journal';
+import { assembleur } from './assemblage';
 
 /*
  * `MediaStreamTrackGenerator` n'est pas dans les types du moteur.
@@ -42,9 +43,6 @@ declare class MediaStreamTrackGenerator extends MediaStreamTrack {
 }
 
 const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-
-/** Taille de l'en-tete qui precede chaque image : largeur, hauteur, octets. */
-const ENTETE = 12;
 
 export interface ImageSysteme {
   /** Flux d'une piste video, a joindre au partage. */
@@ -127,15 +125,9 @@ export async function capturerSource(
   const depart = performance.now();
 
   void (async () => {
-    /*
-     * Les octets arrivent par morceaux quelconques, jamais par images.
-     *
-     * Une connexion ne respecte pas les frontieres de ce qu'on y ecrit : une
-     * image peut arriver en trois morceaux, ou trois images en un seul. D'ou
-     * l'en-tete de douze octets qui precede chaque image et dit sa taille — on
-     * accumule jusqu'a en avoir assez, et pas avant.
-     */
-    let reste: Uint8Array<ArrayBuffer> = new Uint8Array(0);
+    // Le recollage vit dans `assemblage.ts` : c'est un automate a etats, et
+    // ceux-la se verifient par des essais, pas en les lisant.
+    const recollage = assembleur();
 
     try {
       for (;;) {
@@ -143,21 +135,16 @@ export async function capturerSource(
         if (done) break;
         if (!value) continue;
 
-        reste = joindre(reste, value as Uint8Array<ArrayBuffer>);
+        const pretes = recollage.avaler(value);
 
-        for (;;) {
-          if (reste.byteLength < ENTETE) break;
+        // Le flux ne veut plus rien dire : on ferme plutot que de fabriquer du
+        // bruit a partir d'octets decales.
+        if (pretes === null) {
+          journal.alerte('partage', 'Flux d’images incoherent : lecture arretee', { source });
+          return;
+        }
 
-          const vue = new DataView(reste.buffer, reste.byteOffset, ENTETE);
-          const largeur = vue.getUint32(0, true);
-          const hauteur = vue.getUint32(4, true);
-          const octets = vue.getUint32(8, true);
-
-          if (reste.byteLength < ENTETE + octets) break;
-
-          const pixels = reste.slice(ENTETE, ENTETE + octets);
-          reste = reste.slice(ENTETE + octets);
-
+        for (const image of pretes) {
           /*
            * L'horodatage est celui de l'arrivee, pas un compteur d'images.
            *
@@ -166,14 +153,15 @@ export async function capturerSource(
            * son — qui, lui, coule sans interruption — deriverait de plus en
            * plus loin de l'image.
            */
-          const image = new VideoFrame(pixels, {
-            format: 'BGRA',
-            codedWidth: largeur,
-            codedHeight: hauteur,
-            timestamp: Math.round((performance.now() - depart) * 1000),
-          });
+          await ecrivain.write(
+            new VideoFrame(image.pixels, {
+              format: 'BGRA',
+              codedWidth: image.largeur,
+              codedHeight: image.hauteur,
+              timestamp: Math.round((performance.now() - depart) * 1000),
+            }),
+          );
 
-          await ecrivain.write(image);
           recues += 1;
         }
       }
@@ -197,13 +185,42 @@ export async function capturerSource(
    * ce qu'on a demande, et ce qui est arrive.
    */
   window.setTimeout(() => {
-    journal.info('partage', 'Capture native', {
-      source,
-      definition: `${flux.largeur}x${flux.hauteur}`,
-      demandees: images,
-      recues,
-      parSeconde: Math.round(recues / ((performance.now() - depart) / 1000)),
-    });
+    void (async () => {
+      let natif: { arrivees?: number; gardees?: number; abandonnees?: number } | null = null;
+
+      try {
+        natif = await invoke<{ arrivees: number; gardees: number; abandonnees: number }>(
+          'diagnostic_image',
+        );
+      } catch {
+        // Version installee plus ancienne que ce code : on journalise ce qu'on a.
+      }
+
+      journal.info('partage', 'Capture native', {
+        source,
+        definition: `${flux.largeur}x${flux.hauteur}`,
+        demandees: images,
+        recues,
+        parSeconde: Math.round(recues / ((performance.now() - depart) / 1000)),
+
+        /*
+         * Ou les images se perdent, dans l'ordre de la chaine.
+         *
+         * `arrivees` est ce que Windows produit — il suit le rafraichissement
+         * de l'ecran, pas notre cadence. `gardees` est ce qu'on retient et
+         * rapatrie. `abandonnees` est ce qu'on a rapatrie pour rien, faute de
+         * place dans la file. `recues`, juste au-dessus, est ce qui atteint la
+         * piste.
+         *
+         * Les quatre cote a cote referment la chaine : sans eux, « il manque
+         * des images » designe trois defauts qui se corrigent a l'oppose les
+         * uns des autres, et rien ne dit lequel on regarde.
+         */
+        arrivees: natif?.arrivees ?? -1,
+        gardees: natif?.gardees ?? -1,
+        abandonnees: natif?.abandonnees ?? -1,
+      });
+    })();
   }, 5000);
 
   return {
@@ -217,19 +234,6 @@ export async function capturerSource(
       },
     },
   };
-}
-
-/** Colle deux morceaux, en evitant la copie quand le premier est vide. */
-function joindre(
-  gauche: Uint8Array<ArrayBuffer>,
-  droite: Uint8Array<ArrayBuffer>,
-): Uint8Array<ArrayBuffer> {
-  if (gauche.byteLength === 0) return droite;
-
-  const joint = new Uint8Array(gauche.byteLength + droite.byteLength);
-  joint.set(gauche, 0);
-  joint.set(droite, gauche.byteLength);
-  return joint;
 }
 
 /**

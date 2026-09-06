@@ -12,6 +12,23 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.5
+
+- Beaucoup plus d'images par seconde dans les partages. Deux defauts se
+  cumulaient, et aucun des deux ne se voyait : les traces disaient
+  « limite: none » — rien ne retenait l'encodeur — avec onze images par
+  seconde pour soixante demandees.
+- Le recollage des images recopiait tout ce qui s'etait deja accumule a
+  chaque morceau recu. Le cout etait quadratique : 1,7 Go de recopie pour
+  une image 1440p qui en fait 14,7. C'est ce qui plafonnait la cadence, et
+  d'autant plus que la definition etait grande.
+- Le filtre de cadence perdait une image sur deux quand l'ecran tourne a la
+  cadence demandee — soixante images sur un ecran a soixante hertz, le cas
+  le plus courant.
+- Le journal dit maintenant ou les images se perdent : produites par
+  Windows, retenues, abandonnees, recues. « Il manque des images » designait
+  trois defauts qui se corrigent a l'oppose les uns des autres.
+
 ## 9.9.4
 
 - « Connexion au partage… » ne tourne plus indefiniment. Si l'offre qui porte

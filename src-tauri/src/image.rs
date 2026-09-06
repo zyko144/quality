@@ -76,6 +76,21 @@ const IMAGES_EN_RESERVE: i32 = 2;
 /// d'arrivee, qui appartient a Windows et ne doit rien attendre.
 static INTERVALLE_NS: AtomicU64 = AtomicU64::new(0);
 
+/*
+ * Ou passent les images, compte par compte.
+ *
+ * « Ca rame » decrit aussi bien une capture qui ne produit rien qu'un encodeur
+ * qui n'avance pas, et les deux se corrigent a l'oppose l'un de l'autre. Le
+ * cote interface sait deja dire combien d'images lui parviennent ; ces
+ * compteurs-ci disent ce qu'il en est advenu AVANT, ce qui est la seule facon
+ * de distinguer une image que Windows n'a jamais produite d'une image qu'on a
+ * jetee soi-meme.
+ */
+static ARRIVEES: AtomicU64 = AtomicU64::new(0);
+static GARDEES: AtomicU64 = AtomicU64::new(0);
+/// Images lues puis abandonnees faute de place dans la file.
+static ABANDONNEES: AtomicU64 = AtomicU64::new(0);
+
 /// Regle la cadence de capture sans rouvrir la source.
 ///
 /// Rouvrir couperait l'image une demi-seconde, ce qui se verrait bien plus que
@@ -95,6 +110,51 @@ fn intervalle_pour(images: u32) -> u64 {
     // Cinq images par seconde au plancher : en dessous, ce n'est plus un
     // partage mais une suite de photographies.
     1_000_000_000 / images.clamp(5, 240) as u64
+}
+
+/// Part de l'intervalle toleree en avance. Voir `retenir`.
+const TOLERANCE: u64 = 8;
+
+/// Faut-il garder cette image ? Rend la prochaine echeance, ou `None`.
+///
+/// Le filtre precedent mesurait le temps ecoule DEPUIS LA DERNIERE IMAGE
+/// GARDEE et jetait tout ce qui arrivait avant l'intervalle. La regle est juste
+/// en apparence et perd la moitie des images des que la source tourne a la
+/// cadence demandee — le cas le plus courant : soixante images par seconde
+/// demandees sur un ecran a soixante hertz.
+///
+/// Le mecanisme est celui d'un battement. Les arrivees ne sont pas
+/// regulieres a la nanoseconde pres ; il suffit qu'une image arrive quelques
+/// microsecondes trop tot pour etre jetee, et la suivante est alors mesuree
+/// depuis la precedente GARDEE, donc trente-trois millisecondes plus tard.
+/// Une gardee, une jetee, indefiniment : trente images par seconde pour
+/// soixante demandees et soixante capturees, sans que rien ne le signale.
+///
+/// Deux changements le suppriment :
+///
+///  - on vise une ECHEANCE, qui avance de l'intervalle exact a chaque image
+///    gardee. Elle ne derive pas, alors qu'un delai mesure depuis la derniere
+///    gardee accumule le retard de chacune ;
+///  - on tolere une avance d'un huitieme d'intervalle. C'est ce qui absorbe la
+///    gigue : sans elle, l'echeance et la source se croisent sans arret.
+///
+/// La tolerance ne peut pas emballer la cadence : au pire elle rend huit
+/// septiemes de ce qui est demande, et la source, de toute facon, ne produit
+/// pas plus qu'elle ne produit.
+fn retenir(maintenant_ns: u64, echeance_ns: u64, intervalle_ns: u64) -> Option<u64> {
+    if maintenant_ns + intervalle_ns / TOLERANCE < echeance_ns {
+        return None;
+    }
+
+    /*
+     * Apres une pause, on ne rattrape pas.
+     *
+     * Rien ne bouge a l'ecran pendant une seconde : la capture ne produit
+     * rien, et l'echeance se retrouve loin dans le passe. Sans ce plancher,
+     * les soixante images suivantes passeraient toutes d'un coup — une rafale
+     * a la cadence de l'ecran, le temps que l'echeance revienne au present.
+     */
+    Some((echeance_ns + intervalle_ns).max(maintenant_ns))
 }
 
 /// Une image capturee, ramenee en memoire centrale.
@@ -236,7 +296,21 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
      * avoir traverse le bus.
      */
     INTERVALLE_NS.store(intervalle_pour(images), Ordering::Relaxed);
-    let mut precedente = std::time::Instant::now() - std::time::Duration::from_secs(1);
+
+    ARRIVEES.store(0, Ordering::Relaxed);
+    GARDEES.store(0, Ordering::Relaxed);
+    ABANDONNEES.store(0, Ordering::Relaxed);
+
+    /*
+     * Le temps est compte depuis l'ouverture, en nanosecondes.
+     *
+     * `Instant` ne se compare pas a un nombre, et la regle de retenue doit
+     * pouvoir tourner sans horloge pour etre eprouvee. Voir `retenir` et ses
+     * essais : c'est une boucle de decision, et celles-la ne se verifient pas
+     * en les lisant.
+     */
+    let depart = std::time::Instant::now();
+    let mut echeance: u64 = 0;
 
     let mut attente = Attente::default();
 
@@ -247,17 +321,25 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
                 return Ok(());
             };
 
-            let maintenant = std::time::Instant::now();
-            let intervalle =
-                std::time::Duration::from_nanos(INTERVALLE_NS.load(Ordering::Relaxed));
+            ARRIVEES.fetch_add(1, Ordering::Relaxed);
 
-            if maintenant.duration_since(precedente) < intervalle {
+            let maintenant = depart.elapsed().as_nanos() as u64;
+            let intervalle = INTERVALLE_NS.load(Ordering::Relaxed);
+
+            let Some(suivante) = retenir(maintenant, echeance, intervalle) else {
                 return Ok(());
-            }
-            precedente = maintenant;
+            };
+            echeance = suivante;
 
             if let Ok(Some(lue)) = lire(&materiel, &contexte, &image, &mut attente) {
-                let _ = expediteur.try_send(lue);
+                GARDEES.fetch_add(1, Ordering::Relaxed);
+
+                // La file ne bloque jamais : une image en retard ne sert a
+                // personne. Mais on compte celles qu'on abandonne, sans quoi
+                // « il manque des images » ne designe rien.
+                if expediteur.try_send(lue).is_err() {
+                    ABANDONNEES.fetch_add(1, Ordering::Relaxed);
+                }
             }
 
             Ok(())
@@ -576,6 +658,141 @@ pub fn demarrer_image(source: String, images: u32) -> Result<FluxImage, String> 
         largeur,
         hauteur,
     })
+}
+
+/// La retenue des images, eprouvee contre une source qui tourne.
+///
+/// Ces essais-la n'ont besoin ni d'ecran ni de carte graphique : `retenir` ne
+/// connait que des nanosecondes. C'est tout l'interet de l'avoir sortie de
+/// l'evenement — la regle precedente vivait au milieu d'un appel de Windows,
+/// et l'on ne pouvait ni la lire ni la mesurer sans partager un ecran a la
+/// main, en comptant les images a l'oeil.
+#[cfg(test)]
+mod essais_retenue {
+    use super::*;
+
+    /// Fait tourner la regle contre une source reguliere. Rend les images gardees.
+    fn tourner(source_hz: u64, cible_hz: u32, images: u64, gigue_ns: i64) -> u64 {
+        let intervalle = intervalle_pour(cible_hz);
+        let periode = 1_000_000_000 / source_hz;
+
+        let mut echeance = 0u64;
+        let mut gardees = 0u64;
+
+        for n in 0..images {
+            /*
+             * La gigue alterne d'une image a l'autre.
+             *
+             * C'est ce qui compte : une source parfaitement reguliere ne
+             * revele rien. Le battement naissait justement de ce qu'une image
+             * arrivait parfois quelques microsecondes trop tot.
+             */
+            let ecart = if n % 2 == 0 { gigue_ns } else { -gigue_ns };
+            let maintenant = (n * periode).saturating_add_signed(ecart);
+
+            if let Some(suivante) = retenir(maintenant, echeance, intervalle) {
+                echeance = suivante;
+                gardees += 1;
+            }
+        }
+
+        gardees
+    }
+
+    /// Le defaut lui-meme : soixante demandees sur un ecran a soixante hertz.
+    ///
+    /// La regle precedente en rendait la moitie. Les traces le disaient sans
+    /// qu'on sache le lire : `limite: none` — rien ne retenait l'encodeur — et
+    /// pourtant deux fois moins d'images qu'il n'en arrivait.
+    #[test]
+    fn une_source_a_la_cadence_demandee_passe_entiere() {
+        let gardees = tourner(60, 60, 600, 200_000);
+        assert!(gardees >= 590, "seulement {gardees} images sur 600");
+    }
+
+    /// Et l'on ne depasse pas ce qui a ete demande.
+    ///
+    /// La tolerance pourrait, mal posee, faire passer plus d'images que la
+    /// cadence voulue — ce serait payer un rapatriement pour rien.
+    #[test]
+    fn un_ecran_rapide_est_ramene_a_la_cadence_voulue() {
+        let gardees = tourner(144, 60, 1440, 100_000);
+
+        // Dix secondes a 144 Hz : environ six cents images a soixante.
+        assert!(gardees >= 580, "seulement {gardees} images");
+        assert!(gardees <= 690, "{gardees} images, soit plus que demande");
+    }
+
+    #[test]
+    fn une_cadence_basse_est_respectee() {
+        // Trente demandees sur soixante disponibles : une sur deux, et c'est
+        // cette fois voulu.
+        let gardees = tourner(60, 30, 600, 200_000);
+        assert!((290..=310).contains(&gardees), "{gardees} images");
+    }
+
+    /// Une pause ne se rattrape pas en rafale.
+    #[test]
+    fn apres_une_pause_on_ne_rattrape_pas() {
+        let intervalle = intervalle_pour(60);
+
+        // L'echeance est restee une seconde en arriere : rien ne bougeait.
+        let echeance = 0;
+        let maintenant = 1_000_000_000;
+
+        let suivante = retenir(maintenant, echeance, intervalle).expect("image gardee");
+
+        /*
+         * L'echeance revient au present. Sans ce plancher, elle serait a
+         * 16,7 ms — dans le passe — et les soixante images suivantes
+         * passeraient toutes, d'un coup.
+         */
+        assert!(suivante >= maintenant, "l'echeance est restee dans le passe");
+        assert!(suivante <= maintenant + intervalle);
+    }
+
+    #[test]
+    fn une_image_trop_en_avance_est_jetee() {
+        let intervalle = intervalle_pour(60);
+        // La moitie d'un intervalle en avance : bien au-dela de la gigue.
+        assert!(retenir(intervalle / 2, intervalle, intervalle).is_none());
+    }
+}
+
+/// Ce que la capture a vu, entre son arrivee et la file.
+#[derive(serde::Serialize)]
+pub struct DiagnosticImage {
+    /// Images que Windows a produites. Suit le rafraichissement de l'ecran.
+    pub arrivees: u64,
+    /// Images retenues par la cadence, puis rapatriees en memoire centrale.
+    pub gardees: u64,
+    /// Images rapatriees puis abandonnees faute de place dans la file.
+    pub abandonnees: u64,
+}
+
+/// Rend ces comptes. Sans effet de bord.
+///
+/// « Il manque des images » a trois causes qui se corrigent a l'oppose les unes
+/// des autres, et rien dans l'interface ne les distingue :
+///
+///  - `arrivees` faible : Windows ne produit rien. L'ecran est fixe, ou la
+///    source est masquee. Il n'y a rien a corriger.
+///  - `gardees` bien en dessous de `arrivees` : c'est NOUS qui filtrons. Soit
+///    la cadence demandee est basse, soit la regle de retenue se trompe — elle
+///    l'a fait, et perdait une image sur deux.
+///  - `abandonnees` non nul : le lecteur n'absorbe pas ce qu'on produit. Le
+///    goulot est en aval, dans le passage ou dans l'interface.
+///
+/// Le compte des images qui arrivent VRAIMENT jusqu'a la piste est tenu de
+/// l'autre cote, dans `imageSysteme.ts`. Les quatre nombres cote a cote
+/// referment la chaine.
+#[tauri::command]
+pub fn diagnostic_image() -> DiagnosticImage {
+    DiagnosticImage {
+        arrivees: ARRIVEES.load(Ordering::Relaxed),
+        gardees: GARDEES.load(Ordering::Relaxed),
+        abandonnees: ABANDONNEES.load(Ordering::Relaxed),
+    }
 }
 
 /// Arrete la capture d'image. Sans effet si elle ne tourne pas.
