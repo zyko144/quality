@@ -12,6 +12,21 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+## 9.9.6
+
+- Ce que vous ecoutez se voit enfin des autres. L'annonce n'atteignait jamais
+  la base : la colonne qui porte la pochette acceptait cinq cents caracteres,
+  et une pochette reduite en fait trois mille. Chaque annonce en portant une
+  etait rejetee, sans un mot.
+- Vous voyiez la votre parce que l'application la posait dans son propre etat
+  juste apres l'ecriture, sans jamais en lire le resultat. Elle le lit
+  desormais, et le dit au journal quand la base refuse.
+- Une pochette trop lourde est laissee de cote plutot que de faire perdre
+  l'annonce entiere : le morceau vaut mieux que sa vignette.
+- Et une annonce laissee par une application fermee net cesse d'etre crue au
+  bout d'une demi-heure, au lieu de vous montrer « en train d'ecouter » pour
+  toujours.
+
 ## 9.9.5
 
 - Beaucoup plus d'images par seconde dans les partages. Deux defauts se

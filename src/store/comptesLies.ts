@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { journal } from '@/lib/journal';
+import { estFraiche } from '@/features/profile/ecoute';
 import type { UUID } from '@/types/db';
 
 /**
@@ -36,6 +38,15 @@ export interface Activite {
   lien_url: string | null;
   debut_le: string | null;
   duree_ms: number | null;
+
+  /**
+   * Quand l'annonce a ete posee ou rafraichie.
+   *
+   * Sert a ecarter celles que personne n'a effacees : voir `FRAICHEUR`.
+   * Facultatif parce qu'une base d'avant cette lecture n'en donnait pas, et
+   * qu'une annonce sans date vaut mieux que pas d'annonce.
+   */
+  vu_le?: string;
 }
 
 /**
@@ -126,8 +137,22 @@ export const useComptesLies = create<EtatComptes>((set, get) => ({
       });
     }
 
+    /*
+     * Les annonces oubliees sont ecartees a la LECTURE.
+     *
+     * Plutot qu'a l'ecriture : personne ne peut effacer la ligne de quelqu'un
+     * d'autre — la politique ne le permet pas, et c'est bien ainsi — et celui
+     * qui l'a laissee ne reviendra peut-etre pas de sitot. Le seul endroit ou
+     * l'on puisse decider de ne pas y croire, c'est ici.
+     */
     const suite: Record<UUID, Activite> = { ...get().activites };
-    for (const ligne of activites.data ?? []) suite[ligne.profil_id as UUID] = ligne as Activite;
+
+    for (const id of profils) delete suite[id];
+
+    for (const ligne of activites.data ?? []) {
+      const activite = ligne as Activite;
+      if (estFraiche(activite.vu_le)) suite[activite.profil_id] = activite;
+    }
 
     set({ parProfil, activites: suite });
   },
@@ -197,7 +222,35 @@ export const useComptesLies = create<EtatComptes>((set, get) => ({
       return;
     }
 
-    await supabase.from('activites').upsert({ ...activite, profil_id: moi, vu_le: new Date().toISOString() });
+    /*
+     * Le resultat de l'ecriture est LU, et c'est tout le sujet.
+     *
+     * Il ne l'etait pas, et l'etat local etait pose juste apres, sans
+     * condition. Une ecriture refusee par la base donnait donc exactement ce
+     * qu'on voit quand elle reussit : sa propre fiche a jour. « Il n'y a que
+     * moi qui vois le mien » — et c'etait litteralement vrai, la ligne
+     * n'existait nulle part ailleurs que dans cette memoire-ci.
+     *
+     * La cause etait une contrainte de longueur sur `image_url` : cinq cents
+     * caracteres pour une pochette qui en fait trois mille. Elle est corrigee.
+     * Mais ce n'est pas la contrainte qui a rendu le defaut introuvable, c'est
+     * ce `await` sans `error` — et celui-la se serait reproduit a la prochaine
+     * colonne trop courte.
+     */
+    const { error } = await supabase
+      .from('activites')
+      .upsert({ ...activite, profil_id: moi, vu_le: new Date().toISOString() });
+
+    if (error) {
+      journal.erreur('interface', 'Activite refusee par la base', {
+        code: error.code,
+        message: error.message,
+        // Ce qui pese, et donc ce qu'on soupconne en premier.
+        pochette: activite.image_url?.length ?? 0,
+      });
+      return;
+    }
+
     set((etat) => ({
       activites: { ...etat.activites, [moi as UUID]: { ...activite, profil_id: moi as UUID } },
     }));
