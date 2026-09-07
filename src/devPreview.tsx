@@ -12,6 +12,7 @@ import { BadgesPage } from '@/features/badges/BadgesPage';
 import { useBadges, type Badge } from '@/store/badges';
 import { useComptesLies } from '@/store/comptesLies';
 import { LinkPreviews } from '@/features/messages/LinkPreview';
+import { CarteInvitation } from '@/features/spaces/CarteInvitation';
 
 /**
  * Apercu d'un ecran isole, en developpement seulement.
@@ -28,6 +29,21 @@ import { LinkPreviews } from '@/features/messages/LinkPreview';
  */
 export function devPreview(name: string): ReactNode | null {
   if (name === 'amis') return <FriendsPage />;
+
+  /*
+   * La carte d'invitation, et sa porte.
+   *
+   * Deux etats a regarder : ce qu'on voit avant de cliquer, et la case qui
+   * parait ensuite. Le second a ete signale comme « la verif marche pas » —
+   * il refusait en silence — et il ne se verifie qu'en le voyant.
+   */
+  if (name === 'invitation') {
+    return (
+      <div style={{ maxWidth: 460, margin: '40px auto' }}>
+        <CarteInvitation code="apercu" onRejoindre={async () => {}} />
+      </div>
+    );
+  }
 
   /*
    * L'ecran de retour ne s'atteint qu'une fois : a la levee de la maintenance,

@@ -34,6 +34,11 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.11.2
+
+- L'image d'un partage reste lisible quand la liaison faiblit, meme en mouvement.
+- La verification « je ne suis pas un robot » fonctionne, et arrive apres avoir clique sur Rejoindre.
+
 ## 9.11.1
 
 - Le salon vocal ne se reconstruit plus tout seul toutes les quarante-six secondes.

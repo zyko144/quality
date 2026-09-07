@@ -33,6 +33,7 @@ import {
   type AttentePartage,
 } from './relance';
 import { PALIERS, prochainPalier } from './allegement';
+import { reglagePourDebit, vautLeChangement } from './debit';
 import { serveursIce, comporteUnRelais } from './reseau';
 import { presumeMort } from './sante';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
@@ -542,6 +543,23 @@ const decodagePrecedent = new Map<
 
 /** Ce que chaque spectateur nous a demande d'alleger. */
 const allegementApplique = new Map<UUID, number>();
+
+/**
+ * La reduction imposee par notre propre liaison, commune a tous les pairs.
+ *
+ * Elle se compose avec l'allegement demande par chaque spectateur : la
+ * premiere dit ce que notre televersement peut porter, la seconde ce que la
+ * machine d'en face peut decoder. Les deux sont vraies en meme temps, et la
+ * reduction totale est leur produit.
+ *
+ * Les separer importe : elles ne se corrigent pas au meme rythme, et une seule
+ * variable pour les deux ferait qu'un spectateur qui va mieux effacerait la
+ * contrainte du reseau — ou l'inverse.
+ */
+let reductionDebit = 1;
+
+/** La cadence que la liaison permet, ou `null` tant qu'on ne mesure rien. */
+let cadenceDebit: number | null = null;
 let audioContext: AudioContext | null = null;
 let speechTimer: number | null = null;
 const analysers = new Map<UUID, AnalyserNode>();
@@ -1353,6 +1371,80 @@ let cadenceCapture = 0;
            * Uniquement quand la capture vient du systeme : le moteur web, lui,
            * ne nous laisse pas regler la cadence en cours de route.
            */
+          /*
+           * Ce que la liaison peut vraiment porter, en pixels par seconde.
+           *
+           * La correction precedente ne touchait qu'a la cadence, et son
+           * plancher de vingt-quatre images annulait tout en dessous de trois
+           * megabits — c'est-a-dire sur toute la plage ou elle servait. Passe
+           * sur les debits releves : 95 kbps donnaient encore 3 958 bits par
+           * image, pour un seuil vise a cent vingt mille.
+           *
+           * Il manquait surtout l'essentiel : a debit egal, la meme image en
+           * 720p decrit quatre fois moins de pixels qu'en 1080p, donc quatre
+           * fois mieux. C'est le PRODUIT definition x cadence qui compte. Voir
+           * `debit.ts`.
+           */
+          const voulues = useDevices.getState().media.screenFrameRate;
+          const suivant = reglagePourDebit(
+            kbps,
+            entree.frameWidth ?? 0,
+            entree.frameHeight ?? 0,
+            voulues,
+          );
+
+          const courant = { reduction: reductionDebit, images: cadenceDebit ?? voulues };
+
+          /*
+           * On rend aussi ce qu'on a retire.
+           *
+           * Sans cette moitie, une seconde de creux ramenait le partage en
+           * 360p pour le reste de la seance : la regle ne se relisait que sous
+           * contrainte, et il n'y avait aucun chemin de retour. Le debit mesure
+           * suffit a decider dans les deux sens — il monte quand la liaison
+           * respire.
+           */
+          const contraint = limite === 'bandwidth';
+          const peutRendre = !contraint && reductionDebit > 1;
+
+          if ((contraint || peutRendre) && vautLeChangement(courant, suivant)) {
+            journal.info('partage', 'Reglage suivant le debit', {
+              kbps,
+              de: `${courant.reduction}x@${courant.images}`,
+              a: `${suivant.reduction}x@${suivant.images}`,
+              definition: `${entree.frameWidth ?? 0}x${entree.frameHeight ?? 0}`,
+            });
+
+            reductionDebit = suivant.reduction;
+            cadenceDebit = suivant.images;
+
+            // Chaque pair recoit le nouveau reglage, son propre allegement
+            // compris : les deux se composent, voir `appliquerAllegement`.
+            const media = useDevices.getState().media;
+            for (const [pair, connexion] of peers) {
+              if (!connexion.screenSender) continue;
+              void appliquerAllegement(
+                connexion.screenSender,
+                allegementApplique.get(pair) ?? 0,
+                media,
+              );
+            }
+          }
+
+          /*
+           * Et l'on cesse de capturer ce qu'on n'emettra pas.
+           *
+           * Sans cela, la carte continuerait de rapatrier soixante images par
+           * seconde pour que l'encodeur en jette les trois quarts — c'est le
+           * meme gaspillage que celui corrige plus tot, a l'autre bout.
+           */
+          if (captureNative && cadenceDebit !== null && cadenceCapture !== cadenceDebit) {
+            cadenceCapture = cadenceDebit;
+            void import('./imageSysteme').then(({ reglerCadence }) =>
+              reglerCadence(cadenceDebit ?? voulues),
+            );
+          }
+
           if (captureNative) {
             const voulu = useDevices.getState().media.screenFrameRate;
             if (cadenceCapture === 0) cadenceCapture = voulu;
@@ -1834,6 +1926,23 @@ let cadenceCapture = 0;
   ): Promise<void> {
     const cran = PALIERS[palier] ?? PALIERS[0]!;
 
+    /*
+     * Les deux reductions se multiplient.
+     *
+     * Celle de la liaison dit ce que notre televersement porte ; celle du
+     * spectateur, ce que sa machine decode. Appliquer l'une en oubliant
+     * l'autre reviendrait a defaire la correction qu'on vient de poser — et
+     * c'est ce qui arriverait au premier spectateur qui se plaint, ou au
+     * premier creux de debit.
+     */
+    const reduction = cran.reduction * reductionDebit;
+
+    // La cadence la plus basse des deux l'emporte : chacune dit un plafond.
+    const plafondImages = Math.min(
+      cran.images ?? Number.POSITIVE_INFINITY,
+      cadenceDebit ?? Number.POSITIVE_INFINITY,
+    );
+
     await applyEncodingWithRetry(
       emetteur,
       screenBitrate(media),
@@ -1846,7 +1955,7 @@ let cadenceCapture = 0;
       if (!parametres.encodings || parametres.encodings.length === 0) return;
 
       for (const encodage of parametres.encodings) {
-        encodage.scaleResolutionDownBy = (encodage.scaleResolutionDownBy ?? 1) * cran.reduction;
+        encodage.scaleResolutionDownBy = (encodage.scaleResolutionDownBy ?? 1) * reduction;
 
         /*
          * `undefined` plutot que la cadence du partage.
@@ -1856,7 +1965,7 @@ let cadenceCapture = 0;
          * legitimement descendre en dessous. On ne veut poser qu'un PLAFOND,
          * et seulement quand il y en a un.
          */
-        encodage.maxFramerate = cran.images ?? undefined;
+        encodage.maxFramerate = Number.isFinite(plafondImages) ? plafondImages : undefined;
 
         /*
          * Le debit suit la surface.
@@ -1867,7 +1976,7 @@ let cadenceCapture = 0;
          * cote, donc la surface varie comme son carre.
          */
         const budget = encodage.maxBitrate ?? screenBitrate(media);
-        encodage.maxBitrate = Math.round(budget / (cran.reduction * cran.reduction));
+        encodage.maxBitrate = Math.round(budget / (reduction * reduction));
       }
 
       await emetteur.setParameters(parametres);

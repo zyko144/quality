@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 
 /**
@@ -18,23 +18,50 @@ import { Icon } from '@/components/Icon';
  *
  * Ce qui est verifie n'est pas la case
  * -------------------------------------
- * La case est ce qu'on voit ; ce qu'on mesure est le GESTE. Trois conditions,
- * et aucune n'est devinable en lisant la page :
+ * La case est ce qu'on voit ; ce qu'on mesure est le GESTE. Deux conditions :
  *
  *  - l'evenement doit etre `isTrusted` — un `click()` appele par un script ne
  *    l'est pas, le navigateur le marque lui-meme ;
  *  - il doit s'ecouler un instant depuis l'affichage : un script coche des
- *    qu'il trouve la case, une personne la lit d'abord ;
- *  - le pointeur doit avoir bouge, ou une touche avoir ete pressee.
+ *    qu'il trouve la case, une personne la lit d'abord.
  *
- * Cela n'arrete pas quelqu'un qui ecrit un script POUR ce site — rien de ce
+ * Une troisieme condition existait, et elle CASSAIT tout : il fallait qu'un
+ * mouvement de pointeur, une touche ou un contact ait ete observe depuis
+ * l'affichage. Or une fenetre qui parait sous le curseur se coche sans que
+ * rien ne bouge — on clique la ou l'on etait deja. La case refusait alors en
+ * silence, indefiniment, et rien ne disait pourquoi.
+ *
+ * Le clic EST le geste. Un evenement de confiance porte deja tout ce que le
+ * mouvement aurait apporte, et davantage. La condition est donc retiree.
+ *
+ * Un refus se voit
+ * ----------------
+ * Il ne se voyait pas, et c'est ce qui a rendu le defaut si desagreable : la
+ * case se decochait toute seule, sans un mot. On ne dit pas POURQUOI — ce
+ * serait donner la marche a suivre a ce qu'on ecarte — mais on dit qu'il faut
+ * recommencer, ce qu'une personne fait alors avec succes.
+ *
+ * Cela n'arrete pas quelqu'un qui ecrit un script POUR ce site : rien de ce
  * qui vit dans le navigateur ne le fera, et le pretendre serait pire que de ne
  * rien poser. Cela arrete les robots generiques, qui sont l'immense majorite,
- * et cela ne coute rien a une personne : elle coche, et c'est tout.
+ * et cela ne coute rien a une personne.
  */
 
 /** Temps minimal entre l'affichage et le clic. Un script n'attend pas. */
-const REFLEXION_MS = 400;
+export const REFLEXION_MS = 400;
+
+/**
+ * La coche est-elle acceptee ?
+ *
+ * Sortie du composant pour etre eprouvee : la condition qui cassait tout — il
+ * fallait un mouvement de pointeur PREALABLE — ne se voyait pas a la lecture,
+ * et ne se voyait pas non plus a l'usage de qui l'ecrit. Il faut que la
+ * fenetre paraisse pile sous le curseur, ce qui arrive tout le temps a l'usage
+ * et jamais quand on teste a la main.
+ */
+export function accepteLaCoche(deConfiance: boolean, msDepuisAffichage: number): boolean {
+  return deConfiance && msDepuisAffichage >= REFLEXION_MS;
+}
 
 export function CaseHumaine({
   coche,
@@ -46,30 +73,10 @@ export function CaseHumaine({
   libelle?: string;
 }) {
   const depuis = useRef(Date.now());
-  const [geste, setGeste] = useState(false);
+  const [refuse, setRefuse] = useState(false);
 
-  /*
-   * Un mouvement, une touche, un contact : n'importe lequel suffit.
-   *
-   * Trois sortes d'evenements plutot qu'une, parce qu'on ne se sert pas tous
-   * d'une souris. Exiger un deplacement de pointeur ecarterait le clavier et
-   * l'ecran tactile, c'est-a-dire des gens, pas des robots.
-   */
-  useEffect(() => {
-    const noter = () => setGeste(true);
-
-    window.addEventListener('pointermove', noter, { once: true, passive: true });
-    window.addEventListener('keydown', noter, { once: true });
-    window.addEventListener('touchstart', noter, { once: true, passive: true });
-
-    return () => {
-      window.removeEventListener('pointermove', noter);
-      window.removeEventListener('keydown', noter);
-      window.removeEventListener('touchstart', noter);
-    };
-  }, []);
-
-  const pret = geste && Date.now() - depuis.current >= REFLEXION_MS;
+  const accepte = (deConfiance: boolean) =>
+    accepteLaCoche(deConfiance, Date.now() - depuis.current);
 
   return (
     <label className={'casehumaine' + (coche ? ' is-cochee' : '')}>
@@ -84,13 +91,21 @@ export function CaseHumaine({
             return;
           }
 
-          if (!evenement.nativeEvent.isTrusted || !pret) {
-            // On ne dit pas pourquoi. L'expliquer donnerait la marche a suivre
-            // a ce qu'on ecarte, et une personne, elle, reussit du premier coup.
+          if (!accepte(evenement.nativeEvent.isTrusted)) {
+            /*
+             * On ne dit pas pourquoi, mais on dit que ca n'a pas pris.
+             *
+             * Expliquer donnerait la marche a suivre a ce qu'on ecarte. Se
+             * taire, en revanche, laisse quelqu'un cliquer dix fois sur une
+             * case qui se decoche toute seule — et c'est exactement ce qui a
+             * ete rapporte.
+             */
+            setRefuse(true);
             onChange(false);
             return;
           }
 
+          setRefuse(false);
           onChange(true);
         }}
       />
@@ -99,7 +114,10 @@ export function CaseHumaine({
         {coche ? <Icon name="check" size={14} /> : null}
       </span>
 
-      <span className="casehumaine__texte">{libelle}</span>
+      <span className="casehumaine__texte">
+        {libelle}
+        {refuse ? <span className="casehumaine__refus">Reessayez.</span> : null}
+      </span>
     </label>
   );
 }

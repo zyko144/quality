@@ -3487,6 +3487,20 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   color: var(--text-secondary);
 }
 
+/*
+ * Le refus se voit.
+ *
+ * Il ne se voyait pas : la case se decochait toute seule, sans un mot, et l'on
+ * cliquait dix fois. Ce qu'on dit reste vague — expliquer donnerait la marche
+ * a suivre a ce qu'on ecarte — mais dire « recommencez » suffit, et une
+ * personne y arrive au second essai.
+ */
+.casehumaine__refus {
+  margin-left: var(--space-2);
+  color: var(--warning);
+  font-size: var(--text-xs);
+}
+
 .casehumaine__case {
   display: grid;
   place-items: center;

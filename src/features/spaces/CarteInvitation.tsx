@@ -48,6 +48,9 @@ export function CarteInvitation({
 }) {
   const [etat, setEtat] = useState<Etat>({ phase: 'chargement' });
   const [humain, setHumain] = useState(false);
+
+  /** Vrai une fois « Rejoindre » clique : c'est la que la porte parait. */
+  const [verification, setVerification] = useState(false);
   const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
@@ -131,28 +134,53 @@ export function CarteInvitation({
       ) : dejaMembre ? (
         <p className="invitation__note">Vous etes deja dans ce serveur.</p>
       ) : onRejoindre ? (
+        /*
+          Deux temps : on demande a entrer, puis on prouve qu'on est la.
+          
+          La case vivait a cote du bouton, qui restait inerte tant qu'elle
+          n'etait pas cochee. C'etait l'ordre inverse de celui qu'on a en tete :
+          on veut d'abord DECIDER d'entrer, et la verification vient ensuite,
+          comme une porte qu'on pousse — pas comme une condition a remplir avant
+          d'avoir dit ce qu'on voulait.
+          
+          Elle avait aussi un defaut pratique : un bouton grise sans qu'on
+          comprenne pourquoi. La case etait a cote, mais rien ne la reliait au
+          bouton.
+        */
         <div className="invitation__entree">
-          {/*
-            La case avant le bouton, et le bouton inerte sans elle.
+          {verification ? (
+            <>
+              <CaseHumaine
+                coche={humain}
+                onChange={(coche) => {
+                  setHumain(coche);
 
-            L'inverse — cliquer puis se voir demander de cocher — fait
-            recommencer, et donne l'impression d'un refus. Ici l'ordre se lit :
-            on coche, le bouton s'allume.
-          */}
-          <CaseHumaine coche={humain} onChange={setHumain} />
+                  /*
+                   * Cocher suffit : on entre.
+                   *
+                   * Un second bouton apres la case ferait deux gestes pour une
+                   * seule decision, celle-ci ayant deja ete prise en cliquant
+                   * « Rejoindre ». La case n'est pas un choix, c'est une porte.
+                   */
+                  if (!coche || enCours) return;
 
-          <button
-            type="button"
-            className="btn btn--primary"
-            disabled={!humain || enCours}
-            onClick={() => {
-              setEnCours(true);
-              void Promise.resolve(onRejoindre(code)).finally(() => setEnCours(false));
-            }}
-          >
-            {enCours ? <span className="spinner" /> : <Icon name="plus" size={14} />}
-            Rejoindre
-          </button>
+                  setEnCours(true);
+                  void Promise.resolve(onRejoindre(code)).finally(() => setEnCours(false));
+                }}
+              />
+
+              {enCours ? <span className="spinner" /> : null}
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => setVerification(true)}
+            >
+              <Icon name="plus" size={14} />
+              Rejoindre
+            </button>
+          )}
         </div>
       ) : null}
     </div>
