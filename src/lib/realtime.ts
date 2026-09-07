@@ -77,7 +77,23 @@ export function startRealtime(userId: UUID): () => void {
       { event: '*', schema: 'public', table: 'reactions' },
       (payload) => {
         const row = (payload.new ?? payload.old) as ReactionRow | undefined;
-        if (row?.message_id) void refreshReactions(row.message_id);
+        if (!row?.message_id) return;
+
+        /*
+         * Une reaction sur un message qu'on n'a pas ouvert ne nous regarde pas.
+         *
+         * L'abonnement porte sur TOUTE la table : chaque client recevait chaque
+         * reaction de chaque salon du projet, et repartait aussitot demander au
+         * serveur la liste complete des reactions du message concerne. Une
+         * personne qui pose un pouce leve dans un salon ou nous ne sommes pas
+         * declenchait donc une requete chez chacun de nous.
+         *
+         * Le magasin ne peut de toute facon rien faire de la reponse : il
+         * n'affiche que les messages charges. La requete etait perdue d'avance.
+         */
+        if (!useChat.getState().connaitLeMessage(row.message_id)) return;
+
+        void refreshReactions(row.message_id);
       },
     )
     .on(
@@ -106,7 +122,22 @@ export function startRealtime(userId: UUID): () => void {
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'profiles' },
       (payload) => {
-        useChat.getState().applyProfile(payload.new as Profile);
+        /*
+         * Le profil de quelqu'un qu'on ne connait pas n'a rien a faire ici.
+         *
+         * Meme abonnement sans filtre : chaque changement d'avatar, de statut ou
+         * de pseudo de N'IMPORTE QUI arrivait chez tout le monde, et grossissait
+         * le magasin de profils qu'on ne croisera jamais.
+         *
+         * Garder les inconnus ne servait a rien : on n'affiche un profil que
+         * lorsqu'il apparait dans une liste, et ces listes le chargent
+         * elles-memes.
+         */
+        const profil = payload.new as Profile;
+        if (!profil?.id) return;
+        if (!useChat.getState().profiles[profil.id]) return;
+
+        useChat.getState().applyProfile(profil);
       },
     )
     .subscribe();

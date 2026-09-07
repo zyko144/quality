@@ -130,14 +130,58 @@ export async function uploadOne(
 }
 
 /**
+ * Combien de temps vit une signature, et a partir de quand on en refait une.
+ *
+ * Une heure de validite, renouvelee a cinquante minutes : on ne rend jamais une
+ * URL sur le point d'expirer, ce qui arriverait a une image ouverte juste avant
+ * l'echeance.
+ */
+const VALIDITE_SIGNATURE = 3600;
+const RENOUVELLEMENT = 50 * 60 * 1000;
+
+/**
+ * Les signatures deja obtenues, par chemin.
+ *
+ * Ce n'est pas une optimisation de confort : c'est ce qui rend les images
+ * CACHABLES, et c'est ce qui a fait exploser le quota de bande passante.
+ *
+ * Ce qui se passait
+ * -----------------
+ * `createSignedUrl` fabrique une URL neuve a chaque appel — meme fichier,
+ * jeton different. Et la signature etait redemandee a chaque MONTAGE du
+ * composant : defiler vers le haut puis revenir, changer de salon, recharger la
+ * fenetre. Pour le reseau de diffusion, une URL differente est un objet
+ * different : aucun cache ne pouvait servir, et chaque apparition d'une image
+ * la retelechargeait entierement depuis l'origine.
+ *
+ * Une conversation de vingt images parcourue trois fois, ce sont soixante
+ * telechargements complets la ou trois auraient suffi. A plusieurs, sur des
+ * images de plusieurs mega-octets, les cinq gigaoctets mensuels du plan gratuit
+ * partent en quelques jours — ce qui est arrive, et a coupe le service.
+ *
+ * En reutilisant la meme URL tant qu'elle est valable, le navigateur et le
+ * reseau de diffusion la reconnaissent et la servent sans rien redemander.
+ */
+const signatures = new Map<string, { url: string; obtenueA: number }>();
+
+/**
  * Lien de telechargement signe, valable une heure.
  *
  * Le compartiment est prive : sans signature, aucune URL ne fonctionne, ce qui
  * empeche qu'un lien partage hors du salon reste indefiniment ouvert.
  */
 export async function signedUrl(storagePath: string): Promise<string | null> {
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(storagePath, 3600);
-  return data?.signedUrl ?? null;
+  const connue = signatures.get(storagePath);
+  if (connue && Date.now() - connue.obtenueA < RENOUVELLEMENT) return connue.url;
+
+  const { data } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(storagePath, VALIDITE_SIGNATURE);
+
+  if (!data?.signedUrl) return null;
+
+  signatures.set(storagePath, { url: data.signedUrl, obtenueA: Date.now() });
+  return data.signedUrl;
 }
 
 /** Libere les apercus locaux, qui autrement resteraient en memoire. */

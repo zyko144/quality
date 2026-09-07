@@ -229,6 +229,8 @@ interface ChatState {
   deleteChannel: (channelId: UUID) => Promise<UUID | null>;
   renameChannel: (channelId: UUID, name: string, topic?: string | null) => Promise<boolean>;
   reorderChannels: (spaceId: UUID, channelIds: UUID[]) => Promise<void>;
+  /** Vrai si ce message est charge quelque part : la seule chose qu'on affiche. */
+  connaitLeMessage: (messageId: UUID) => boolean;
   /** Range un salon dans une categorie, ou l'en sort avec `null`. */
   rangerSalon: (channelId: UUID, categoryId: UUID | null) => Promise<boolean>;
   creerCategorie: (spaceId: UUID, nom: string) => Promise<boolean>;
@@ -1035,6 +1037,20 @@ export const useChat = create<ChatState>((set, get) => ({
 
     get().applyChannel(data as Channel);
     return true;
+  },
+
+  /*
+   * Ce message est-il quelque part sous nos yeux ?
+   *
+   * Sert au temps reel, qui recoit les evenements de TOUT le projet : sans ce
+   * tri, une reaction posee dans un salon inconnu declenchait chez chacun une
+   * requete dont la reponse n'aurait ete affichee nulle part.
+   */
+  connaitLeMessage: (messageId) => {
+    for (const liste of Object.values(get().messages)) {
+      if (liste.some((message) => message.id === messageId)) return true;
+    }
+    return false;
   },
 
   reorderChannels: async (spaceId, channelIds) => {
