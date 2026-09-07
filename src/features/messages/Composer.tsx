@@ -19,6 +19,7 @@ import {
   type PendingUpload,
 } from '@/lib/upload';
 import { Icon } from '@/components/Icon';
+import { QualityLogo } from '@/components/QualityLogo';
 import { Avatar } from '@/components/Avatar';
 import { EmojiPicker } from '@/components/EmojiPicker';
 import { LIMITS } from '@/constants';
@@ -490,9 +491,17 @@ export function Composer({ channelId, threadId = null, placeholder, autoFocus }:
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
     >
+      {/*
+        Le logo pendant qu'on depose un fichier.
+
+        C'est le moment ou l'ecran entier change d'etat sous le curseur : la
+        marque y dit « c'est bien Echow qui va recevoir ceci », ce qu'une
+        trombone ne dit pas. Ailleurs dans le composeur, la trombone reste :
+        elle nomme une action, et une marque ne nomme rien.
+      */}
       {dragging ? (
         <div className="composer-drop" aria-hidden="true">
-          <Icon name="paperclip" size={22} />
+          <QualityLogo size={26} />
           Deposez pour joindre
         </div>
       ) : null}

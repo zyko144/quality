@@ -9,6 +9,7 @@ import type { UUID } from '@/types/db';
 import { useUI } from '@/store/ui';
 import { initialsFor } from '@/constants';
 import { Icon } from '@/components/Icon';
+import { QualityLogo } from '@/components/QualityLogo';
 import { useSpacePrefs } from '@/store/spacePrefs';
 
 /**
@@ -124,7 +125,18 @@ export function SpaceRail() {
           aria-current={view === 'direct' ? 'true' : undefined}
           title="Messages prives"
         >
-          <Icon name="thread" size={21} />
+          {/*
+            Le logo, tout en haut, a la place de l'icone de fil.
+            
+            C'est la seule case du rail qui ne designe pas un espace : les
+            autres portent l'image de celui qu'elles ouvrent, et celle-ci
+            ramene chez soi. La marque y est a sa place — c'est le geste
+            qu'on fait pour revenir a l'application elle-meme.
+
+            Le titre et le texte cache restent : une image ne dit pas ou elle
+            mene, et c'est ce que lit qui n'y voit pas.
+          */}
+          <QualityLogo size={26} alt="" />
           <span className="visually-hidden">Messages prives</span>
         </button>
 

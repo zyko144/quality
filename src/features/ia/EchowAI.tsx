@@ -3,6 +3,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { useEchowAI, AMORCES } from '@/store/echowAI';
 import { RetourMobile } from '@/components/RetourMobile';
 import { useUI } from '@/store/ui';
+import { QualityLogo } from '@/components/QualityLogo';
 
 /**
  * Echow AI.
@@ -313,59 +314,22 @@ function TexteIA({ texte }: { texte: string }) {
 }
 
 /**
- * La marque d'Echow AI.
+ * La marque d'Echow AI : le logo de l'application.
  *
- * Dessinee plutot que chargee : une image de fond a retirer laisse toujours un
- * halo sur les bords, visible des que le fond de l'application change de
- * teinte. Un trace suit la couleur du texte et reste net a toutes les tailles.
+ * Elle etait DESSINEE, et pour une bonne raison a l'epoque : le logo d'alors
+ * avait un fond, et le retirer laissait un halo sur les bords — visible des
+ * que le fond de l'application changeait de teinte. Un trace vectoriel suivait
+ * la couleur du texte et restait net partout.
  *
- * La forme reprend celle du logo — une bulle, deux yeux, un sourire, et les
- * barres d'un son qui monte.
+ * Le nouveau logo est fourni sans fond, proprement detoure. Le trace n'a plus
+ * de raison d'exister, et il en avait un defaut : il IMITAIT le logo. Deux
+ * dessins qui se ressemblent sans etre identiques finissent toujours par
+ * diverger — celui-ci portait encore des ecouteurs et des barres de son que le
+ * logo n'a plus.
+ *
+ * L'assistant porte donc la meme image que l'application, et il n'y a plus
+ * qu'un seul endroit ou la changer.
  */
 export function MarqueIA({ taille = 24 }: { taille?: number }) {
-  return (
-    <svg
-      className="ia__marque"
-      width={taille}
-      height={taille}
-      viewBox="0 0 48 48"
-      fill="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="ia-degrade" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#38bdf8" />
-        </linearGradient>
-      </defs>
-
-      {/* Les ecouteurs, de part et d'autre. */}
-      <rect x="3" y="18" width="7" height="13" rx="3.5" fill="url(#ia-degrade)" opacity="0.85" />
-      <rect x="38" y="18" width="7" height="13" rx="3.5" fill="url(#ia-degrade)" opacity="0.85" />
-
-      {/* La bulle, avec sa pointe en bas a gauche. */}
-      <path
-        d="M24 5c10.5 0 19 8.1 19 18.1 0 10-8.5 18.1-19 18.1-1.5 0-3-.2-4.4-.5l-6.3 4.2a1.4 1.4 0 0 1-2.2-1.4l1.4-5.6C7.6 34.6 5 29.2 5 23.1 5 13.1 13.5 5 24 5Z"
-        stroke="url(#ia-degrade)"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-
-      {/* Les yeux. */}
-      <rect x="16" y="17" width="4" height="7" rx="2" fill="url(#ia-degrade)" />
-      <rect x="26" y="17" width="4" height="7" rx="2" fill="url(#ia-degrade)" />
-
-      {/* Le sourire. */}
-      <path
-        d="M19 29.5c1.3 1.6 3 2.4 5 2.4s3.7-.8 5-2.4"
-        stroke="url(#ia-degrade)"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-
-      {/* Les barres du son, en bas a droite. */}
-      <rect x="29" y="31" width="2.6" height="4" rx="1.3" fill="url(#ia-degrade)" />
-      <rect x="33" y="28.5" width="2.6" height="6.5" rx="1.3" fill="url(#ia-degrade)" />
-    </svg>
-  );
+  return <QualityLogo size={taille} className="ia__marque" alt="" />;
 }

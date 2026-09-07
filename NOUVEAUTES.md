@@ -34,6 +34,12 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.11.0
+
+- Nouveau logo, partout : Windows, l'ecran de chargement, le site et l'application.
+- Echow AI porte desormais le logo de l'application au lieu d'un dessin qui l'imitait.
+- Le logo remplace l'icone des messages prives, en haut du rail.
+
 ## 9.10.7
 
 - Le journal nomme desormais les programmes qui font du son pendant un partage.
