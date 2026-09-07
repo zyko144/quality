@@ -204,6 +204,27 @@ export interface MessageRow {
   edited_at: ISODate | null;
   reply_to_id: UUID | null;
   pinned: boolean;
+
+  /**
+   * Le webhook qui a ecrit ce message, quand il ne vient pas d'une personne.
+   *
+   * L'AUTEUR reste une personne — celle qui a cree le webhook, et qui en
+   * repond. Ces trois champs disent seulement ce qu'on AFFICHE. Voir la
+   * migration : `messages.author_id` ne peut pas etre nul, et un webhook n'a
+   * pas de compte.
+   */
+  webhook_id?: UUID | null;
+
+  /**
+   * Le nom et l'image AU MOMENT DE L'ENVOI.
+   *
+   * Figes dans le message plutot que lus dans le webhook : renommer un webhook
+   * ne doit pas reecrire l'histoire de ce qu'il a dit. Ils permettent aussi a
+   * un seul webhook de parler au nom de plusieurs sources — « CI »,
+   * « Sauvegarde », « Serveur 2 » — comme le fait celui de Discord.
+   */
+  webhook_nom?: string | null;
+  webhook_avatar?: string | null;
 }
 
 export interface Attachment {

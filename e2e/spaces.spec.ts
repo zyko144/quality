@@ -334,7 +334,7 @@ test.describe('Espaces et salons', () => {
    * bandeau d'onglets, si bien qu'un menu casse a l'air intact tant qu'on ne
    * l'ouvre pas.
    */
-  test('les reglages de l espace ouvrent leurs sept sections', async ({ page }) => {
+  test('les reglages de l espace ouvrent leurs huit sections', async ({ page }) => {
     await openApp(page);
 
     await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
@@ -342,13 +342,16 @@ test.describe('Espaces et salons', () => {
     /*
      * Une page entiere, plus une boite a onglets.
      *
-     * Sept sections, des listes de membres, de salons et de roles tenaient dans
+     * Huit sections, des listes de membres, de salons et de roles tenaient dans
      * six cent vingt pixels, ou chaque liste devait defiler dans son propre
      * creux. La navigation est desormais un rail a gauche, comme celui des
      * reglages de l'application — memes gestes, meme disposition.
+     *
+     * Le compte est verifie autant que la liste : un onglet ajoute sans que ce
+     * cas ne bouge signalerait qu'on l'a ajoute sans y penser.
      */
     const onglets = page.locator('.espace-reglages .settings__navitem');
-    await expect(onglets).toHaveCount(7);
+    await expect(onglets).toHaveCount(8);
 
     const attendus = [
       'General',
@@ -356,6 +359,7 @@ test.describe('Espaces et salons', () => {
       'Salons',
       'Categories',
       'Roles',
+      'Webhooks',
       'Mes preferences',
       'Zone sensible',
     ];
@@ -376,13 +380,26 @@ test.describe('Espaces et salons', () => {
       // fenetres, dont une fermee, et le premier trouve n'etait pas le bon.
       Categories: 'text=Une categorie regroupe des salons',
       Roles: '.roles__liste',
+      // La liste des webhooks peut etre vide ; le formulaire de creation, lui,
+      // est toujours la — c'est ce qui prouve que le panneau a rendu.
+      Webhooks: '.webhook__creation',
       'Mes preferences': '.switchrow',
       'Zone sensible': '.danger-zone',
     };
 
+    /*
+     * Les marqueurs sont cherches DANS la fenetre des reglages.
+     *
+     * Cherches dans la page entiere, ils attrapaient ce qui leur ressemblait
+     * ailleurs — `.switchrow` existe aussi dans l'editeur de profil, ferme, et
+     * `.first()` tombait dessus. Le cas echouait alors pour une raison sans
+     * rapport avec ce qu'il verifie.
+     */
+    const reglages = page.locator('.espace-reglages');
+
     for (const nom of attendus) {
-      await page.locator('.espace-reglages .settings__navitem', { hasText: nom }).first().click();
-      await expect(page.locator(marqueurs[nom]!).first()).toBeVisible();
+      await reglages.locator('.settings__navitem', { hasText: nom }).first().click();
+      await expect(reglages.locator(marqueurs[nom]!).first()).toBeVisible();
     }
 
     await page.keyboard.press('Escape');

@@ -319,7 +319,21 @@ export function Sidebar() {
 
         {spaceCategories.map((category) => {
           const items = spaceChannels.filter((channel) => channel.category_id === category.id);
-          if (items.length === 0) return null;
+
+          /*
+           * Une categorie vide se voit — mais seulement de qui peut la remplir.
+           *
+           * Elle etait cachee pour tout le monde, et c'est la moitie du defaut
+           * rapporte : on en creait une, elle ne paraissait nulle part, et il
+           * n'y avait aucun moyen de savoir si elle existait. L'autre moitie
+           * etait qu'aucune interface ne permettait d'y ranger un salon — les
+           * deux se cachaient l'une l'autre.
+           *
+           * Pour un membre ordinaire, en revanche, un titre suivi de rien
+           * n'apprend rien : il ne peut pas le remplir, et cela ne ferait
+           * qu'allonger la liste. Il ne la voit donc que lorsqu'elle sert.
+           */
+          if (items.length === 0 && myRank < 2) return null;
           const collapsed = collapsedCategories.has(category.id);
 
           return (

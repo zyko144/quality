@@ -297,9 +297,30 @@ export function MiseAJour() {
             // les montrera d'elle-meme au prochain lancement.
             setInstallation('prete');
             useMajEtat.getState().signaler(null, 'installee', mise.version);
-            journal.info('mise-a-jour', 'Installee, en attente de relance', {
+            journal.info('mise-a-jour', 'Installee, relance immediate', {
               proposee: mise.version,
             });
+
+            /*
+             * On relance TOUT DE SUITE, et surtout : le processus actuel meurt.
+             *
+             * Il ne mourait pas. On posait un bouton « Relancer » et l'on
+             * attendait, l'ancienne version toujours en memoire — pendant que
+             * l'installateur, lui, en demarrait une neuve de son cote. Deux
+             * processus coexistaient alors, et le greffon d'instance unique
+             * faisait exactement ce pour quoi il est fait : la nouvelle
+             * instance cedait la place a celle qui existait deja.
+             *
+             * Celle qui existait deja etant l'ANCIENNE, on se retrouvait
+             * ramene dessus. D'ou les deux symptomes rapportes, qui n'en font
+             * qu'un : « ca relance l'app avec l'ancien logo », et « le micro
+             * est utilise par une autre application » — l'autre application
+             * etant soi-meme, en double.
+             *
+             * `relaunch` demarre la nouvelle et termine celle-ci. Il ne reste
+             * qu'un processus, et c'est le bon.
+             */
+            await relancerApplication();
           },
         });
       } catch (cause) {
@@ -398,6 +419,13 @@ export function MiseAJour() {
             </p>
           </div>
 
+          {/*
+            Le bouton reste, en dernier recours.
+
+            La relance est automatique juste apres l'installation ; s'il parait
+            malgre tout, c'est qu'elle a echoue — et il faut alors un moyen de
+            la redemander a la main.
+          */}
           {installation === 'prete' ? (
             <>
               <button

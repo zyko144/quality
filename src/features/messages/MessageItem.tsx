@@ -176,7 +176,18 @@ function MessageItemInner({
               title={author ? `Voir le profil de ${author.display_name}` : 'Profil'}
               aria-label={author ? `Voir le profil de ${author.display_name}` : 'Profil'}
             >
-              <Avatar profile={author} size={undefined} />
+              {/*
+                L'image du webhook quand il en fournit une.
+
+                `Avatar` attend un profil, et un webhook n'en a pas. Une simple
+                image suffit : elle n'ouvre pas de fiche, parce qu'il n'y a pas
+                de fiche a ouvrir.
+              */}
+              {message.webhook_id && message.webhook_avatar ? (
+                <img className="message__avatar-webhook" src={message.webhook_avatar} alt="" />
+              ) : (
+                <Avatar profile={author} size={undefined} />
+              )}
             </button>
           )}
         </div>
@@ -184,14 +195,38 @@ function MessageItemInner({
         <div className="message__content">
           {!grouped ? (
             <header className="message__header">
-              <button
-                type="button"
-                className="message__author"
-                onClick={() => author && openModal({ kind: 'profile', userId: author.id })}
-                title={author ? `Voir le profil de ${author.display_name}` : undefined}
-              >
-                {author?.display_name ?? 'Compte supprime'}
-              </button>
+              {/*
+                Un message de webhook porte le nom du webhook, pas celui de son
+                auteur.
+
+                L'auteur existe pourtant — c'est la personne qui a cree le
+                webhook, et elle en repond. Mais l'afficher tromperait : elle
+                n'a pas ecrit ce message, un programme l'a fait en son nom. La
+                pastille dit d'ou ca vient, et le survol nomme la personne
+                responsable pour qui veut savoir a qui s'adresser.
+              */}
+              {message.webhook_id ? (
+                <span
+                  className="message__author message__author--webhook"
+                  title={
+                    author
+                      ? `Webhook cree par ${author.display_name}`
+                      : 'Webhook'
+                  }
+                >
+                  {message.webhook_nom?.trim() || 'Webhook'}
+                  <span className="message__marque">webhook</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="message__author"
+                  onClick={() => author && openModal({ kind: 'profile', userId: author.id })}
+                  title={author ? `Voir le profil de ${author.display_name}` : undefined}
+                >
+                  {author?.display_name ?? 'Compte supprime'}
+                </button>
+              )}
               <time
                 className="message__time"
                 dateTime={message.created_at}

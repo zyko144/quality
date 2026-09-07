@@ -10,6 +10,7 @@ import { useUI } from '@/store/ui';
 import { LIMITS } from '@/constants';
 import { uploadSpaceImage } from '@/lib/upload';
 import { useSession } from '@/store/session';
+import { Webhooks } from './Webhooks';
 import type { UUID } from '@/types/db';
 
 type Tab =
@@ -18,6 +19,7 @@ type Tab =
   | 'salons'
   | 'categories'
   | 'roles'
+  | 'webhooks'
   | 'preferences'
   | 'danger';
 
@@ -226,6 +228,7 @@ export function SpaceSettings({
                 ['salons', 'Salons', 'hash'],
                 ['categories', 'Categories', 'folder'],
                 ['roles', 'Roles', 'shield'],
+                ['webhooks', 'Webhooks', 'link'],
               ] as const
             ).map(([id, label, icon]) => (
               <button
@@ -494,6 +497,7 @@ export function SpaceSettings({
       {tab === 'salons' && spaceId ? <SalonsPanel spaceId={spaceId} /> : null}
 
       {tab === 'roles' && spaceId ? <RolesPanel spaceId={spaceId} /> : null}
+      {tab === 'webhooks' && spaceId ? <Webhooks spaceId={spaceId} /> : null}
 
       {tab === 'preferences' && spaceId ? <PreferencesEspace spaceId={spaceId} /> : null}
 

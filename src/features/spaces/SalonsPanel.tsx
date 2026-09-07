@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { journal } from '@/lib/journal';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { Icon } from '@/components/Icon';
@@ -35,8 +37,46 @@ export function SalonsPanel({ spaceId }: { spaceId: UUID }) {
     [channels, spaceId],
   );
 
-  const nomCategorie = (id: UUID | null) =>
-    id ? (categories.find((categorie) => categorie.id === id)?.name ?? '—') : 'Sans categorie';
+  /**
+   * Range un salon dans une categorie, ou l'en sort.
+   *
+   * L'ecriture passe par la table : il n'existait aucune action pour cela dans
+   * le magasin, et en ajouter une qui ne servirait qu'ici serait une couche de
+   * plus pour une seule ligne. Le rechargement vient du direct — la table est
+   * ecoutee — donc rien a poser dans l'etat.
+   */
+  const ranger = async (salon: Channel, categorie: UUID | null) => {
+    if (occupe) return;
+    setOccupe(true);
+
+    const { error } = await supabase
+      .from('channels')
+      .update({ category_id: categorie })
+      .eq('id', salon.id);
+
+    setOccupe(false);
+
+    if (error) {
+      journal.alerte('interface', 'Categorie non changee', {
+        salon: salon.id,
+        cause: error.message,
+      });
+      return;
+    }
+
+    /*
+     * L'etat local suit tout de suite.
+     *
+     * Le direct finira par l'annoncer, mais une liste deroulante qui revient a
+     * sa valeur precedente une demi-seconde apres qu'on l'a changee donne
+     * l'impression d'un refus.
+     */
+    useChat.setState((etat) => ({
+      channels: etat.channels.map((entree) =>
+        entree.id === salon.id ? { ...entree, category_id: categorie } : entree,
+      ),
+    }));
+  };
 
   const deplacer = async (index: number, sens: -1 | 1) => {
     const cible = index + sens;
@@ -127,7 +167,32 @@ export function SalonsPanel({ spaceId }: { spaceId: UUID }) {
               </button>
             )}
 
-            <span className="salons__categorie truncate">{nomCategorie(channel.category_id)}</span>
+            {/*
+              La categorie se CHOISIT ici, elle ne faisait que s'afficher.
+
+              C'est ce qui manquait pour que les categories servent a quelque
+              chose : on pouvait en creer, et rien nulle part ne permettait d'y
+              ranger un salon. Deux existaient dans la base, aucune ne contenait
+              quoi que ce soit — et une categorie vide ne parait pas dans la
+              barre laterale, d'ou « on les voit pas et on peut pas y mettre de
+              salon ». Les deux moities du defaut se cachaient l'une l'autre.
+            */}
+            <select
+              className="salons__categorie"
+              value={channel.category_id ?? ''}
+              disabled={occupe}
+              aria-label={`Categorie de ${channel.name}`}
+              onChange={(evenement) => void ranger(channel, evenement.target.value || null)}
+            >
+              <option value="">Sans categorie</option>
+              {categories
+                .filter((categorie) => categorie.space_id === spaceId)
+                .map((categorie) => (
+                  <option key={categorie.id} value={categorie.id}>
+                    {categorie.name}
+                  </option>
+                ))}
+            </select>
 
             <span className="salons__actions">
               <button

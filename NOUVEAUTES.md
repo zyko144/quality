@@ -34,6 +34,13 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.12.0
+
+- Des webhooks : un programme externe peut ecrire dans un salon par une adresse secrete.
+- Le format est celui de Discord : ce qui parle deja a Discord parle a Echow.
+- Les categories fonctionnent : on peut y ranger des salons, et une categorie vide se voit.
+- Une mise a jour ne laisse plus l'ancienne version tourner en arriere-plan.
+
 ## 9.11.2
 
 - L'image d'un partage reste lisible quand la liaison faiblit, meme en mouvement.
