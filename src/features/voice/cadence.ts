@@ -25,6 +25,33 @@
 export const PLANCHER = 12;
 
 /**
+ * Plancher quand c'est la LIAISON qui coince, et non le processeur.
+ *
+ * Plus haut que le plancher absolu, et pour une raison de fond : une machine
+ * qui n'encode pas assez vite ne peut rien y faire, tandis qu'une liaison
+ * etroite se supporte tres bien a vingt-quatre images — c'est la cadence du
+ * cinema. Descendre plus bas donnerait une saccade qu'on ne compenserait par
+ * aucune nettete.
+ */
+export const PLANCHER_LIAISON = 24;
+
+/**
+ * Ce qu'il faut de bits a une image pour qu'on y lise quelque chose.
+ *
+ * Cent vingt kilobits, en ordre de grandeur pour du 1080p qui bouge. Ce n'est
+ * pas un seuil de qualite fine, c'est la frontiere entre « une image » et
+ * « des blocs » : en dessous, l'encodeur ne peut plus decrire les contours, et
+ * le texte est la premiere chose qui disparait.
+ *
+ * C'est ce chiffre-la qu'il faut regarder, et non la cadence. Sous contrainte,
+ * le moteur TIENT les soixante images — c'est ce qu'on lui demande avec
+ * `maintain-framerate` — et retire des bits a chacune. La cadence emise reste
+ * donc a soixante pendant que l'image devient illisible : elle ne dit rien du
+ * probleme, et s'y fier n'aurait rien declenche.
+ */
+export const BITS_PAR_IMAGE = 120_000;
+
+/**
  * Marge gardee au-dessus de ce que l'encodeur sort.
  *
  * Superieure a un, et c'est ce qui empeche l'effondrement : la cible reste
@@ -44,6 +71,9 @@ export interface Constat {
    * si la liaison ne suit pas, `none` s'il ne se retient pas.
    */
   limite: string;
+
+  /** Debit reellement emis, en kilobits par seconde. */
+  kbps: number;
 }
 
 /**
@@ -69,12 +99,38 @@ function viser(courante: number, voulu: number, constat: Constat): number {
   const borne = (valeur: number) => Math.min(voulu, Math.max(PLANCHER, Math.round(valeur)));
 
   /*
-   * Seul le manque de puissance justifie de capturer moins.
+   * Une liaison etroite justifie aussi de capturer moins — et c'est nouveau.
    *
-   * Une liaison etroite — `bandwidth` — se traite en baissant le debit, pas la
-   * capture : le moteur le fait deja de son cote, et lui retirer des images en
-   * plus abimerait le partage sans rien economiser la ou ca coince.
+   * Le raisonnement precedent tenait en une phrase : « le moteur baisse deja
+   * le debit de son cote, lui retirer des images n'economise rien la ou ca
+   * coince ». La premiere moitie est vraie, la conclusion ne l'est pas.
+   *
+   * Sous contrainte, ce que fait le moteur depend de `degradationPreference`,
+   * et nous lui demandons `maintain-framerate` pour les jeux : il TIENT les
+   * soixante images et retire des bits a chacune. Les traces le montrent —
+   * `limite: bandwidth` a 95, 134, 480 kilobits par seconde. Quatre-vingt-quinze
+   * kilobits repartis sur soixante images font mille six cents bits par image :
+   * il n'y a plus d'image, seulement des blocs. C'est exactement « quand ya
+   * trop de moov la qual baisse de ouf ».
+   *
+   * On ne regarde donc PAS la cadence emise — elle reste a soixante, c'est tout
+   * le probleme — mais ce que recoit chaque image. La cadence visee est celle
+   * qui rendrait aux images de quoi etre lisibles, au debit qu'on a vraiment.
+   *
+   * On ne perd pas de la qualite, on la deplace : moins d'images, mais des
+   * images ou l'ecriture se lit.
    */
+  if (constat.limite === 'bandwidth') {
+    if (constat.kbps <= 0) return courante;
+
+    const tenables = (constat.kbps * 1000) / BITS_PAR_IMAGE;
+
+    // Le plancher est plus haut que pour le processeur : une machine trop
+    // lente ne peut rien y faire, tandis qu'une liaison etroite se supporte
+    // tres bien a vingt-quatre images — c'est la cadence du cinema.
+    return borne(Math.max(tenables, PLANCHER_LIAISON));
+  }
+
   if (constat.limite !== 'cpu') {
     // Rien ne freine : on remonte vers ce qui a ete demande, par paliers.
     // D'un coup, on retomberait aussitot dans le meme mur.

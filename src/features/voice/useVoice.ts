@@ -1357,6 +1357,9 @@ let cadenceCapture = 0;
             const suite = ajuster(cadenceCapture, voulu, {
               images: Math.round(entree.framesPerSecond ?? 0),
               limite,
+              // Le debit compte autant que la cadence : sous contrainte, c'est
+              // lui qui dit ce que chaque image recoit. Voir `cadence.ts`.
+              kbps,
             });
 
             if (suite !== null) {
@@ -1366,6 +1369,12 @@ let cadenceCapture = 0;
                 demande: voulu,
                 emises: Math.round(entree.framesPerSecond ?? 0),
                 limite,
+                kbps,
+                // Ce que chaque image recevait avant l'ajustement : c'est le
+                // chiffre qui dit si l'on regarde une image ou des blocs.
+                bitsParImage: Math.round(
+                  (kbps * 1000) / Math.max(1, Math.round(entree.framesPerSecond ?? 0)),
+                ),
               });
 
               cadenceCapture = suite;

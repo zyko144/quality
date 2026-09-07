@@ -796,15 +796,38 @@ function MenuPartage({
   const basculerCoupure = useUserAudio((state) => state.toggleMute);
   const toggleWatch = useVoice((state) => state.toggleWatch);
 
+  const cadre = useRef<HTMLDivElement>(null);
+
   /*
-   * Un clic ailleurs, ou Echap, referme.
+   * Un clic AILLEURS, ou Echap, referme.
    *
-   * En phase de capture : sans cela, le clic qui ferme active aussi ce qui se
-   * trouve dessous, et l'on quitte un partage en croyant fermer un menu.
+   * « Ailleurs » est tout le sujet, et il manquait. L'ecoute est en phase de
+   * CAPTURE — il le faut, sinon le clic qui ferme active au passage ce qui se
+   * trouve dessous — et elle fermait sans regarder ou l'on avait clique.
+   *
+   * Le menu se croyait protege par un `stopPropagation` pose sur lui-meme.
+   * C'est impossible : la capture descend depuis `window`, donc elle passe
+   * AVANT que l'evenement n'atteigne le menu. Arreter la propagation la
+   * n'arrete rien de ce qui a deja eu lieu.
+   *
+   * Resultat : cliquer « Couper le son » fermait le menu au moment de
+   * l'appui, et le bouton disparaissait avant de recevoir le clic. Aucune
+   * entree n'etait donc jamais atteignable — « les clics droit marchent pas,
+   * meme pour quitter ». Le menu s'ouvrait pourtant tres bien, ce qui rendait
+   * le defaut d'autant plus deroutant.
+   *
+   * `ContextMenu` fait le test depuis toujours ; celui-ci ne l'avait pas.
    */
   useEffect(() => {
     const fermer = (evenement: Event) => {
-      if (evenement instanceof KeyboardEvent && evenement.key !== 'Escape') return;
+      if (evenement instanceof KeyboardEvent) {
+        if (evenement.key === 'Escape') onFermer();
+        return;
+      }
+
+      const cible = evenement.target as Node | null;
+      if (cible && cadre.current?.contains(cible)) return;
+
       onFermer();
     };
 
@@ -819,6 +842,7 @@ function MenuPartage({
 
   return (
     <div
+      ref={cadre}
       className="menu-partage"
       // Borne a la fenetre : un menu ouvert pres du bord droit sortirait de
       // l'ecran, et l'on ne verrait que sa premiere colonne de pixels.

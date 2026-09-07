@@ -34,6 +34,11 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.10.6
+
+- Le clic droit sur un partage repond de nouveau : couper le son, plein ecran, quitter.
+- Sur une liaison etroite, l'image reste lisible au lieu de devenir des blocs.
+
 ## 9.10.5
 
 - Le push-to-mute sur un bouton de souris fonctionne de nouveau.

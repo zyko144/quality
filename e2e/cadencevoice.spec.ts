@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ajuster, PLANCHER, MARGE, PAS_DE_REMONTEE } from '../src/features/voice/cadence';
+import { ajuster, PLANCHER_LIAISON, BITS_PAR_IMAGE, PLANCHER, MARGE, PAS_DE_REMONTEE } from '../src/features/voice/cadence';
 
 /**
  * La cadence de capture.
@@ -28,13 +28,16 @@ function tourner(depart: number, voulu: number, capacite: number, tours: number)
     const emises = Math.min(courante, capacite);
     const limite = emises < courante ? 'cpu' : 'none';
 
-    const decide = ajuster(courante, voulu, { images: emises, limite });
+    const decide = ajuster(courante, voulu, { images: emises, limite, kbps: LARGE });
     if (decide !== null) courante = decide;
     suite.push(courante);
   }
 
   return suite;
 }
+
+/** Un debit confortable : ces cas-la ne parlent pas de la liaison. */
+const LARGE = 20_000;
 
 test.describe('Cadence de capture', () => {
   test('une machine qui suit garde la cadence demandee', () => {
@@ -77,7 +80,7 @@ test.describe('Cadence de capture', () => {
     // Un jeu qui se ferme, une autre application qui rend le processeur.
     let courante = 20;
     for (let i = 0; i < 30; i += 1) {
-      const decide = ajuster(courante, 60, { images: courante, limite: 'none' });
+      const decide = ajuster(courante, 60, { images: courante, limite: 'none', kbps: LARGE });
       if (decide !== null) courante = decide;
     }
 
@@ -85,7 +88,7 @@ test.describe('Cadence de capture', () => {
   });
 
   test('la remontee est progressive, jamais d un bond', () => {
-    const decide = ajuster(20, 60, { images: 20, limite: 'none' });
+    const decide = ajuster(20, 60, { images: 20, limite: 'none', kbps: LARGE });
     expect(decide).toBe(20 + PAS_DE_REMONTEE);
   });
 
@@ -99,20 +102,61 @@ test.describe('Cadence de capture', () => {
     expect(Math.max(...suite)).toBe(30);
   });
 
-  test('une liaison etroite ne fait pas baisser la capture', () => {
+  test('une liaison etroite fait baisser la capture', () => {
     /*
-     * `bandwidth` se traite en baissant le debit, ce que le moteur fait deja.
-     * Retirer des images en plus abimerait le partage sans rien economiser la
-     * ou ca coince — le processeur, lui, n'est pas en cause.
+     * Ce cas disait l'inverse, et il avait tort.
+     *
+     * Le raisonnement d'alors : « `bandwidth` se traite en baissant le debit,
+     * ce que le moteur fait deja ». La premiere moitie est vraie ; la
+     * conclusion ne l'est pas. Sous contrainte, le moteur fait ce que
+     * `degradationPreference` lui dit — et nous lui demandons de TENIR la
+     * cadence. Il garde donc les soixante images et retire des bits a chacune.
+     *
+     * Releve d'un vrai partage : `limite: bandwidth`, 95 kilobits par seconde,
+     * soixante images. Cela fait mille six cents bits par image — il n'y a plus
+     * d'image, seulement des blocs.
      */
-    const decide = ajuster(60, 60, { images: 12, limite: 'bandwidth' });
-    expect(decide).toBeNull();
+    const decide = ajuster(60, 60, { images: 60, limite: 'bandwidth', kbps: 95 });
+
+    expect(decide).not.toBeNull();
+    expect(decide).toBe(PLANCHER_LIAISON);
+  });
+
+  test('la cadence visee rend aux images de quoi etre lisibles', () => {
+    /*
+     * Trois megabits par seconde : de quoi tenir vingt-cinq images a cent
+     * vingt kilobits chacune. On ne perd pas de la qualite, on la deplace.
+     */
+    const decide = ajuster(60, 60, { images: 60, limite: 'bandwidth', kbps: 3_000 });
+
+    expect(decide).not.toBeNull();
+    expect(decide! * BITS_PAR_IMAGE).toBeLessThanOrEqual(3_000 * 1000 * 1.05);
+    expect(decide!).toBeGreaterThanOrEqual(PLANCHER_LIAISON);
+  });
+
+  test('une liaison large ne retire rien', () => {
+    // Douze megabits a soixante images : deux cents kilobits chacune, bien
+    // au-dessus du seuil. Rien a corriger.
+    expect(ajuster(60, 60, { images: 60, limite: 'bandwidth', kbps: 12_000 })).toBeNull();
+  });
+
+  test('la cadence demandee reste un plafond, meme avec du debit a revendre', () => {
+    /*
+     * Quelqu'un qui a choisi trente images ne doit pas en recevoir soixante
+     * parce que sa liaison est bonne : c'est un choix, pas une limite.
+     */
+    expect(ajuster(30, 30, { images: 30, limite: 'bandwidth', kbps: 50_000 })).toBeNull();
+  });
+
+  test('un debit nul ne decide rien', () => {
+    // Le premier releve, avant qu'un seul octet ne soit parti.
+    expect(ajuster(60, 60, { images: 60, limite: 'bandwidth', kbps: 0 })).toBeNull();
   });
 
   test('un premier releve vide ne decide rien', () => {
     // Avant la premiere image, le moteur annonce zero. S'y fier ramenerait la
     // capture au plancher des la premiere seconde d'un partage qui va bien.
-    expect(ajuster(60, 60, { images: 0, limite: 'cpu' })).toBeNull();
+    expect(ajuster(60, 60, { images: 0, limite: 'cpu', kbps: LARGE })).toBeNull();
   });
 
   test('on ne suit pas le bruit de mesure', () => {
