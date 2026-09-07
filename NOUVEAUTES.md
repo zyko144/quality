@@ -41,7 +41,7 @@ sur une ligne n'a de toute facon pas ce probleme.
 - Le clic droit sur un salon propose de creer un salon ou une categorie.
 - Le menu du clic droit ne se referme plus tout seul aussitot ouvert.
 - Moins d'espace perdu entre les categories.
-- Nouvelle adresse : echows.vercel.app, avec le nouveau logo partout.
+- Le nouveau logo partout : onglet, favoris, site, et la carte des liens partages.
 - L'icone de la barre des taches se rafraichit vraiment apres une mise a jour.
 
 ## 9.12.2

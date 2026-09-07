@@ -28,12 +28,12 @@
  * cessent de fonctionner : c'est inevitable, et c'est la raison pour laquelle
  * elle est seule et nommee, plutot que recopiee a quatre endroits.
  *
- * Elle a demenage une fois : `echowebplayer.vercel.app` est devenu
- * `echows.vercel.app`. L'ancienne adresse reste reconnue par les apercus de
- * liens — un lien envoye il y a un mois montre encore de quel serveur il
- * parle, meme s'il ne s'ouvre plus.
+ * A ne pas confondre avec `echows.vercel.app`, qui est le SITE de
+ * presentation : il parle de l'application, il ne la sert pas. Une invitation
+ * qui pointerait dessus ouvrirait une page de telechargement au lieu du
+ * serveur qu'on voulait rejoindre.
  */
-export const APPLICATION_WEB = 'https://echows.vercel.app';
+export const APPLICATION_WEB = 'https://echowebplayer.vercel.app';
 
 /**
  * Vrai si cette origine peut etre donnee a quelqu'un d'autre.
