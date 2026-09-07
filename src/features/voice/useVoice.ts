@@ -3241,6 +3241,10 @@ let cadenceCapture = 0;
             const capture = await capturerSource(
               sourceId,
               useDevices.getState().media.screenFrameRate,
+              // La meme hauteur que celle demandee a l'encodeur : reduire deux
+              // fois pour la meme cible n'aurait pas de sens, et reduire moins
+              // ici laisserait passer des pixels qu'il jetterait ensuite.
+              screenTargetHeight(useDevices.getState().media),
             );
 
             if (capture.ok) {

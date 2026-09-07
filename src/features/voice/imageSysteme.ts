@@ -84,6 +84,16 @@ export function captureNativeDisponible(): boolean {
 export async function capturerSource(
   source: string,
   images: number,
+  /**
+   * Hauteur voulue pour ce qui part sur le reseau, ou `null` pour la source.
+   *
+   * La carte reduit alors l'image AVANT de la rapatrier. Ce n'est pas une
+   * perte : c'est la meme reduction que l'encodeur allait faire, effectuee
+   * plus tot et par le materiel prevu pour cela. Voir `Reducteur` dans
+   * `image.rs`, et ce que les traces disaient — une image 3440x1440 pese
+   * 19,8 megaoctets, dont l'encodeur jetait les trois quarts.
+   */
+  hauteurVoulue: number | null = null,
 ): Promise<ResultatImage> {
   if (!captureNativeDisponible()) {
     return { ok: false, raison: 'La capture native n’est pas disponible ici.' };
@@ -95,6 +105,23 @@ export async function capturerSource(
     invoke = (await import('@tauri-apps/api/core')).invoke;
   } catch {
     return { ok: false, raison: 'Le pont vers l’application n’a pas repondu.' };
+  }
+
+  /*
+   * La hauteur voulue est posee AVANT d'ouvrir la capture.
+   *
+   * C'est elle qui decide si la carte reduit l'image avant de la rapatrier. La
+   * poser apres laisserait passer les premieres images en pleine definition —
+   * celles-la memes qui saturent le passage au moment ou tout demarre.
+   *
+   * Zero veut dire « ne reduis pas » : c'est le reglage « Source », ou l'on
+   * demande explicitement l'image telle qu'elle est.
+   */
+  try {
+    await invoke('hauteur_image', { hauteur: hauteurVoulue ?? 0 });
+  } catch {
+    // Version installee plus ancienne que ce code : la capture ouvre en pleine
+    // definition, comme avant. Rien d'autre ne change.
   }
 
   let flux: FluxImage;

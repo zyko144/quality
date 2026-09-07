@@ -100,8 +100,12 @@ export function devPreview(name: string): ReactNode | null {
       ['vocal-5000', 'Voix — 5 000 h', 'A passe cinq mille heures en salon vocal.', 'succes', '#d946ef', null, 360],
       ['anciennete-1an', 'Veteran — 1 an', 'Compte ouvert depuis plus d’un an.', 'anciennete', '#94a3b8', null, 40],
       ['anciennete-5ans', 'Veteran — 5 ans', 'Compte ouvert depuis plus de cinq ans.', 'anciennete', '#3b82f6', null, 42],
-    ].map(([cle, nom, description, famille, teinte, limite, rang]) => ({
-      cle, nom, description, famille, teinte, limite, rang,
+      // Cache : il est possede, il doit donc paraitre EN HAUT parmi les
+      // trophees, et nulle part dans les familles en dessous. C'est cette
+      // difference-la qu'on vient verifier ici.
+      ['singe', 'Singe', 'Donne a la main.', 'equipe', '#f5a623', null, 5, true],
+    ].map(([cle, nom, description, famille, teinte, limite, rang, cache]) => ({
+      cle, nom, description, famille, teinte, limite, rang, cache,
     })) as Badge[];
 
     const moi = '00000000-0000-4000-8000-000000000003';
@@ -114,6 +118,7 @@ export function devPreview(name: string): ReactNode | null {
         [moi]: [
           { badge_cle: 'pionnier', position: 1, obtenu_le: '2026-08-26T00:12:00.000Z' },
           { badge_cle: 'vocal-150', position: null, obtenu_le: '2026-09-01T09:00:00.000Z' },
+          { badge_cle: 'singe', position: null, obtenu_le: '2026-09-07T02:30:00.000Z' },
         ],
       },
       compte: { pionnier: 1, 'vocal-150': 4 },
@@ -175,6 +180,9 @@ export function devPreview(name: string): ReactNode | null {
         ['pionnier', '100 premiers soutiens', 'Parmi les cent premiers comptes ouverts sur Echow.', 'soutien', '#f59e0b', 100, 1],
         ['premiere-heure', 'Premiere heure', 'Present le jour de l’ouverture.', 'soutien', '#ec4899', null, 2],
         ['rapporteur', 'Bug Hunter', 'A signale un defaut qui a ete corrige.', 'succes', '#10b981', null, 4],
+        // Son neon vit dans ses pixels, pas dans le style : c'est le cas a
+        // regarder pour verifier qu'aucun halo ne s'y ajoute par-dessus.
+        ['singe', 'Singe', 'Donne a la main.', 'equipe', '#f5a623', null, 5],
         ['messages-100k', 'Plume — 100 000', 'A ecrit cent mille messages.', 'succes', '#a855f7', null, 22],
         ['anciennete-3ans', 'Veteran — 3 ans', 'Compte ouvert depuis plus de trois ans.', 'anciennete', '#f59e0b', null, 41],
       ].map(([cle, nom, description, famille, teinte, limite, rang]) => ({
@@ -186,6 +194,7 @@ export function devPreview(name: string): ReactNode | null {
           { badge_cle: 'pionnier', position: 7, obtenu_le: '2026-08-26T00:20:00.000Z' },
           { badge_cle: 'premiere-heure', position: null, obtenu_le: '2026-08-26T00:20:00.000Z' },
           { badge_cle: 'rapporteur', position: null, obtenu_le: '2026-08-30T10:00:00.000Z' },
+          { badge_cle: 'singe', position: null, obtenu_le: '2026-09-07T02:30:00.000Z' },
           { badge_cle: 'messages-100k', position: null, obtenu_le: '2026-09-01T10:00:00.000Z' },
           { badge_cle: 'anciennete-3ans', position: null, obtenu_le: '2026-09-01T10:00:00.000Z' },
         ],

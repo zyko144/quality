@@ -120,7 +120,17 @@ export function BadgesPage() {
       </section>
 
       {FAMILLES.map((famille) => {
-        const dedans = catalogue.filter((badge) => badge.famille === famille.cle);
+        /*
+         * Les badges caches ne figurent pas dans les familles.
+         *
+         * Ceux qu'on donne a la main n'ont rien a faire dans un catalogue :
+         * on vient y voir ce qui existe et ce qu'il reste a faire, et pour
+         * eux il n'y a rien a faire. La rangee de trophees en haut, elle, les
+         * montre a qui les porte — c'est le sien.
+         */
+        const dedans = catalogue.filter(
+          (badge) => badge.famille === famille.cle && badge.cache !== true,
+        );
         if (dedans.length === 0) return null;
 
         return (

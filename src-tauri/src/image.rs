@@ -44,13 +44,22 @@ use windows::Graphics::Capture::{
 use windows::Graphics::DirectX::Direct3D11::IDirect3DDevice;
 use windows::Graphics::DirectX::DirectXPixelFormat;
 use windows::Graphics::SizeInt32;
-use windows::Win32::Foundation::{HMODULE, HWND};
+use windows::Win32::Foundation::{HMODULE, HWND, RECT};
 use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
 use windows::Win32::Graphics::Direct3D11::{
     D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
+    ID3D11VideoContext, ID3D11VideoDevice, ID3D11VideoProcessor, ID3D11VideoProcessorEnumerator,
+    D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_TEX2D_VPIV, D3D11_TEX2D_VPOV,
+    D3D11_USAGE_DEFAULT, D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE,
+    D3D11_VIDEO_PROCESSOR_CONTENT_DESC, D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC,
+    D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC_0, D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC,
+    D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC_0, D3D11_VIDEO_PROCESSOR_STREAM,
+    D3D11_VIDEO_USAGE_PLAYBACK_NORMAL, D3D11_VPIV_DIMENSION_TEXTURE2D,
+    D3D11_VPOV_DIMENSION_TEXTURE2D,
     D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAPPED_SUBRESOURCE,
     D3D11_MAP_READ, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC, D3D11_USAGE_STAGING,
 };
+use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC};
 use windows::Win32::Graphics::Dxgi::IDXGIDevice;
 use windows::Win32::Graphics::Gdi::HMONITOR;
 use windows::Win32::System::WinRT::Direct3D11::CreateDirect3D11DeviceFromDXGIDevice;
@@ -359,6 +368,7 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
     let mut echeance: u64 = 0;
 
     let mut attente = Attente::default();
+    let mut reducteur = Reducteur::default();
 
     let pour_evenement = reserve.clone();
     reserve.FrameArrived(&TypedEventHandler::new(
@@ -377,7 +387,7 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
             };
             echeance = suivante;
 
-            if let Ok(Some(lue)) = lire(&materiel, &contexte, &image, &mut attente) {
+            if let Ok(Some(lue)) = lire(&materiel, &contexte, &image, &mut attente, &mut reducteur) {
                 GARDEES.fetch_add(1, Ordering::Relaxed);
 
                 // La file ne bloque jamais : une image en retard ne sert a
@@ -435,6 +445,295 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
 /// En creer une par image serait pire encore : le pilote allouerait soixante
 /// fois par seconde, ce qui coute plus cher que la copie. Les dimensions ne
 /// changent que si la source change de taille, et l'on refait alors les deux.
+/// La hauteur demandee pour ce qui part sur le reseau, ou zero.
+///
+/// Reglee par l'interface, qui connait le choix de definition. Zero veut dire
+/// « ne reduis pas » : c'est le cas du reglage « Source ».
+static HAUTEUR_VOULUE: AtomicU64 = AtomicU64::new(0);
+
+#[tauri::command]
+#[cfg(windows)]
+pub fn hauteur_image(hauteur: u32) {
+    HAUTEUR_VOULUE.store(hauteur as u64, Ordering::Relaxed);
+}
+
+#[tauri::command]
+#[cfg(not(windows))]
+pub fn hauteur_image(_hauteur: u32) {}
+
+/// La taille a rapatrier, pour une source donnee et la hauteur voulue.
+///
+/// Rend `None` quand il n'y a rien a gagner : source deja assez petite, ou
+/// aucune hauteur demandee.
+///
+/// Les deux cotes sont ramenes a un nombre PAIR. Les formats video comptent
+/// leurs couleurs par blocs de deux pixels, et une dimension impaire fait
+/// echouer la creation des vues sur certains pilotes — pour un pixel dont
+/// personne ne verrait l'absence.
+pub(crate) fn taille_reduite(largeur: u32, hauteur: u32, voulue: u32) -> Option<(u32, u32)> {
+    if voulue == 0 || hauteur == 0 || largeur == 0 || hauteur <= voulue {
+        return None;
+    }
+
+    let facteur = hauteur as f64 / voulue as f64;
+    let l = (((largeur as f64 / facteur).round() as u32).max(2)) & !1;
+    let h = voulue.max(2) & !1;
+
+    if l >= largeur && h >= hauteur {
+        return None;
+    }
+
+    Some((l, h))
+}
+
+/// De quoi reduire une image sur la carte, avant de la rapatrier.
+///
+/// Pourquoi c'est le correctif qui compte
+/// --------------------------------------
+/// Les traces d'un partage en 3440x1440 disent ou vont les images :
+///
+/// ```text
+/// arrivees 166 · gardees 164 · abandonnees 0 · recues 31
+/// ```
+///
+/// Cent trente-trois disparaissent entre le rapatriement et la piste. La cause
+/// est la taille : une image de cette definition pese 19,8 megaoctets, et l'on
+/// en produisait trente-trois par seconde — six cent cinquante megaoctets par
+/// seconde a faire passer par une connexion locale que l'interface lit a son
+/// rythme.
+///
+/// Or ces pixels sont JETES juste apres. Le reglage sort en 1080p : l'encodeur
+/// recoit 3440x1440 et en fait du 1920 de large. On payait le transport de
+/// trois pixels sur quatre pour qu'ils soient ecartes au bout.
+///
+/// Reduire ici ne coute donc rien en qualite — c'est la meme reduction, faite
+/// plus tot et par le materiel prevu pour cela — et divise le transport
+/// d'autant. En 3440x1440 vers 1080 : 19,8 megaoctets deviennent 5,6.
+///
+/// Pourquoi le processeur video et non un nuanceur
+/// -----------------------------------------------
+/// `ID3D11VideoProcessor` est ce que le pilote expose pour redimensionner une
+/// image : materiel dedie, filtrage correct, ni nuanceur a compiler ni
+/// geometrie a poser. Un nuanceur ferait le meme travail en trois cents lignes
+/// de plus.
+///
+/// Tout echec retombe sur le comportement precedent
+/// ------------------------------------------------
+/// Chaque etape rend `None` plutot que de lever, et `renonce` retient l'echec
+/// pour ne pas le rejouer soixante fois par seconde : un pilote qui refuse le
+/// processeur video, une vue d'entree que la texture de capture n'accepte pas,
+/// un `Blt` qui echoue. On rapatrie alors l'image entiere, exactement comme
+/// avant.
+///
+/// C'est la propriete la plus importante de ce code : la reduction est un
+/// gain, jamais une condition. Elle tourne sur des machines et des pilotes que
+/// je n'ai pas, et un partage doit continuer de fonctionner la ou elle ne
+/// passe pas.
+#[cfg(windows)]
+#[derive(Default)]
+struct Reducteur {
+    appareil: Option<ID3D11VideoDevice>,
+    contexte: Option<ID3D11VideoContext>,
+    catalogue: Option<ID3D11VideoProcessorEnumerator>,
+    processeur: Option<ID3D11VideoProcessor>,
+    /// La texture qui recoit l'image reduite.
+    sortie: Option<ID3D11Texture2D>,
+    entree: (u32, u32),
+    taille: (u32, u32),
+    /// Vrai quand une tentative a echoue : on ne la refait plus.
+    renonce: bool,
+}
+
+#[cfg(windows)]
+impl Reducteur {
+    /// Prepare, si besoin, de quoi passer de `entree` a `taille`.
+    unsafe fn preparer(
+        &mut self,
+        materiel: &ID3D11Device,
+        contexte: &ID3D11DeviceContext,
+        entree: (u32, u32),
+        taille: (u32, u32),
+    ) -> Option<()> {
+        if self.renonce {
+            return None;
+        }
+
+        if self.processeur.is_some() && self.entree == entree && self.taille == taille {
+            return Some(());
+        }
+
+        let appareil = match materiel.cast::<ID3D11VideoDevice>() {
+            Ok(valeur) => valeur,
+            Err(_) => {
+                self.renonce = true;
+                return None;
+            }
+        };
+
+        let video = match contexte.cast::<ID3D11VideoContext>() {
+            Ok(valeur) => valeur,
+            Err(_) => {
+                self.renonce = true;
+                return None;
+            }
+        };
+
+        let description = D3D11_VIDEO_PROCESSOR_CONTENT_DESC {
+            InputFrameFormat: D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE,
+            InputWidth: entree.0,
+            InputHeight: entree.1,
+            OutputWidth: taille.0,
+            OutputHeight: taille.1,
+            // Un partage d'ecran n'est pas un film : on demande la qualite
+            // plutot que le debit, le materiel fait le reste.
+            Usage: D3D11_VIDEO_USAGE_PLAYBACK_NORMAL,
+            ..Default::default()
+        };
+
+        let catalogue = match appareil.CreateVideoProcessorEnumerator(&description) {
+            Ok(valeur) => valeur,
+            Err(_) => {
+                self.renonce = true;
+                return None;
+            }
+        };
+
+        let processeur = match appareil.CreateVideoProcessor(&catalogue, 0) {
+            Ok(valeur) => valeur,
+            Err(_) => {
+                self.renonce = true;
+                return None;
+            }
+        };
+
+        let forme = D3D11_TEXTURE2D_DESC {
+            Width: taille.0,
+            Height: taille.1,
+            MipLevels: 1,
+            ArraySize: 1,
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
+            Usage: D3D11_USAGE_DEFAULT,
+            BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
+            CPUAccessFlags: 0,
+            MiscFlags: 0,
+        };
+
+        let mut sortie: Option<ID3D11Texture2D> = None;
+        if materiel
+            .CreateTexture2D(&forme, None, Some(&mut sortie))
+            .is_err()
+        {
+            self.renonce = true;
+            return None;
+        }
+
+        /*
+         * L'image occupe toute la sortie, sans bande noire.
+         *
+         * Le rapport des cotes est conserve par `taille_reduite`, qui derive la
+         * largeur du meme facteur que la hauteur. Le dire quand meme au
+         * processeur evite de dependre de son comportement par defaut, qui
+         * varie d'un pilote a l'autre.
+         */
+        video.VideoProcessorSetStreamDestRect(
+            &processeur,
+            0,
+            true,
+            Some(&RECT {
+                left: 0,
+                top: 0,
+                right: taille.0 as i32,
+                bottom: taille.1 as i32,
+            }),
+        );
+
+        self.appareil = Some(appareil);
+        self.contexte = Some(video);
+        self.catalogue = Some(catalogue);
+        self.processeur = Some(processeur);
+        self.sortie = sortie;
+        self.entree = entree;
+        self.taille = taille;
+
+        Some(())
+    }
+
+    /// Reduit `source` et rend la texture qui porte le resultat.
+    unsafe fn reduire(&mut self, source: &ID3D11Texture2D) -> Option<&ID3D11Texture2D> {
+        let vue_entree = D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC {
+            FourCC: 0,
+            ViewDimension: D3D11_VPIV_DIMENSION_TEXTURE2D,
+            Anonymous: D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC_0 {
+                Texture2D: D3D11_TEX2D_VPIV {
+                    MipSlice: 0,
+                    ArraySlice: 0,
+                },
+            },
+        };
+
+        let mut entree = None;
+        let mut sortie = None;
+
+        {
+            let appareil = self.appareil.as_ref()?;
+            let catalogue = self.catalogue.as_ref()?;
+
+            if appareil
+                .CreateVideoProcessorInputView(source, catalogue, &vue_entree, Some(&mut entree))
+                .is_err()
+            {
+                self.renonce = true;
+                return None;
+            }
+
+            let vue_sortie = D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC {
+                ViewDimension: D3D11_VPOV_DIMENSION_TEXTURE2D,
+                Anonymous: D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC_0 {
+                    Texture2D: D3D11_TEX2D_VPOV { MipSlice: 0 },
+                },
+            };
+
+            if appareil
+                .CreateVideoProcessorOutputView(
+                    self.sortie.as_ref()?,
+                    catalogue,
+                    &vue_sortie,
+                    Some(&mut sortie),
+                )
+                .is_err()
+            {
+                self.renonce = true;
+                return None;
+            }
+        }
+
+        let flux = D3D11_VIDEO_PROCESSOR_STREAM {
+            Enable: true.into(),
+            pInputSurface: std::mem::ManuallyDrop::new(entree),
+            ..Default::default()
+        };
+
+        let echec = {
+            let video = self.contexte.as_ref()?;
+            let processeur = self.processeur.as_ref()?;
+            video
+                .VideoProcessorBlt(processeur, sortie.as_ref()?, 0, &[flux])
+                .is_err()
+        };
+
+        if echec {
+            self.renonce = true;
+            return None;
+        }
+
+        self.sortie.as_ref()
+    }
+}
+
 #[derive(Default)]
 struct Attente {
     textures: Option<[ID3D11Texture2D; 2]>,
@@ -456,17 +755,47 @@ fn lire(
     contexte: &ID3D11DeviceContext,
     image: &windows::Graphics::Capture::Direct3D11CaptureFrame,
     attente: &mut Attente,
+    reducteur: &mut Reducteur,
 ) -> ResultatWin<Option<Image>> {
     let surface = image.Surface()?;
     let acces: windows::Win32::System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess =
         surface.cast()?;
-    let texture: ID3D11Texture2D = unsafe { acces.GetInterface()? };
+    let capturee: ID3D11Texture2D = unsafe { acces.GetInterface()? };
 
     let mut description = D3D11_TEXTURE2D_DESC::default();
-    unsafe { texture.GetDesc(&mut description) };
+    unsafe { capturee.GetDesc(&mut description) };
 
-    let largeur = description.Width;
-    let hauteur = description.Height;
+    /*
+     * La reduction, avant tout le reste.
+     *
+     * Elle change ce qu'on rapatrie, donc la taille des textures d'attente et
+     * celle du paquet. La faire ici plutot qu'apres evite d'allouer une fois la
+     * taille de la source pour la jeter aussitot.
+     *
+     * `texture` designe ensuite ce qu'on lit : la capture, ou sa reduction.
+     */
+    let voulue = HAUTEUR_VOULUE.load(Ordering::Relaxed) as u32;
+    let reduite = taille_reduite(description.Width, description.Height, voulue).and_then(|taille| {
+        unsafe {
+            reducteur.preparer(
+                materiel,
+                contexte,
+                (description.Width, description.Height),
+                taille,
+            )?;
+            reducteur.reduire(&capturee).map(|texture| (texture.clone(), taille))
+        }
+    });
+
+    let (texture, largeur, hauteur) = match reduite {
+        Some((petite, (l, h))) => (petite, l, h),
+        None => (capturee, description.Width, description.Height),
+    };
+
+    // La description sert desormais de gabarit pour la texture d'attente : ses
+    // dimensions doivent etre celles qu'on lit, pas celles de la source.
+    description.Width = largeur;
+    description.Height = hauteur;
 
     // On refait les textures seulement si la taille a change : une fenetre
     // redimensionnee pendant qu'on la partage, et rien d'autre.
@@ -812,6 +1141,73 @@ mod essais_retenue {
         let intervalle = intervalle_pour(60);
         // La moitie d'un intervalle en avance : bien au-dela de la gigue.
         assert!(retenir(intervalle / 2, intervalle, intervalle).is_none());
+    }
+}
+
+/// La taille a rapatrier, eprouvee sur les definitions reelles.
+///
+/// Ces essais n'ont besoin ni d'ecran ni de carte : `taille_reduite` ne
+/// connait que trois nombres. C'est tout l'interet de l'avoir sortie du
+/// chemin graphique — le reste ne se verifie que sur une vraie machine, et
+/// cette arithmetique-la decide de ce que les gens voient.
+#[cfg(test)]
+mod essais_reduction {
+    use super::taille_reduite;
+
+    /// Le cas rapporte : un ultra-large, un reglage en 1080p.
+    #[test]
+    fn un_ultra_large_descend_a_la_hauteur_demandee() {
+        let (l, h) = taille_reduite(3440, 1440, 1080).expect("il y a de quoi reduire");
+
+        assert_eq!(h, 1080);
+        // Le rapport des cotes est garde : 3440/1440 vaut 2,389.
+        assert_eq!(l, 2580);
+
+        // Et c'est bien le transport qu'on divise : 19,8 megaoctets en 11,1.
+        let avant = 3440u64 * 1440 * 4;
+        let apres = l as u64 * h as u64 * 4;
+        assert!(apres * 100 / avant < 60, "{apres} n'est pas assez petit devant {avant}");
+    }
+
+    /// On ne reduit pas une source qui est deja a la bonne taille, ou en dessous.
+    ///
+    /// Reduire alors AGRANDIRAIT, ce qui couterait du transport pour des pixels
+    /// inventes — l'exact contraire du but.
+    #[test]
+    fn une_source_assez_petite_reste_intacte() {
+        assert_eq!(taille_reduite(1280, 720, 1080), None);
+        assert_eq!(taille_reduite(1920, 1080, 1080), None);
+    }
+
+    /// Zero veut dire « ne reduis pas » : c'est le reglage « Source ».
+    #[test]
+    fn sans_hauteur_demandee_on_ne_touche_a_rien() {
+        assert_eq!(taille_reduite(3440, 1440, 0), None);
+    }
+
+    /// Les deux cotes sont pairs, quelle que soit la source.
+    ///
+    /// Une dimension impaire fait echouer la creation des vues sur certains
+    /// pilotes — et l'echec serait silencieux : on retomberait sur la pleine
+    /// definition sans que rien ne le dise, c'est-a-dire sur le defaut qu'on
+    /// vient de corriger.
+    #[test]
+    fn les_deux_cotes_sont_pairs() {
+        for (l, h, voulue) in [(1365u32, 1023u32, 720u32), (2560, 1440, 721), (3441, 1441, 1080)] {
+            let Some((rl, rh)) = taille_reduite(l, h, voulue) else {
+                continue;
+            };
+
+            assert_eq!(rl % 2, 0, "largeur impaire pour {l}x{h} vers {voulue}");
+            assert_eq!(rh % 2, 0, "hauteur impaire pour {l}x{h} vers {voulue}");
+        }
+    }
+
+    /// Une source degeneree ne fait rien exploser.
+    #[test]
+    fn une_source_vide_ne_reduit_rien() {
+        assert_eq!(taille_reduite(0, 0, 1080), None);
+        assert_eq!(taille_reduite(1920, 0, 1080), None);
     }
 }
 

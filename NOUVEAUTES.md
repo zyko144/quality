@@ -34,6 +34,12 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.10.2
+
+- Les partages en tres grande definition ne perdent plus les trois quarts de leurs images.
+- L'image est reduite par la carte graphique avant d'etre rapatriee, sans perte de qualite.
+- Un badge peut etre donne a la main sans figurer au catalogue.
+
 ## 9.10.1
 
 - Les liens d'invitation fonctionnent enfin.

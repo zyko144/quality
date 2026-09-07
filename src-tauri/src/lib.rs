@@ -240,6 +240,7 @@ pub fn run() {
             image::demarrer_image,
             image::arreter_image,
             image::cadence_image,
+            image::hauteur_image,
             image::diagnostic_image,
             clavier::definir_touches_globales
         ])

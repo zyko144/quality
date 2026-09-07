@@ -26,6 +26,22 @@ export interface Badge {
   /** Nombre maximal d'attributions, ou `null` si illimite. */
   limite: number | null;
   rang: number;
+
+  /**
+   * Ne figure pas au catalogue de la page « Badges ».
+   *
+   * Un badge donne a la main n'a rien a y faire : il n'y a rien a accomplir
+   * pour l'obtenir, et l'y montrer poserait une question dont la seule reponse
+   * honnete — « celui-la, on ne peut pas l'avoir » — ne vaut pas d'etre
+   * affichee a tout le monde.
+   *
+   * Il s'affiche normalement sur la fiche de qui le porte, et dans SA propre
+   * rangee de trophees : c'est le sien, il a le droit de le voir.
+   *
+   * Facultatif : une base d'avant cette colonne n'en donne pas, et l'absence
+   * vaut « non ».
+   */
+  cache?: boolean;
 }
 
 export interface BadgeObtenu {
