@@ -22,3 +22,37 @@ enable_signup = true
 enable_signup = true
 # Desactive en developpement pour ne pas dependre d'un service de mail.
 enable_confirmations = false
+
+# ---------------------------------------------------------------------------
+# Fonctions serveur
+# ---------------------------------------------------------------------------
+
+# Le webhook n'a pas de session, et c'est TOUT L'INTERET.
+#
+# Par defaut, la passerelle de Supabase exige un en-tete `Authorization` avant
+# meme d'atteindre la fonction. C'est le bon reglage pour tout ce qui est
+# appele depuis l'application — il n'y a alors aucune raison d'ouvrir une
+# adresse a la planete.
+#
+# Un webhook, non. Il est appele par un module Garry's Mod, une action GitHub,
+# une sonde de supervision : des programmes qui envoient un corps JSON et rien
+# d'autre. Aucun n'ajoutera un en-tete que Discord ne demande pas — c'est
+# precisement pourquoi on a repris son format.
+#
+# Verifie avant d'ecrire cette ligne : sans elle, un appel rend
+# `UNAUTHORIZED_NO_AUTH_HEADER` sans jamais entrer dans la fonction. La
+# fonctionnalite etait donc complete et totalement inutilisable.
+#
+# Ce que cela n'ouvre pas
+# -----------------------
+# L'adresse devient publique ; le DROIT ne l'est pas. Le jeton fait
+# soixante-quatre caracteres, il est verifie en base par `poster_par_webhook`,
+# et il n'autorise qu'une chose : ecrire dans un salon, trente fois par minute
+# au plus. La fonction ne rend aucune donnee, quel que soit l'appelant.
+[functions.webhook]
+verify_jwt = false
+
+# L'assistant, lui, GARDE sa verification : il coute un appel a un modele
+# payant, et son adresse ouverte serait une facture ouverte.
+[functions.echow-ai]
+verify_jwt = true
