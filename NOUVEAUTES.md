@@ -34,6 +34,11 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.10.5
+
+- Le push-to-mute sur un bouton de souris fonctionne de nouveau.
+- Relacher la touche rend toujours le micro, meme si l'on a clique ailleurs entre-temps.
+
 ## 9.10.4
 
 - La fiche de profil est plus grande.

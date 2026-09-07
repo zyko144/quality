@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { openApp } from './session';
-import { tenir, etatTenueVide, type Evenement } from '../src/features/voice/tenue';
+import { tenir, etatTenueVide, frappeAgissante, type Evenement } from '../src/features/voice/tenue';
 import { codeWindows } from '../src/features/voice/clavierGlobal';
 import {
   noter,
@@ -279,5 +279,67 @@ test.describe('Detection du martelement', () => {
      */
     for (let i = 0; i < 2000; i += 1) noter(etat, i * 50);
     expect(etat.instants.length).toBeLessThanOrEqual(FENETRE / 50 + 1);
+  });
+});
+
+/**
+ * Le filtre « on est en train d'ecrire », et ses deux exceptions.
+ *
+ * Le defaut rapporte : « le push to mute marche plus, des qu'il l'utilise on
+ * l'entend quand meme ». Le raccourci etait pose sur un bouton du pouce, et il
+ * etait bien recu — le crochet systeme le decodait, la fenetre aussi. Il etait
+ * jete un cran plus loin, par un filtre ecrit pour les touches.
+ *
+ * Ce filtre ne se voit pas a l'usage de celui qui l'ecrit : il faut avoir la
+ * zone d'ecriture au focus, ce qui est l'etat normal d'une application de
+ * discussion et l'etat improbable d'un essai.
+ */
+test.describe('quand une frappe agit', () => {
+  test('une touche est ignoree pendant qu’on ecrit', () => {
+    expect(frappeAgissante(true, false, true)).toBe(false);
+  });
+
+  test('la meme touche agit hors d’un champ', () => {
+    expect(frappeAgissante(true, false, false)).toBe(true);
+  });
+
+  test('un bouton de souris agit meme dans un champ', () => {
+    /*
+     * On ne tape pas « Souris4 » dans un texte. Le filtre existait pour
+     * empecher qu'ecrire « M » coupe le micro ; un bouton du pouce ne produit
+     * aucun caractere, il n'a jamais eu a passer par la.
+     */
+    expect(frappeAgissante(true, true, true)).toBe(true);
+  });
+
+  test('un relachement passe toujours', () => {
+    /*
+     * Le cas qui laisse coince. On enfonce hors d'un champ — le micro se
+     * coupe — puis on clique dans la zone d'ecriture, et l'on relache. Si le
+     * relachement est avale, le micro reste coupe et plus rien ne le ramene.
+     *
+     * Vaut pour les deux sortes de raccourcis : rendre un etat est toujours
+     * plus urgent que de le prendre.
+     */
+    expect(frappeAgissante(false, false, true)).toBe(true);
+    expect(frappeAgissante(false, true, true)).toBe(true);
+  });
+
+  test('enfoncer puis relacher rend toujours le micro', () => {
+    /*
+     * Le parcours complet, filtre compris : on enfonce hors d'un champ, on
+     * clique dans la zone d'ecriture, on relache. Le micro doit revenir a ce
+     * qu'il etait.
+     */
+    const etat = etatTenueVide();
+
+    expect(frappeAgissante(true, false, false)).toBe(true);
+    const presse = tenir(etat, 'bas', false, true);
+    expect(presse.micro).toBe(true);
+
+    // Le focus est parti dans la zone d'ecriture entre-temps.
+    expect(frappeAgissante(false, false, true)).toBe(true);
+    const lache = tenir(etat, 'haut', true, true);
+    expect(lache.micro).toBe(false);
   });
 });

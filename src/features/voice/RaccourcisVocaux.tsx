@@ -4,10 +4,11 @@ import {
   useRaccourcis,
   correspond,
   codeSouris,
+  estSouris,
   type ActionVocale,
   type Combinaison,
 } from '@/store/raccourcis';
-import { tenir, etatTenueVide, type Evenement, type EtatTenue } from './tenue';
+import { tenir, etatTenueVide, frappeAgissante, type Evenement, type EtatTenue } from './tenue';
 import { surveillerGlobalement, enSaisie } from './clavierGlobal';
 import { journal } from '@/lib/journal';
 
@@ -144,16 +145,11 @@ export function RaccourcisVocaux() {
      * Les deux chemins — systeme et fenetre — aboutissent ici, ce qui garantit
      * qu'une touche fait la meme chose dans les deux cas.
      */
-    const agir = (action: ActionVocale, bas: boolean) => {
-      /*
-       * Une touche de conversation ne s'active pas pendant qu'on ecrit.
-       *
-       * Le systeme, lui, ne sait rien de ce qu'on fait : il signale la touche
-       * que la fenetre soit devant ou non. Sans ce filtre, taper « M » dans un
-       * message couperait le micro. Le filtre ne mord que si la fenetre a le
-       * focus — voir `enSaisie` : ecrire dans un jeu n'est pas ecrire ici.
-       */
-      if (enSaisie()) return;
+    const agir = (action: ActionVocale, bas: boolean, souris = false) => {
+      // La regle vit dans `frappeAgissante`, avec ses deux exceptions et ce
+      // qu'elles reparent : un bouton n'est pas une frappe, et un relachement
+      // passe toujours.
+      if (!frappeAgissante(bas, souris, enSaisie())) return;
 
       if (action === 'pousser-pour-parler') {
         if (bas && !useVoice.getState().channelId) return;
@@ -258,6 +254,7 @@ export function RaccourcisVocaux() {
           // Les modificateurs ne sont exiges qu'a l'enfoncement, comme pour les
           // touches : lacher `Ctrl` avant le bouton ne defait pas le fait qu'on
           // a lache le bouton.
+          // `true` en dernier : c'est un bouton, pas une frappe. Voir `agir`.
           if (
             bas &&
             (event.ctrlKey !== entree.combinaison.ctrl ||
@@ -268,7 +265,7 @@ export function RaccourcisVocaux() {
           }
 
           event.preventDefault();
-          if (!dejaTraitee(entree.action, bas)) agir(entree.action, bas);
+          if (!dejaTraitee(entree.action, bas)) agir(entree.action, bas, true);
           return;
         }
       };
@@ -308,7 +305,15 @@ export function RaccourcisVocaux() {
     void surveillerGlobalement(entrees, (frappe) => {
       const action = frappe.nom as ActionVocale;
       traitees.set(`${action}|${frappe.bas}`, Date.now());
-      agir(action, frappe.bas);
+
+      /*
+       * Le systeme ne dit pas si c'est un bouton : on le relit du reglage.
+       *
+       * `estSouris` regarde le code range — `Souris3` a `Souris5`. C'est la
+       * meme source que celle qui a servi a poser la surveillance, donc les
+       * deux ne peuvent pas diverger.
+       */
+      agir(action, frappe.bas, estSouris(pour(action)));
     }).then((suivi) => {
       // L'effet a pu etre defait pendant l'attente : on rend alors ce qu'on
       // vient d'obtenir plutot que de laisser une surveillance orpheline.

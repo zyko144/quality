@@ -74,3 +74,34 @@ export function tenir(
   etat.avant = null;
   return { micro: aRendre, tenue: false };
 }
+
+/**
+ * Cette frappe doit-elle agir, alors qu'on est peut-etre en train d'ecrire ?
+ *
+ * Une touche de conversation ne s'active pas pendant qu'on tape un message :
+ * sans ce filtre, ecrire « M » couperait le micro. Le systeme, lui, ne sait
+ * rien de ce qu'on fait — il signale la touche que la fenetre soit devant ou
+ * non.
+ *
+ * Deux exceptions, et chacune repare un defaut constate.
+ *
+ * **Un bouton de souris n'est pas une frappe.** On ne tape pas « Souris4 »
+ * dans un champ de texte. Or la zone d'ecriture d'une conversation a le focus
+ * la plupart du temps — c'est l'etat normal d'une application de discussion —
+ * si bien qu'un push-to-mute pose sur le pouce ne partait presque jamais.
+ * « Des qu'il l'utilise on l'entend quand meme » : le bouton etait bien recu,
+ * et jete ici.
+ *
+ * **Un relachement passe toujours.** Le filtre ne regardait pas le sens : on
+ * pouvait enfoncer hors d'un champ, cliquer dans la zone d'ecriture, puis
+ * relacher — et le relachement etait avale. Le micro restait dans la position
+ * de la pression, et plus rien ne le ramenait. C'est le meme raisonnement que
+ * dans `tenir` : omettre de RENDRE un etat coute bien plus cher que de le
+ * prendre a tort.
+ */
+export function frappeAgissante(bas: boolean, souris: boolean, enSaisie: boolean): boolean {
+  if (!bas) return true;
+  if (souris) return true;
+
+  return !enSaisie;
+}
