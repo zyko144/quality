@@ -42,6 +42,18 @@ export interface Badge {
    * vaut « non ».
    */
   cache?: boolean;
+
+  /**
+   * Ne peut pas etre obtenu : il se donne, par la cle de service.
+   *
+   * Deja en base depuis le badge C.E.O. C'est ce qui rend `cache` presque
+   * superflu : un badge qu'on ne peut pas obtenir n'a rien a faire dans un
+   * catalogue, ou l'on vient chercher ce qui existe ET ce qu'il reste a
+   * accomplir. Les deux drapeaux se distinguent quand meme — on pourrait
+   * vouloir cacher un badge que l'on PEUT gagner, pour en faire une surprise —
+   * mais l'un implique l'autre dans le sens qui compte.
+   */
+  reserve?: boolean;
 }
 
 export interface BadgeObtenu {

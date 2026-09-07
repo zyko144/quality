@@ -100,12 +100,18 @@ export function devPreview(name: string): ReactNode | null {
       ['vocal-5000', 'Voix — 5 000 h', 'A passe cinq mille heures en salon vocal.', 'succes', '#d946ef', null, 360],
       ['anciennete-1an', 'Veteran — 1 an', 'Compte ouvert depuis plus d’un an.', 'anciennete', '#94a3b8', null, 40],
       ['anciennete-5ans', 'Veteran — 5 ans', 'Compte ouvert depuis plus de cinq ans.', 'anciennete', '#3b82f6', null, 42],
-      // Cache : il est possede, il doit donc paraitre EN HAUT parmi les
-      // trophees, et nulle part dans les familles en dessous. C'est cette
-      // difference-la qu'on vient verifier ici.
+      /*
+       * Reserve, et possede : il doit paraitre EN HAUT parmi les trophees, et
+       * nulle part dans les familles en dessous.
+       *
+       * `reserve` et non `cache`, parce que c'est ce qui est en base : un
+       * badge qu'on ne peut pas obtenir n'a rien a faire dans un catalogue,
+       * et cette colonne-la existe deja. C'est cette difference qu'on vient
+       * verifier ici.
+       */
       ['singe', 'Singe', 'Donne a la main.', 'equipe', '#f5a623', null, 5, true],
-    ].map(([cle, nom, description, famille, teinte, limite, rang, cache]) => ({
-      cle, nom, description, famille, teinte, limite, rang, cache,
+    ].map(([cle, nom, description, famille, teinte, limite, rang, reserve]) => ({
+      cle, nom, description, famille, teinte, limite, rang, reserve,
     })) as Badge[];
 
     const moi = '00000000-0000-4000-8000-000000000003';

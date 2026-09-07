@@ -10,6 +10,7 @@ import {
   placesRestantes,
   type Badge,
 } from '@/store/badges';
+import { auCatalogue } from './catalogue';
 
 /**
  * Les badges.
@@ -120,16 +121,9 @@ export function BadgesPage() {
       </section>
 
       {FAMILLES.map((famille) => {
-        /*
-         * Les badges caches ne figurent pas dans les familles.
-         *
-         * Ceux qu'on donne a la main n'ont rien a faire dans un catalogue :
-         * on vient y voir ce qui existe et ce qu'il reste a faire, et pour
-         * eux il n'y a rien a faire. La rangee de trophees en haut, elle, les
-         * montre a qui les porte — c'est le sien.
-         */
+        // Voir `auCatalogue` : ni les caches, ni ceux qu'on ne peut pas obtenir.
         const dedans = catalogue.filter(
-          (badge) => badge.famille === famille.cle && badge.cache !== true,
+          (badge) => badge.famille === famille.cle && auCatalogue(badge),
         );
         if (dedans.length === 0) return null;
 
