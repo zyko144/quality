@@ -419,25 +419,38 @@ ${activite.lien_url}`,
                 ) : null}
               </div>
 
-              <p className="profile__handle">
-                {/*
-                  Le pseudo sans arobase.
-                  
-                  Elle sert a MENTIONNER quelqu'un — dans un message, dans une
-                  recherche. Sur sa propre fiche il n'y a personne a mentionner :
-                  elle ne fait qu'ajouter un caractere devant un nom qui se
-                  suffit.
-                */}
-                {profile.username}
-                {profile.pronouns ? (
-                  <>
-                    <span className="profile__dot" aria-hidden="true">
-                      ·
-                    </span>
-                    {profile.pronouns}
-                  </>
-                ) : null}
-              </p>
+              {/*
+                Le pseudo et les pronoms, ou ce qu'il en reste.
+
+                Le pseudo est ecrit sans arobase : elle sert a MENTIONNER
+                quelqu'un — dans un message, dans une recherche — et il n'y a
+                personne a mentionner sur une fiche. Elle n'ajouterait qu'un
+                caractere devant un nom qui se suffit.
+
+                Le pseudo peut etre masque, quand il ne fait que repeter le nom
+                d'affichage. Les pronoms, eux, restent : ils ne disent pas la
+                meme chose, et les faire disparaitre avec le pseudo serait
+                retirer deux choses pour une demandee. Le point de separation
+                ne parait alors que s'il separe vraiment quelque chose, et la
+                ligne entiere disparait quand il ne reste rien — une ligne vide
+                laisse un blanc sous le nom, qu'on prend pour un defaut
+                d'affichage.
+              */}
+              {!profile.masquer_pseudo || profile.pronouns ? (
+                <p className="profile__handle">
+                  {profile.masquer_pseudo ? null : profile.username}
+                  {profile.pronouns ? (
+                    <>
+                      {profile.masquer_pseudo ? null : (
+                        <span className="profile__dot" aria-hidden="true">
+                          ·
+                        </span>
+                      )}
+                      {profile.pronouns}
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
             </div>
 
             {/*

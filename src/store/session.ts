@@ -353,6 +353,7 @@ interface SessionState {
         | 'links'
         | 'theme_hue'
         | 'profil_couleurs'
+        | 'masquer_pseudo'
       >
     >,
   ) => Promise<void>;

@@ -12,107 +12,73 @@ d'une liste a puces. Le premier titre rencontre est celui de la version en
 cours ; l'outil de publication et l'application lisent tous deux la section
 correspondant a leur numero de version.
 
+UNE PUCE, UNE PHRASE COURTE, ET PAS DE POURQUOI
+-----------------------------------------------
+Ces lignes s'affichent dans une fenetre qui s'ouvre par surprise, au premier
+lancement suivant une mise a jour. Personne n'y lit un paragraphe : on veut
+savoir en trois secondes ce qui a change, pas comprendre comment.
+
+Les puces ont longtemps porte la cause du defaut et le raisonnement de la
+correction — jusqu'a trois cents caracteres. Le detail a sa place, et ce n'est
+pas ici : il est dans le message de commit, ou il sera relu par quelqu'un qui
+le cherche.
+
+Ecrire donc : « Repondre a quelqu'un le previent. » Et non : « Repondre a
+quelqu'un le previent. Le fil de reponse existait, mais ne comptait pour rien
+dans la decision de prevenir. »
+
+Une puce doit aussi tenir sur UNE LIGNE du fichier, meme longue. Le repli a
+quatre-vingts colonnes n'est pas anodin : chaque ligne d'une puce repliee
+etait comptee comme une puce a part entiere, et la fenetre affichait des
+morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
+desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
+sur une ligne n'a de toute facon pas ce probleme.
+
+## 9.10.0
+
+- Les nouveautes vont droit au but, et ne montrent plus de bouts de phrases.
+- Le pseudo peut etre cache sur sa fiche, quand il repete le nom.
+
 ## 9.9.9
 
-- Le partage coute nettement moins cher a celui qui partage. Chaque image
-  etait recopiee une fois de trop avant d'etre envoyee : en 1080p a soixante
-  images, cinq cents megaoctets par seconde deplaces pour rien, sur la machine
-  de quelqu'un qui joue en meme temps.
-- Et il s'adapte a chaque spectateur SEPAREMENT. Une machine qui n'arrive pas
-  a decoder demande moins, et ne recoit moins qu'elle : personne d'autre ne
-  perd en qualite. Elle retrouve sa definition d'elle-meme quand elle peut la
-  tenir.
-- La definition baisse avant la cadence : elle divise le travail par quatre la
-  ou la cadence ne le divise que par deux, et une image un peu douce se suit
-  mieux qu'une image nette qui saccade.
-- Les pseudos d'une lettre deviennent possibles, mais ne se prennent pas : ils
-  se donnent. Deux caracteres restent le minimum a l'inscription.
+- Les partages coutent beaucoup moins au processeur.
+- Chacun recoit la qualite que sa machine peut suivre, sans que les autres y perdent.
+- Les pseudos d'une lettre existent, sur attribution.
 
 ## 9.9.8
 
-- La pastille « C.E.O » disparait de la fiche de profil : elle disait la meme
-  chose que la couronne, a trois centimetres d'ecart. La couronne reste, un
-  peu plus discrete. La pastille est intacte partout ailleurs — moderation,
-  liste des membres — ou aucun badge ne s'affiche.
-- Repondre a quelqu'un le previent. Le fil de reponse existait, mais ne
-  comptait pour rien : sur un salon anime, on ne decouvrait jamais qu'on nous
-  avait repondu.
-- Taper `@` propose enfin quelqu'un dans une conversation privee. La liste
-  venait des membres d'un espace, et une conversation privee n'en a aucun :
-  elle ressortait vide, et dans un groupe a cinq il fallait taper
-  l'identifiant de memoire.
-- Une demande de support peut se fermer, et fermee veut dire fermee : plus
-  personne n'y ecrit, ni vous ni l'equipe. La regle est tenue par la base, pas
-  seulement par l'interface. La console peut rouvrir une demande fermee par
-  erreur.
+- La pastille C.E.O quitte la fiche de profil ; la couronne reste.
+- Repondre a quelqu'un le previent.
+- Taper @ propose les personnes dans les conversations privees.
+- Les demandes de support se ferment. Fermee, plus personne n'y ecrit.
 
 ## 9.9.7
 
-- Vous revoyez ce que vous ecoutez sur votre fiche. La version precedente
-  n'affichait plus rien tant que la base refusait l'annonce : le morceau
-  joue, c'est vrai, et le cacher n'aidait personne.
-- Quand l'annonce n'a atteint personne, la carte le dit — au lieu de laisser
-  croire qu'elle est partie. C'est ce qui manquait depuis le debut.
-- Une fiche ouverte se met a jour toutes les trente secondes : le morceau
-  suivant s'affiche sans avoir a refermer et rouvrir. Seulement quand la
-  fenetre est visible, et sans redemander les comptes lies.
+- Vous revoyez ce que vous ecoutez sur votre fiche.
+- La fiche dit quand votre annonce n'est pas partie.
+- Une fiche ouverte se met a jour toute seule.
 
 ## 9.9.6
 
-- Ce que vous ecoutez se voit enfin des autres. L'annonce n'atteignait jamais
-  la base : la colonne qui porte la pochette acceptait cinq cents caracteres,
-  et une pochette reduite en fait trois mille. Chaque annonce en portant une
-  etait rejetee, sans un mot.
-- Vous voyiez la votre parce que l'application la posait dans son propre etat
-  juste apres l'ecriture, sans jamais en lire le resultat. Elle le lit
-  desormais, et le dit au journal quand la base refuse.
-- Une pochette trop lourde est laissee de cote plutot que de faire perdre
-  l'annonce entiere : le morceau vaut mieux que sa vignette.
-- Et une annonce laissee par une application fermee net cesse d'etre crue au
-  bout d'une demi-heure, au lieu de vous montrer « en train d'ecouter » pour
-  toujours.
+- Ce que vous ecoutez se voit enfin des autres.
+- Une pochette trop lourde ne fait plus perdre l'annonce.
+- Une ecoute oubliee cesse de s'afficher au bout d'une demi-heure.
 
 ## 9.9.5
 
-- Beaucoup plus d'images par seconde dans les partages. Deux defauts se
-  cumulaient, et aucun des deux ne se voyait : les traces disaient
-  « limite: none » — rien ne retenait l'encodeur — avec onze images par
-  seconde pour soixante demandees.
-- Le recollage des images recopiait tout ce qui s'etait deja accumule a
-  chaque morceau recu. Le cout etait quadratique : 1,7 Go de recopie pour
-  une image 1440p qui en fait 14,7. C'est ce qui plafonnait la cadence, et
-  d'autant plus que la definition etait grande.
-- Le filtre de cadence perdait une image sur deux quand l'ecran tourne a la
-  cadence demandee — soixante images sur un ecran a soixante hertz, le cas
-  le plus courant.
-- Le journal dit maintenant ou les images se perdent : produites par
-  Windows, retenues, abandonnees, recues. « Il manque des images » designait
-  trois defauts qui se corrigent a l'oppose les uns des autres.
+- Beaucoup plus d'images par seconde dans les partages.
+- Le journal dit ou les images se perdent.
 
 ## 9.9.4
 
-- « Connexion au partage… » ne tourne plus indefiniment. Si l'offre qui porte
-  l'image se perd — le canal se ferme et se rebatit — celui qui regarde
-  n'avait RIEN a rattraper, et celui qui partage ne voyait aucun probleme :
-  sa piste etait bien posee. Personne ne pouvait le corriger.
-- Celui qui attend redemande maintenant une offre, trois fois, puis renonce.
-- Et quand il renonce, il le dit : la vignette affiche « Le partage ne repond
-  pas » avec un bouton pour redemander, au lieu d'un rond qui tourne pour
-  toujours.
+- Un partage qui n'arrive pas est redemande, puis abandonne proprement.
+- La vignette dit « ne repond pas » au lieu de tourner indefiniment.
 
 ## 9.9.3
 
-- Le son d'un partage ne part plus muet. Partager une fenetre prenait le son
-  de son application, sans laisser le choix ; beaucoup ne jouent pas leur son
-  elles-memes — un navigateur confie le sien a un processus de service — et
-  la page YouTube ou Spotify partait alors sans un bruit.
-- Par defaut, tout l'ordinateur est desormais entendu, quoi qu'on partage.
-- Et si la capture d'une application ne porte rien au bout de quatre
-  secondes, tout l'ordinateur est repris automatiquement, sans que la piste
-  disparaisse pour ceux qui regardent.
-- Le choix du son est refait : trois cartes — tout l'ordinateur, l'application
-  partagee, une autre application — avec ce que chacune coute, au lieu d'une
-  liste deroulante visible seulement en partageant un ecran.
+- Le son d'un partage ne part plus muet.
+- Tout l'ordinateur est entendu par defaut, quoi qu'on partage.
+- Le choix du son est refait : tout l'ordinateur, l'application partagee, ou une autre.
 
 ## 9.9.2
 

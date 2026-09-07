@@ -46,6 +46,18 @@ export interface Profile {
   banner_frame: unknown;
   bio: string | null;
   pronouns: string | null;
+
+  /**
+   * Cache le pseudo sur la FICHE, et la seulement.
+   *
+   * Il reste partout ou il sert a identifier quelqu'un — recherche, mentions,
+   * liste des membres — sans quoi ce ne serait plus un reglage d'affichage
+   * mais une disparition, et deux personnes ne pourraient plus se nommer.
+   *
+   * Facultatif : une base d'avant cette colonne n'en donne pas, et l'absence
+   * vaut « non ».
+   */
+  masquer_pseudo?: boolean;
   links: ProfileLink[];
   /**
    * Ancienne teinte de carte, conservee mais inutilisee.

@@ -104,8 +104,47 @@ function raccourcir(texte: string): string {
  * que d'etre devine ligne a ligne. Classer au jugé serait pire que ne pas
  * classer : on croirait une categorie fiable alors qu'elle serait fabriquee.
  */
+function regrouper(lignes: string[]): string[] {
+  const entrees: string[] = [];
+  let encours: string | null = null;
+
+  const poser = () => {
+    if (encours !== null) entrees.push(encours);
+    encours = null;
+  };
+
+  for (const brute of lignes) {
+    const ligne = brute.trim();
+
+    if (ligne === '') {
+      poser();
+      continue;
+    }
+
+    // Un titre coupe toujours : il ouvre une categorie, il ne prolonge rien.
+    if (/^###\s+/.test(ligne)) {
+      poser();
+      entrees.push(ligne);
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(ligne)) {
+      poser();
+      encours = ligne;
+      continue;
+    }
+
+    // La suite d'une puce. Sans puce ouverte, c'est un paragraphe libre — les
+    // notes d'anciennes versions en contiennent — et il vaut comme une entree.
+    encours = encours === null ? ligne : encours + ' ' + ligne;
+  }
+
+  poser();
+  return entrees;
+}
+
 export function lireLesNotes(brut: string): Categorie[] {
-  const lignes = brut.split('\n');
+  const lignes = regrouper(brut.split('\n'));
 
   const categories: Categorie[] = [];
   let courante: Categorie | null = null;

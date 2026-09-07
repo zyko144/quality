@@ -44,6 +44,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
 
   const [displayName, setDisplayName] = useState('');
   const [pronouns, setPronouns] = useState('');
+  const [masquerPseudo, setMasquerPseudo] = useState(false);
   const [bio, setBio] = useState('');
   const [customStatus, setCustomStatus] = useState('');
   const [statutCouleur, setStatutCouleur] = useState<string | null>(null);
@@ -70,6 +71,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
     if (!open || !profile) return;
     setDisplayName(profile.display_name);
     setPronouns(profile.pronouns ?? '');
+    setMasquerPseudo(profile.masquer_pseudo === true);
     setBio(profile.bio ?? '');
     setCustomStatus(profile.custom_status ?? '');
     setStatutCouleur(profile.status_couleur ?? null);
@@ -249,6 +251,7 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
         ? {}
         : { status_opacite: statutOpacite }),
       pronouns: pronouns.trim() || null,
+      masquer_pseudo: masquerPseudo,
       links: cleanLinks,
 
       /*
@@ -525,6 +528,37 @@ export function ProfileEditor({ open, onClose }: { open: boolean; onClose: () =>
           onChange={(event) => setPronouns(event.target.value)}
         />
       </div>
+
+      {/*
+        Cacher le pseudo, quand il ne fait que repeter le nom d'affichage.
+
+        Pose sous les deux champs qu'il concerne : on ne decide de masquer son
+        pseudo qu'apres avoir vu ce qu'il donne a cote du nom.
+
+        Ce que cela coute est dit a cote de l'interrupteur, pas apres. Le
+        pseudo reste le seul moyen de mentionner quelqu'un : le retirer de la
+        fiche, c'est retirer l'endroit ou l'on venait l'apprendre. C'est un
+        choix defendable, mais il doit se faire en connaissance de cause.
+      */}
+      <label className="switchrow">
+        <span className="switchrow__body">
+          <span className="switchrow__label">Cacher mon pseudo sur ma fiche</span>
+          <span className="switchrow__hint">
+            Utile quand il repete votre nom. Il reste visible dans la recherche,
+            les mentions et la liste des membres — sans lui, personne ne
+            pourrait plus vous nommer.
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          className="visually-hidden"
+          checked={masquerPseudo}
+          onChange={(event) => setMasquerPseudo(event.target.checked)}
+        />
+        <span className={'switchrow__track' + (masquerPseudo ? ' is-on' : '')} aria-hidden="true">
+          <span className="switchrow__thumb" />
+        </span>
+      </label>
 
       <div className="field">
         <label className="field__label" htmlFor="pf-status">

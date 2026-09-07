@@ -125,7 +125,12 @@ export function devPreview(name: string): ReactNode | null {
     return <BadgesPage />;
   }
 
-  if (name === 'profil' || name === 'profil:moi' || name === 'profil:muet') {
+  if (
+    name === 'profil' ||
+    name === 'profil:moi' ||
+    name === 'profil:muet' ||
+    name === 'profil:sanspseudo'
+  ) {
     // Un profil rempli, pose directement dans le magasin : la carte se lit mal
     // a vide, or c'est justement la version pleine — banniere, bio, liens,
     // espaces en commun — qu'il faut regarder quand on retouche sa mise en
@@ -147,6 +152,8 @@ export function devPreview(name: string): ReactNode | null {
         { url: 'https://exemple.fr/une/page/assez/longue' },
       ],
       profil_couleurs: { a: '#2563eb', b: '#16a34a', style: 'duo', panneau: 'noir' },
+      // `?preview=profil:sanspseudo` : le pseudo cache, les pronoms gardes.
+      masquer_pseudo: name.endsWith(':sanspseudo'),
       status_couleur: '#5865f2',
       status_opacite: 0.85,
       username_chosen: true,
