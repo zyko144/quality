@@ -88,15 +88,43 @@ export function ContextMenu({
 
     window.addEventListener('keydown', onKey);
     window.addEventListener('pointerdown', onPointer, true);
-    // Le menu suit le curseur, pas le contenu : le laisser ouvert pendant un
-    // defilement le detacherait de ce qu'il designe.
-    window.addEventListener('scroll', onClose, true);
+    /*
+     * Le menu suit le curseur, pas le contenu : le laisser ouvert pendant un
+     * defilement le detacherait de ce qu'il designe.
+     *
+     * On ecoute la MOLETTE, et non le defilement lui-meme.
+     *
+     * `scroll` disait bien plus que « quelqu'un fait defiler ». Mesure en
+     * ecoutant les evenements pendant un clic droit sur un salon :
+     * `pointerdown SPAN.channel__name`, puis `scroll DIV.sidebar__scroll` — le
+     * navigateur donne le focus au bouton vise, et le conteneur le ramene dans
+     * sa vue de quelques pixels. Le menu se fermait donc sur un defilement
+     * qu'il avait lui-meme provoque, quelques millisecondes apres s'etre
+     * ouvert : six releves a 400 ms d'intervalle donnaient 1, 0, 0, 0, 0, 0.
+     *
+     * Une temporisation a d'abord ete essayee — ignorer les defilements du
+     * premier quart de seconde. Elle marchait sur une machine au repos et
+     * lachait des que le processeur etait pris : l'evenement attend alors son
+     * tour derriere le rendu, et arrive apres le delai. Une course qu'on ne
+     * gagne qu'en moyenne n'est pas gagnee.
+     *
+     * `wheel` et `touchmove` ne se declenchent que sous un geste. Le focus n'en
+     * produit aucun, et il n'y a plus rien a arbitrer. Le defilement automatique
+     * de la liste des messages, quand quelqu'un ecrit pendant qu'on tient un
+     * menu ouvert, ne le ferme plus non plus — et c'est mieux ainsi.
+     *
+     * La barre de defilement, elle, se saisit au pointeur : le clic hors du
+     * menu s'en charge deja, plus haut.
+     */
+    window.addEventListener('wheel', onClose, { capture: true, passive: true });
+    window.addEventListener('touchmove', onClose, { capture: true, passive: true });
     window.addEventListener('resize', onClose);
 
     return () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('pointerdown', onPointer, true);
-      window.removeEventListener('scroll', onClose, true);
+      window.removeEventListener('wheel', onClose, true);
+      window.removeEventListener('touchmove', onClose, true);
       window.removeEventListener('resize', onClose);
     };
   }, [onClose]);

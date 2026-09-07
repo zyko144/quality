@@ -229,6 +229,10 @@ interface ChatState {
   deleteChannel: (channelId: UUID) => Promise<UUID | null>;
   renameChannel: (channelId: UUID, name: string, topic?: string | null) => Promise<boolean>;
   reorderChannels: (spaceId: UUID, channelIds: UUID[]) => Promise<void>;
+  /** Range un salon dans une categorie, ou l'en sort avec `null`. */
+  rangerSalon: (channelId: UUID, categoryId: UUID | null) => Promise<boolean>;
+  creerCategorie: (spaceId: UUID, nom: string) => Promise<boolean>;
+  supprimerCategorie: (categoryId: UUID) => Promise<boolean>;
   updateSpaceVisuals: (
     spaceId: UUID,
     patch: { name?: string; description?: string; icon_url?: string | null; banner_url?: string | null },
@@ -1052,6 +1056,99 @@ export const useChat = create<ChatState>((set, get) => ({
     } catch {
       // ignore
     }
+  },
+
+  /*
+   * Ranger un salon dans une categorie.
+   *
+   * L'etat local bouge D'ABORD, et se defait si l'ecriture echoue. C'est un
+   * geste de glisser-deposer : le salon doit se retrouver sous le curseur a
+   * l'instant ou on le lache, pas apres un aller-retour reseau. Attendre la
+   * reponse ferait revenir le salon a sa place pendant une demi-seconde, ce que
+   * l'on lit comme un depot rate — et on recommence, cette fois pour de bon.
+   */
+  rangerSalon: async (channelId, categoryId) => {
+    const avant = get().channels.find((entree) => entree.id === channelId)?.category_id ?? null;
+    if (avant === categoryId) return true;
+
+    const poser = (valeur: UUID | null) =>
+      set((etat) => ({
+        channels: etat.channels.map((entree) =>
+          entree.id === channelId ? { ...entree, category_id: valeur } : entree,
+        ),
+      }));
+
+    poser(categoryId);
+
+    const { error } = await supabase
+      .from('channels')
+      .update({ category_id: categoryId })
+      .eq('id', channelId);
+
+    if (error) {
+      poser(avant);
+      set({ error: errorMessage(error) });
+      return false;
+    }
+
+    return true;
+  },
+
+  /*
+   * Creer et supprimer une categorie, sans tout recharger.
+   *
+   * `bootstrap()` faisait l'affaire et coutait cher : il relit espaces, salons,
+   * membres et rangs pour une ligne de quatre champs. Surtout, il renouvelle
+   * l'identite de chaque objet du magasin, ce que les composants ouverts lisent
+   * comme « tout a change » — les reglages d'un espace revenaient a leur
+   * premier onglet a chaque categorie creee.
+   *
+   * La table `categories` n'a pas d'ecoute temps reel : les autres clients la
+   * decouvriront a leur prochain chargement, exactement comme avant.
+   */
+  creerCategorie: async (spaceId, nom) => {
+    const rang = get().categories.filter((entree) => entree.space_id === spaceId).length;
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({ space_id: spaceId, name: nom, position: rang })
+      .select()
+      .single();
+
+    if (error || !data) {
+      set({ error: errorMessage(error) });
+      return false;
+    }
+
+    set((etat) => ({ categories: [...etat.categories, data as Category] }));
+    return true;
+  },
+
+  supprimerCategorie: async (categoryId) => {
+    const { error } = await supabase.from('categories').delete().eq('id', categoryId);
+
+    if (error) {
+      set({ error: errorMessage(error) });
+      return false;
+    }
+
+    /*
+     * Les salons qu'elle contenait remontent hors categorie.
+     *
+     * La base le fait de son cote — `on delete set null` — mais rien ne nous le
+     * dira : les salons ne sont pas relus ici, et leur ecoute temps reel ne
+     * porte que sur ce que l'on ecrit soi-meme dans la table. Sans cette
+     * ligne, ils disparaissaient de la barre laterale jusqu'au rechargement
+     * suivant, puisque leur categorie n'existait plus.
+     */
+    set((etat) => ({
+      categories: etat.categories.filter((entree) => entree.id !== categoryId),
+      channels: etat.channels.map((salon) =>
+        salon.category_id === categoryId ? { ...salon, category_id: null } : salon,
+      ),
+    }));
+
+    return true;
   },
 
   updateSpaceVisuals: async (spaceId, data) => {

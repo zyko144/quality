@@ -96,6 +96,35 @@ export function ChannelContextMenu({
         },
       },
 
+      /*
+       * Creer se propose aussi ici, et pas seulement sur le fond de la liste.
+       *
+       * Le bouton « Nouveau salon » a ete retire du bas de la colonne, ou il
+       * doublait le clic droit sur le fond. Mais le fond n'existe que tant que
+       * la liste ne remplit pas la colonne : passe une quinzaine de salons, il
+       * n'y a plus un pixel de vide a viser, et creer devenait impossible sans
+       * ouvrir les parametres. Un clic droit sur un salon, lui, marche
+       * toujours.
+       */
+      {
+        id: 'nouveau-salon',
+        label: 'Creer un salon',
+        icon: <Icon name="plus" size={15} />,
+        disabled: channel.space_id === null,
+        onSelect: () => {
+          if (channel.space_id) openModal({ kind: 'create-channel', spaceId: channel.space_id });
+        },
+      },
+      {
+        id: 'nouvelle-categorie',
+        label: 'Creer une categorie',
+        icon: <Icon name="folder" size={15} />,
+        disabled: channel.space_id === null,
+        onSelect: () => {
+          if (channel.space_id) openModal({ kind: 'create-category', spaceId: channel.space_id });
+        },
+      },
+
       { id: 'sep-grave', separator: true },
       {
         id: 'supprimer',

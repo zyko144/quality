@@ -271,8 +271,44 @@
   text-align: center;
 }
 
+/*
+ * Les categories se suivent de pres.
+ *
+ * Seize pixels de marge SOUS une section, plus dix-huit AU-DESSUS du titre de
+ * la suivante, plus la hauteur du titre : quarante-six pixels de vide entre le
+ * dernier salon d'une categorie et le nom de la suivante. Sur une liste de
+ * trois categories, la moitie de la colonne ne portait rien.
+ *
+ * Quatre suffisent : le titre en capitales et sa couleur pale separent deja
+ * les groupes, l'espace n'a pas a le refaire une seconde fois.
+ */
 .sidebar__section {
-  margin-bottom: 16px;
+  margin-bottom: 4px;
+}
+
+/*
+ * La categorie visee pendant un glisser.
+ *
+ * Un cadre, et non un trait comme entre deux salons : ce n'est pas le meme
+ * geste. Un trait dit « il se posera ICI, entre ces deux-la » ; le cadre dit
+ * « il entrera dans ce groupe », sans promettre un rang qu'on ne choisit pas.
+ * Confondre les deux ferait viser un interstice qui n'existe pas.
+ */
+.sidebar__section.is-drop-target {
+  border-radius: var(--radius-md);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Le mot qui dit ou l'on est, quand la categorie n'a rien a montrer — vide, ou
+   repliee. Sans lui, la zone serait un rectangle colore sans nom. */
+.sidebar__depot {
+  margin: 0;
+  padding: 4px 8px 6px;
+  font-size: var(--text-2xs);
+  color: var(--text-secondary);
+  pointer-events: none;
 }
 
 /* Intitule de categorie : 12 px, capitales, gras. Il doit se voir sans se
@@ -282,8 +318,8 @@
   align-items: center;
   gap: 4px;
   width: 100%;
-  height: 24px;
-  padding: 18px 8px 4px 0;
+  height: 20px;
+  padding: 10px 8px 2px 0;
   box-sizing: content-box;
   font-size: var(--text-2xs);
   font-weight: var(--weight-bold);

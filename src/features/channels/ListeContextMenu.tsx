@@ -46,10 +46,10 @@ export function ListeContextMenu({
       id: 'categorie',
       label: 'Creer une categorie',
       icon: <Icon name="inbox" size={15} />,
-      // Les categories se gerent dans les reglages : elles n'ont ni sujet ni
-      // permissions propres, et une boite dediee pour un seul champ ferait une
-      // fenetre de plus a fermer.
-      onSelect: () => openModal({ kind: 'space-settings', spaceId }),
+      // Une fenetre a soi, comme pour un salon : on cree une categorie au
+      // meme endroit et pour la meme raison, et ouvrir les reglages complets
+      // repondait a une autre question.
+      onSelect: () => openModal({ kind: 'create-category', spaceId }),
     },
 
     { id: 'sep-lecture', separator: true },

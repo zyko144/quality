@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { RolesPanel } from './RolesPanel';
 import { MembresPanel } from './MembresPanel';
 import { SalonsPanel } from './SalonsPanel';
+import { CategoriesPanel } from './CategoriesPanel';
 import { PreferencesEspace } from './PreferencesEspace';
 import { supabase, errorMessage } from '@/lib/supabase';
 import { useChat } from '@/store/chat';
@@ -40,8 +41,6 @@ export function SpaceSettings({
   onClose: () => void;
 }) {
   const spaces = useChat((state) => state.spaces);
-  const categories = useChat((state) => state.categories);
-  const channels = useChat((state) => state.channels);
   const ranks = useChat((state) => state.ranks);
   const bootstrap = useChat((state) => state.bootstrap);
   const selectSpace = useUI((state) => state.selectSpace);
@@ -56,7 +55,6 @@ export function SpaceSettings({
   const champBanniere = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [newCategory, setNewCategory] = useState('');
   const [confirmName, setConfirmName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,23 +63,34 @@ export function SpaceSettings({
   const rank = spaceId ? (ranks[spaceId] ?? 0) : 0;
   const isOwner = rank >= 3;
 
-  const spaceCategories = useMemo(
-    () => categories.filter((item) => item.space_id === spaceId),
-    [categories, spaceId],
-  );
-
+  /*
+   * Les champs se remplissent a l'OUVERTURE, pas a chaque changement d'espace.
+   *
+   * L'effet ecoutait l'objet `space` lui-meme. Or il change d'identite des que
+   * le magasin recharge les espaces — et le magasin recharge pour des raisons
+   * qui n'ont rien a voir : quelqu'un renomme le serveur, on cree une
+   * categorie, un ecouteur temps reel s'exprime. On se retrouvait alors
+   * ramene a l'onglet « General », au milieu d'autre chose, sans que rien ne
+   * l'explique. Le nom en cours de saisie etait ecrase du meme coup.
+   *
+   * `spaceId` est ce qu'on voulait dire : un identifiant ne change que si l'on
+   * ouvre les reglages d'un AUTRE espace.
+   */
   useEffect(() => {
-    if (!open || !space) return;
+    if (!open || !spaceId) return;
+
+    const courant = useChat.getState().spaces.find((item) => item.id === spaceId);
+    if (!courant) return;
+
     setTab('general');
-    setName(space.name);
-    setDescription(space.description ?? '');
-    setNewCategory('');
+    setName(courant.name);
+    setDescription(courant.description ?? '');
     setConfirmName('');
-    setIcone(space?.icon_url ?? null);
-    setBanniere(space?.banner_url ?? null);
+    setIcone(courant.icon_url ?? null);
+    setBanniere(courant.banner_url ?? null);
     setEnvoi(null);
     setError(null);
-  }, [open, space]);
+  }, [open, spaceId]);
 
   if (!space || !spaceId) return null;
 
@@ -139,38 +148,6 @@ export function SpaceSettings({
       })
       .eq('id', spaceId);
 
-    setBusy(false);
-
-    if (failure) {
-      setError(errorMessage(failure));
-      return;
-    }
-    await bootstrap();
-  };
-
-  const addCategory = async () => {
-    const label = newCategory.trim();
-    if (!label) return;
-
-    setBusy(true);
-    const { error: failure } = await supabase.from('categories').insert({
-      space_id: spaceId,
-      name: label,
-      position: spaceCategories.length,
-    });
-    setBusy(false);
-
-    if (failure) {
-      setError(errorMessage(failure));
-      return;
-    }
-    setNewCategory('');
-    await bootstrap();
-  };
-
-  const removeCategory = async (categoryId: UUID) => {
-    setBusy(true);
-    const { error: failure } = await supabase.from('categories').delete().eq('id', categoryId);
     setBusy(false);
 
     if (failure) {
@@ -409,86 +386,7 @@ export function SpaceSettings({
         </>
       ) : null}
 
-      {tab === 'categories' ? (
-        <>
-          <p className="field__hint">
-            Une categorie regroupe des salons dans la barre laterale. Supprimer une
-            categorie ne supprime pas ses salons : ils remontent simplement en haut
-            de la liste.
-          </p>
-
-          {spaceCategories.length === 0 ? (
-            <div className="empty">
-              <span className="empty__icon">
-                <Icon name="hash" size={22} />
-              </span>
-              <p className="empty__title">Aucune categorie</p>
-              <p className="empty__body">
-                Les salons apparaissent tous au meme niveau. Creez-en une pour les
-                regrouper.
-              </p>
-            </div>
-          ) : (
-            <ul className="mod-list">
-              {spaceCategories.map((category) => {
-                const count = channels.filter((c) => c.category_id === category.id).length;
-                return (
-                  <li className="mod-row" key={category.id}>
-                    <div className="mod-row__head">
-                      <Icon name="hash" size={15} />
-                      <div className="mod-row__identity">
-                        <span className="mod-row__name">{category.name}</span>
-                        <span className="mod-row__handle">
-                          {count === 0
-                            ? 'Aucun salon'
-                            : count === 1
-                              ? '1 salon'
-                              : `${count} salons`}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="icon-btn icon-btn--danger"
-                        onClick={() => void removeCategory(category.id)}
-                        aria-label={`Supprimer la categorie ${category.name}`}
-                      >
-                        <Icon name="trash" size={15} />
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          <div className="field">
-            <label className="field__label" htmlFor="space-new-category">
-              Nouvelle categorie
-            </label>
-            <div className="mod-actions__row">
-              <input
-                id="space-new-category"
-                className="input"
-                style={{ flex: 1, minWidth: '200px' }}
-                value={newCategory}
-                maxLength={64}
-                placeholder="Projets"
-                onChange={(event) => setNewCategory(event.target.value)}
-                onKeyDown={(event) => event.key === 'Enter' && void addCategory()}
-              />
-              <button
-                type="button"
-                className="btn btn--primary"
-                disabled={!newCategory.trim() || busy}
-                onClick={() => void addCategory()}
-              >
-                <Icon name="plus" size={15} />
-                Ajouter
-              </button>
-            </div>
-          </div>
-        </>
-      ) : null}
+      {tab === 'categories' && spaceId ? <CategoriesPanel spaceId={spaceId} /> : null}
 
       {tab === 'membres' && spaceId ? (
         <MembresPanel spaceId={spaceId} peutGerer={rank >= 2} />

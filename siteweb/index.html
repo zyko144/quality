@@ -6,7 +6,8 @@
 <title>Echow — la discussion d'equipe, sans detour</title>
 <meta name="description" content="Echow est une application de discussion d'equipe : salons ecrits, salons vocaux en pair-a-pair et partage d'ecran jusqu'a 1080p60. Telechargement Windows, installateur de moins de 3 Mo.">
 <meta name="theme-color" content="#000000">
-<link rel="icon" href="assets/Echow-logo.png" type="image/png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="assets/app-icon.png">
 <link rel="stylesheet" href="assets/style.css">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Echow — la discussion d'equipe, sans detour">
@@ -36,6 +37,7 @@
       <a href="index.html" aria-current="page">Accueil</a>
       <a href="telecharger.html">Telecharger</a>
       <a href="player.html">Lecteur web</a>
+      <a href="https://echows.vercel.app">Ouvrir Echow</a>
       <span class="nav__item-indisponible" title="Support actuellement indisponible"><span class="texte-barre">Support</span> <span class="badge-croix">✕</span></span>
       <a href="securite.html">Securite</a>
       <a class="bouton bouton--principal" href="https://github.com/zyko144/quality/releases/latest/download/Quality-setup.exe">Telecharger</a>
@@ -65,7 +67,14 @@
             </svg>
             Telecharger pour Windows
           </a>
-          <a class="bouton bouton--secondaire bouton--grand" href="player.html">Voir l'interface</a>
+          <!--
+            Le second bouton mene a l'application elle-meme, plus a sa
+            photographie. « Voir l'interface » montrait une page figee : c'est
+            utile quand on hesite a installer quelque chose, et c'est un detour
+            quand on peut simplement l'ouvrir. Le tour du proprietaire reste
+            accessible depuis la barre du haut.
+          -->
+          <a class="bouton bouton--secondaire bouton--grand" href="https://echows.vercel.app">Ouvrir dans le navigateur</a>
         </div>
         <p class="heros__note">Windows 10 et 11 · 64 bits · gratuit · macOS et Linux a venir</p>
       </div>
@@ -243,6 +252,7 @@
           <li><a href="index.html">Accueil</a></li>
           <li><a href="telecharger.html">Telecharger</a></li>
           <li><a href="player.html">Lecteur web</a></li>
+          <li><a href="https://echows.vercel.app">Ouvrir Echow</a></li>
           <li><span class="nav__item-indisponible" style="padding:0;" title="Support actuellement indisponible"><span class="texte-barre">Support</span> <span class="badge-croix">✕</span></span></li>
           <li><a href="securite.html">Securite</a></li>
         </ul>

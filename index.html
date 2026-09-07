@@ -11,6 +11,36 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#6366f1" />
 
+    <!--
+      La carte que montrent Discord, iMessage et les autres quand on colle un
+      lien Echow.
+
+      Sans ces lignes, une invitation collee dans une conversation n'etait
+      qu'une adresse nue : `echows.vercel.app/invite/9f2c…`. Rien ne disait a
+      qui la recevait de quoi il s'agissait, et un lien qu'on ne reconnait pas
+      ne se clique pas.
+
+      L'image est absolue et non relative : les robots qui la lisent ne
+      resolvent pas toujours un chemin, et une carte sans vignette ressemble a
+      une erreur.
+
+      Le titre reste le meme sur toutes les pages — l'application est servie par
+      un seul fichier, et le serveur ne sait pas quel salon on demande. Dire
+      « Echow » a coup sur vaut mieux que promettre le nom du salon et se
+      tromper.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Echow" />
+    <meta property="og:title" content="Echow" />
+    <meta
+      property="og:description"
+      content="La discussion d'equipe en temps reel : salons ecrits, vocal en pair-a-pair et partage d'ecran."
+    />
+    <meta property="og:url" content="https://echows.vercel.app" />
+    <meta property="og:image" content="https://echows.vercel.app/icons/icon-512.png" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -43,7 +73,21 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap"
     />
 
-    <link rel="icon" type="image/png" href="/app-icon.png" />
+    <!--
+      L'icone de l'onglet porte son fond violet.
+
+      `app-icon.png` est la version sans fond : elle sert dans l'application,
+      posee sur un theme qu'on choisit. Dans un onglet on ne choisit rien — la
+      barre est blanche chez la plupart des gens, et un dessin lavande clair sur
+      blanc disparait presque entierement. Le carre violet, lui, se voit sur les
+      deux.
+
+      Le `.ico` suit, pour ce qui ne lit pas la premiere ligne : les favoris de
+      Windows, quelques agregateurs, et le vieux fond de l'internet qui va
+      chercher `/favicon.ico` sans rien demander a personne.
+    -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
     <!--
       Ce qu'iOS demande pour poser l'application sur l'ecran d'accueil.

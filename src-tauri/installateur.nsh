@@ -78,14 +78,37 @@
 ;
 ; Ce qu'on fait
 ; -------------
-; `ie4uinit.exe -show` demande a l'interpreteur de commandes de reconstruire
-; son cache d'icones. C'est l'outil que Windows fournit pour cela, present sur
-; toutes les versions prises en charge, et il ne touche a rien d'autre.
+; Trois gestes, du plus doux au plus franc, parce que le premier ne suffisait
+; pas : `-show` seul a ete essaye, et l'ancienne image est restee.
 ;
-; L'echec est ignore : une icone qui met un jour a se rafraichir n'est pas une
-; raison d'interrompre une installation qui, elle, a reussi.
+;  1. `ie4uinit.exe -ClearIconCache` invalide le cache ;
+;  2. `ie4uinit.exe -show` demande a l'interpreteur de commandes de le
+;     reconstruire ;
+;  3. les fichiers du cache sont effaces a la main.
+;
+; Le troisieme n'est pas une precaution de trop. Depuis Windows 10, les images
+; ne vivent plus dans le seul `IconCache.db` que `ie4uinit` connait, mais dans
+; une serie de `iconcache_<taille>.db` — une par definition d'ecran. Verifie sur
+; la machine ou le defaut se voit : les quinze fichiers s'effacent sans que
+; l'explorateur proteste, et il les reconstruit a partir des binaires.
+;
+; Ce qu'on ne fait PAS : redemarrer l'explorateur. C'est le remede infaillible,
+; et il ferme toutes les fenetres ouvertes de qui installe une mise a jour. Une
+; icone se corrige au pire au prochain demarrage ; une session de travail
+; perdue, non.
+;
+; L'echec est ignore d'un bout a l'autre : une icone qui met un jour a se
+; rafraichir n'est pas une raison d'interrompre une installation qui, elle, a
+; reussi.
 !macro NSIS_HOOK_POSTINSTALL
   ClearErrors
+  ExecWait '"$SYSDIR\ie4uinit.exe" -ClearIconCache'
   ExecWait '"$SYSDIR\ie4uinit.exe" -show'
+
+  ; Les caches par definition d'ecran. `Delete` echoue en silence sur un
+  ; fichier verrouille, ce qui est exactement le comportement voulu ici.
+  Delete "$LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache_*.db"
+  Delete "$LOCALAPPDATA\IconCache.db"
+
   ClearErrors
 !macroend

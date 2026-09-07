@@ -21,6 +21,31 @@ function openDialog(page: Page) {
   return page.locator('dialog[open]');
 }
 
+/**
+ * Ouvre la fenetre de creation d'un salon.
+ *
+ * Par le clic droit dans le vide de la liste, seul chemin depuis la barre
+ * laterale : le bouton « Nouveau salon » qui trainait en bas de la colonne a
+ * ete retire — il doublait ce menu, et occupait une place qui manque des qu'un
+ * serveur a une dizaine de salons.
+ *
+ * Le clic vise un salon, et non le fond de la colonne : sur un serveur bien
+ * rempli il n'y a plus de fond a viser, et c'est justement pour ce cas que
+ * l'entree existe aussi dans le menu d'un salon.
+ */
+async function ouvrirCreationSalon(page: Page) {
+  const salon = page.locator('.sidebar__channels .channel').first();
+  await expect(salon).toBeVisible();
+  await salon.click({ button: 'right' });
+
+  // Le menu se replace apres son ouverture pour tenir dans la fenetre : viser
+  // l'entree par la page entiere attrapait la version d'avant ce calage, et le
+  // clic tombait dans le vide. On la cherche donc DANS le menu.
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  await menu.getByRole('menuitem', { name: 'Creer un salon', exact: true }).click();
+}
+
 test.describe('Espaces et salons', () => {
   test.skip(withoutCredentials, skipReason);
 
@@ -97,7 +122,7 @@ test.describe('Espaces et salons', () => {
     // attendue apres normalisation, pas la saisie brute.
     const channelName = `salon-${Date.now().toString(36)}`;
 
-    await page.getByRole('button', { name: 'Nouveau salon' }).click();
+    await ouvrirCreationSalon(page);
     await openDialog(page).getByLabel('Nom').fill(channelName);
     await openDialog(page).getByRole('button', { name: 'Creer', exact: true }).click();
 
@@ -455,6 +480,68 @@ test.describe('Espaces et salons', () => {
 
     // On repose l'etat d'origine : un test ne doit pas laisser le compte muet.
     await apresRechargement.click();
+    await page.keyboard.press('Escape');
+  });
+  /*
+   * Ranger un salon dans une categorie.
+   *
+   * Le defaut rapporte tenait en une phrase : « on peut pas moove les salon
+   * dans les categories, on est obligé d'aller dans parametre ». Il y avait
+   * donc deux choses a reparer, et ce test couvre la seconde — celle qui
+   * s'eprouve sans souris : le panneau des categories ne faisait que COMPTER
+   * les salons de chacune, sans jamais permettre d'en mettre un.
+   *
+   * Le glisser de la barre laterale, lui, se verifie a la main : les
+   * evenements de glisser-deposer que joue un automate ne prouvent pas grand
+   * chose sur ce que fait un vrai curseur.
+   */
+  test('une categorie recoit un salon depuis ses parametres', async ({ page }) => {
+    await openApp(page);
+
+    await page.getByRole('button', { name: 'Parametres de l’espace' }).first().click();
+    const reglages = page.locator('.espace-reglages');
+    await reglages.locator('.settings__navitem', { hasText: 'Categories' }).first().click();
+
+    const nom = uniqueText('Cat');
+    await reglages.getByLabel('Nouvelle categorie').fill(nom);
+    await reglages.getByRole('button', { name: 'Ajouter' }).click();
+
+    /*
+     * La ligne se designe par SON bouton, pas par son texte.
+     *
+     * Le nom d'une categorie reapparait dans les listes deroulantes des autres
+     * — « # general — Projets » dit ou se trouve deja ce salon — et un filtre
+     * par texte attrapait alors trois lignes au lieu d'une.
+     */
+    const ligne = reglages
+      .locator('.mod-row')
+      .filter({ has: page.getByRole('button', { name: `Supprimer la categorie ${nom}` }) });
+    await expect(ligne).toBeVisible({ timeout: 15_000 });
+
+    // Une categorie neuve est vide, et c'est precisement l'etat ou l'on ne
+    // pouvait rien faire : elle doit malgre tout offrir de quoi la remplir.
+    await expect(ligne).toContainText('Aucun salon');
+
+    const ajout = ligne.getByLabel(`Ajouter un salon a ${nom}`);
+    const premier = await ajout.locator('option').nth(1).getAttribute('value');
+    if (!premier) {
+      test.skip(true, 'Cet espace n a aucun salon a ranger.');
+      return;
+    }
+
+    await ajout.selectOption(premier);
+    await expect(ligne).toContainText('1 salon', { timeout: 15_000 });
+
+    // Et il en ressort par le meme panneau : une porte a sens unique laisserait
+    // le salon prisonnier de la premiere categorie ou on l aurait pose.
+    await ligne.locator('.categorie__salon .icon-btn').first().click();
+    await expect(ligne).toContainText('Aucun salon', { timeout: 15_000 });
+
+    await ligne.getByRole('button', { name: `Supprimer la categorie ${nom}` }).click();
+    await expect(reglages.locator('.mod-row', { hasText: nom })).toHaveCount(0, {
+      timeout: 15_000,
+    });
+
     await page.keyboard.press('Escape');
   });
 });

@@ -33,6 +33,11 @@ export function Modals() {
         spaceId={modal.kind === 'create-channel' ? modal.spaceId : null}
         onClose={closeModal}
       />
+      <CreateCategoryModal
+        open={modal.kind === 'create-category'}
+        spaceId={modal.kind === 'create-category' ? modal.spaceId : null}
+        onClose={closeModal}
+      />
       <InviteModal
         open={modal.kind === 'invite'}
         spaceId={modal.kind === 'invite' ? modal.spaceId : null}
@@ -249,6 +254,119 @@ function JoinSpaceModal({ open, onClose }: { open: boolean; onClose: () => void 
 /* ========================================================================== */
 /* Creation de salon                                                          */
 /* ========================================================================== */
+
+/**
+ * Creer une categorie, comme on cree un salon.
+ *
+ * Elle se creait dans les reglages de l'espace, et le clic droit y renvoyait :
+ * « les categories se gerent dans les reglages, une boite dediee pour un seul
+ * champ ferait une fenetre de plus a fermer ».
+ *
+ * Le raisonnement portait sur le nombre de champs, et c'est le mauvais critere.
+ * Ce qui compte est le GESTE : on cree une categorie au meme endroit et pour la
+ * meme raison qu'un salon — en regardant sa liste, en voulant y ranger quelque
+ * chose. Y repondre par une page de reglages complete, ou il faut ensuite
+ * trouver le bon onglet, est une reponse a une autre question.
+ *
+ * Un seul champ n'est pas une raison de ne pas avoir de fenetre. C'est une
+ * raison d'en avoir une petite.
+ */
+function CreateCategoryModal({
+  open,
+  spaceId,
+  onClose,
+}: {
+  open: boolean;
+  spaceId: string | null;
+  onClose: () => void;
+}) {
+  const categories = useChat((state) => state.categories);
+
+  const [nom, setNom] = useState('');
+  const [occupe, setOccupe] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setNom('');
+      setErreur(null);
+    }
+  }, [open]);
+
+  const valider = async () => {
+    if (!spaceId || !nom.trim() || occupe) return;
+    setOccupe(true);
+
+    /*
+     * La nouvelle categorie se place a la fin.
+     *
+     * Les positions sont libres et non contigues : prendre le maximum plus un
+     * evite d'avoir a renumeroter les autres, et une categorie creee arrive la
+     * ou l'on s'attend a la trouver — en bas, la ou l'on vient de cliquer.
+     */
+    const dernier = categories
+      .filter((entree) => entree.space_id === spaceId)
+      .reduce((haut, entree) => Math.max(haut, entree.position), -1);
+
+    const { error } = await supabase.from('categories').insert({
+      space_id: spaceId,
+      name: nom.trim(),
+      position: dernier + 1,
+    });
+
+    setOccupe(false);
+
+    if (error) {
+      setErreur(error.message);
+      return;
+    }
+
+    onClose();
+  };
+
+  return (
+    <Modal
+      open={open}
+      title="Nouvelle categorie"
+      description="Un titre pour regrouper des salons. Vous y glisserez ensuite ce que vous voulez."
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            Annuler
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={!nom.trim() || occupe}
+            onClick={() => void valider()}
+          >
+            Creer
+          </button>
+        </>
+      }
+    >
+      <div className="field">
+        <label className="field__label" htmlFor="categorie-nom">
+          Nom
+        </label>
+        <input
+          id="categorie-nom"
+          className="input"
+          value={nom}
+          maxLength={48}
+          autoFocus
+          placeholder="Vocal, Annonces, Projets…"
+          onChange={(evenement) => setNom(evenement.target.value)}
+          onKeyDown={(evenement) => {
+            if (evenement.key === 'Enter') void valider();
+          }}
+        />
+        {erreur ? <p className="field__hint field__hint--erreur">{erreur}</p> : null}
+      </div>
+    </Modal>
+  );
+}
 
 function CreateChannelModal({
   open,

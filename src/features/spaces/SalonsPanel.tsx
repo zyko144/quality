@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { journal } from '@/lib/journal';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
@@ -22,6 +21,7 @@ export function SalonsPanel({ spaceId }: { spaceId: UUID }) {
   const categories = useChat((state) => state.categories);
   const renameChannel = useChat((state) => state.renameChannel);
   const reorderChannels = useChat((state) => state.reorderChannels);
+  const rangerSalon = useChat((state) => state.rangerSalon);
   const deleteChannel = useChat((state) => state.deleteChannel);
   const openModal = useUI((state) => state.openModal);
 
@@ -40,42 +40,22 @@ export function SalonsPanel({ spaceId }: { spaceId: UUID }) {
   /**
    * Range un salon dans une categorie, ou l'en sort.
    *
-   * L'ecriture passe par la table : il n'existait aucune action pour cela dans
-   * le magasin, et en ajouter une qui ne servirait qu'ici serait une couche de
-   * plus pour une seule ligne. Le rechargement vient du direct — la table est
-   * ecoutee — donc rien a poser dans l'etat.
+   * Le magasin s'en charge : le meme geste existe maintenant a trois endroits —
+   * cette liste deroulante, le glisser-deposer de la barre laterale et le
+   * panneau des categories. Trois copies d'une meme ecriture finissent par
+   * differer sur ce qui compte, ici le retour en arriere quand le serveur
+   * refuse.
    */
   const ranger = async (salon: Channel, categorie: UUID | null) => {
     if (occupe) return;
     setOccupe(true);
 
-    const { error } = await supabase
-      .from('channels')
-      .update({ category_id: categorie })
-      .eq('id', salon.id);
-
+    const pose = await rangerSalon(salon.id, categorie);
     setOccupe(false);
 
-    if (error) {
-      journal.alerte('interface', 'Categorie non changee', {
-        salon: salon.id,
-        cause: error.message,
-      });
-      return;
+    if (!pose) {
+      journal.alerte('interface', 'Categorie non changee', { salon: salon.id });
     }
-
-    /*
-     * L'etat local suit tout de suite.
-     *
-     * Le direct finira par l'annoncer, mais une liste deroulante qui revient a
-     * sa valeur precedente une demi-seconde apres qu'on l'a changee donne
-     * l'impression d'un refus.
-     */
-    useChat.setState((etat) => ({
-      channels: etat.channels.map((entree) =>
-        entree.id === salon.id ? { ...entree, category_id: categorie } : entree,
-      ),
-    }));
   };
 
   const deplacer = async (index: number, sens: -1 | 1) => {

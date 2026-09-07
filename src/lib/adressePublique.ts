@@ -27,8 +27,13 @@
  * Le jour ou elle demenage, cette ligne change et les liens deja envoyes
  * cessent de fonctionner : c'est inevitable, et c'est la raison pour laquelle
  * elle est seule et nommee, plutot que recopiee a quatre endroits.
+ *
+ * Elle a demenage une fois : `echowebplayer.vercel.app` est devenu
+ * `echows.vercel.app`. L'ancienne adresse reste reconnue par les apercus de
+ * liens — un lien envoye il y a un mois montre encore de quel serveur il
+ * parle, meme s'il ne s'ouvre plus.
  */
-export const APPLICATION_WEB = 'https://echowebplayer.vercel.app';
+export const APPLICATION_WEB = 'https://echows.vercel.app';
 
 /**
  * Vrai si cette origine peut etre donnee a quelqu'un d'autre.

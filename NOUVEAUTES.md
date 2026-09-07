@@ -34,6 +34,16 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.13.0
+
+- On peut glisser un salon dans une categorie, directement dans la barre laterale.
+- Les parametres montrent le contenu de chaque categorie, et on y range les salons.
+- Le clic droit sur un salon propose de creer un salon ou une categorie.
+- Le menu du clic droit ne se referme plus tout seul aussitot ouvert.
+- Moins d'espace perdu entre les categories.
+- Nouvelle adresse : echows.vercel.app, avec le nouveau logo partout.
+- L'icone de la barre des taches se rafraichit vraiment apres une mise a jour.
+
 ## 9.12.2
 
 - Arreter un partage ne peut plus faire planter l'application.

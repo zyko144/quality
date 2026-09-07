@@ -51,7 +51,8 @@ const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$/i;
  * montrent au moins de quel serveur il s'agissait, au lieu d'une adresse nue
  * que personne ne comprend.
  */
-const HOTES = /^(echowebplayer\.vercel\.app|echow\.[a-z]+|tauri\.localhost|localhost|127\.0\.0\.1)$/i;
+const HOTES =
+  /^(echows\.vercel\.app|echowebplayer\.vercel\.app|echow\.[a-z]+|tauri\.localhost|localhost|127\.0\.0\.1)$/i;
 
 function codeDInvitation(url: URL): string | null {
   if (!HOTES.test(url.hostname)) return null;

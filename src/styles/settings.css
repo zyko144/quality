@@ -1660,3 +1660,52 @@
   line-height: 1.2;
   letter-spacing: 4px;
 }
+
+/* --------------------------------------------------------------------------
+   Le contenu d'une categorie, dans ses parametres.
+
+   Les salons y sont des pastilles et non des lignes : une categorie en contient
+   trois ou quatre, et quatre lignes pleine largeur pour quatre mots feraient
+   defiler un panneau qui doit se lire d'un coup d'oeil.
+   -------------------------------------------------------------------------- */
+
+.categorie__salons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.categorie__salon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 2px 2px var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.categorie__salon .icon-btn--sm {
+  width: 22px;
+  height: 22px;
+}
+
+.categorie__ajout {
+  margin-top: var(--space-2);
+  max-width: 260px;
+  font-size: var(--text-sm);
+}
+
+.categorie__vers {
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}

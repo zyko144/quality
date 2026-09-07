@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { DragEvent } from 'react';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { useSession } from '@/store/session';
@@ -60,18 +61,11 @@ export function Sidebar() {
    * perdre la piste des qu'on sort de la liste et qu'on y revient.
    */
   const [deplace, setDeplace] = useState<UUID | null>(null);
-  const [survole, setSurvole] = useState<UUID | null>(null);
+  const [survole, setSurvole] = useState<string | null>(null);
 
   const reorderChannels = useChat((state) => state.reorderChannels);
+  const rangerSalon = useChat((state) => state.rangerSalon);
 
-  /*
-   * Range le salon deplace juste avant celui qu'on relache.
-   *
-   * L'ordre transmis porte sur TOUS les salons de l'espace, pas seulement sur
-   * la categorie visee : les positions sont un entier unique par espace, et
-   * renumeroter une seule categorie decalerait les autres sans qu'on l'ait
-   * demande.
-   */
   /*
    * Deposer quelqu'un sur un salon vocal l'y deplace.
    *
@@ -86,15 +80,47 @@ export function Sidebar() {
     deplacerVocal(userId, salon);
   };
 
-  const relacher = (idDeplace: string, cible: UUID) => {
+  /*
+   * Les salons de l'espace dans l'ordre ou on les voit.
+   *
+   * `reorderChannels` renumerote les positions d'apres le RANG dans le tableau
+   * qu'on lui passe : le lui donner dans l'ordre du magasin — celui d'arrivee —
+   * plutot que dans celui de l'affichage rebattrait toute la colonne a chaque
+   * depot.
+   */
+  const ordreAffiche = () =>
+    channels
+      .filter((canal) => canal.space_id === activeSpaceId)
+      .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
+
+  /*
+   * Range le salon deplace juste avant celui qu'on relache.
+   *
+   * L'ordre transmis porte sur TOUS les salons de l'espace, pas seulement sur
+   * la categorie visee : les positions sont un entier unique par espace, et
+   * renumeroter une seule categorie decalerait les autres sans qu'on l'ait
+   * demande.
+   */
+  const relacher = async (idDeplace: string, cible: UUID) => {
     setDeplace(null);
     setSurvole(null);
     if (!idDeplace || idDeplace === cible || !activeSpaceId) return;
 
-    const ordre = channels
-      .filter((canal) => canal.space_id === activeSpaceId)
-      .map((canal) => canal.id);
+    const salonCible = channels.find((canal) => canal.id === cible);
+    if (!salonCible) return;
 
+    /*
+     * Deposer un salon sur un autre, c'est aussi entrer dans SA categorie.
+     *
+     * Sans cela, glisser un salon au milieu d'une categorie le placait bien a
+     * cet endroit dans les positions, mais il continuait de s'afficher hors
+     * categorie — chaque section ne montre que les salons qui portent son
+     * identifiant. Le geste semblait n'avoir servi a rien, ou pire, avoir
+     * ramene le salon en haut de la liste.
+     */
+    await rangerSalon(idDeplace as UUID, salonCible.category_id ?? null);
+
+    const ordre = ordreAffiche().map((canal) => canal.id);
     const depuis = ordre.indexOf(idDeplace as UUID);
     const vers = ordre.indexOf(cible);
     if (depuis === -1 || vers === -1) return;
@@ -104,6 +130,84 @@ export function Sidebar() {
 
     void reorderChannels(activeSpaceId, ordre);
   };
+
+  /**
+   * Depose un salon sur le titre d'une categorie — ou sur la zone « hors
+   * categorie », avec `null`.
+   *
+   * C'est le geste qui manquait : jusqu'ici, ranger un salon demandait
+   * d'ouvrir les parametres du serveur, l'onglet des salons, puis de trouver
+   * la bonne ligne. Le titre de la categorie est a trois pixels du salon qu'on
+   * veut y mettre.
+   *
+   * Il arrive EN BAS de la categorie visee. Le haut serait plus visible, mais
+   * un titre de categorie fait vingt pixels de haut : viser « juste dessous »
+   * plutot que « dessus » n'est pas un geste qu'on peut demander. Le bas est le
+   * seul endroit qui ne depend pas de la precision du curseur.
+   */
+  const deposerDansCategorie = async (idDeplace: string, categorie: UUID | null) => {
+    setDeplace(null);
+    setSurvole(null);
+    if (!idDeplace || !activeSpaceId) return;
+
+    const salon = channels.find((canal) => canal.id === idDeplace);
+    if (!salon || (salon.category_id ?? null) === categorie) return;
+
+    const pose = await rangerSalon(salon.id, categorie);
+    if (!pose) return;
+
+    // Une categorie vide n'impose aucun rang : la seule chose que les positions
+    // decident, c'est l'ordre entre voisins d'une meme categorie.
+    const voisins = ordreAffiche().filter(
+      (canal) => (canal.category_id ?? null) === categorie && canal.id !== salon.id,
+    );
+    const dernier = voisins[voisins.length - 1];
+    if (!dernier) return;
+
+    const ordre = ordreAffiche().map((canal) => canal.id);
+    const depuis = ordre.indexOf(salon.id);
+    if (depuis === -1) return;
+
+    ordre.splice(depuis, 1);
+    ordre.splice(ordre.indexOf(dernier.id) + 1, 0, salon.id);
+
+    void reorderChannels(activeSpaceId, ordre);
+  };
+
+  /*
+   * Ce qu'il faut poser sur une zone de depot, partout pareil.
+   *
+   * Une personne qu'on glisse ne se range pas dans une categorie : seuls les
+   * salons voyagent en `text/plain`. Sans ce tri, lacher quelqu'un sur un titre
+   * de categorie aurait essaye d'y ranger un salon dont l'identifiant est
+   * celui d'un membre — donc rien, en silence.
+   */
+  const zoneDeDepot = (cle: string, categorie: UUID | null) => ({
+    onDragOver: (event: DragEvent) => {
+      if (myRank < 2 || deplace === null) return;
+      if (event.dataTransfer.types.includes(TRANSFERT_MEMBRE)) return;
+
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      setSurvole(cle);
+    },
+    onDragLeave: (event: DragEvent) => {
+      /*
+       * `dragleave` remonte aussi quand on passe d'un salon a son voisin, a
+       * l'interieur de la meme section. Sans ce test, le lisere clignoterait
+       * pendant tout le trajet, et l'on ne saurait plus ou l'on depose.
+       */
+      const vers = event.relatedTarget;
+      if (vers instanceof Node && event.currentTarget.contains(vers)) return;
+
+      setSurvole((actuel) => (actuel === cle ? null : actuel));
+    },
+    onDrop: (event: DragEvent) => {
+      if (myRank < 2) return;
+      event.preventDefault();
+      void deposerDansCategorie(event.dataTransfer.getData('text/plain'), categorie);
+    },
+  });
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [threadsOpen, setThreadsOpen] = useState(true);
@@ -289,8 +393,25 @@ export function Sidebar() {
           </section>
         ) : null}
 
-        {uncategorized.length > 0 ? (
-          <section className="sidebar__section">
+        {/*
+          Hors categorie : la sortie.
+
+          La section existait deja, mais seulement quand elle avait du monde —
+          d'ou l'impasse : une fois tous les salons ranges, plus rien ne
+          permettait d'en ressortir un sans passer par les parametres. Elle
+          apparait donc aussi vide, le temps d'un glisser, avec de quoi viser.
+        */}
+        {uncategorized.length > 0 || deplace !== null ? (
+          <section
+            className={
+              'sidebar__section' +
+              (survole === 'hors-categorie' ? ' is-drop-target' : '')
+            }
+            {...zoneDeDepot('hors-categorie', null)}
+          >
+            {uncategorized.length === 0 ? (
+              <p className="sidebar__depot">Deposer ici pour sortir de sa categorie</p>
+            ) : null}
             <ul className="sidebar__channels">
               {uncategorized.map((channel) => (
                 <ChannelItem
@@ -336,8 +457,22 @@ export function Sidebar() {
           if (items.length === 0 && myRank < 2) return null;
           const collapsed = collapsedCategories.has(category.id);
 
+          const vise = survole === category.id;
+
           return (
-            <section className="sidebar__section" key={category.id}>
+            /*
+              Toute la categorie recoit le depot, pas seulement son titre.
+
+              Viser une ligne de vingt pixels a la souris, en tenant un salon,
+              demande une precision qu'on ne peut pas exiger — et rater faisait
+              retomber le salon la ou il etait, sans rien dire. La section fait
+              la hauteur de ses salons : on ne la manque pas.
+            */
+            <section
+              className={'sidebar__section' + (vise ? ' is-drop-target' : '')}
+              key={category.id}
+              {...zoneDeDepot(category.id, category.id)}
+            >
               <button
                 type="button"
                 className="sidebar__section-title"
@@ -355,6 +490,14 @@ export function Sidebar() {
                       key={channel.id}
                       channel={channel}
                       active={channel.id === activeChannelId}
+                      survole={survole === channel.id && deplace !== null}
+                      onDragStart={setDeplace}
+                      onDragOver={setSurvole}
+                      onDrop={relacher}
+                      onDragEnd={() => {
+                        setDeplace(null);
+                        setSurvole(null);
+                      }}
                       unread={readStates[channel.id]?.unread_count ?? 0}
                       mentions={readStates[channel.id]?.mention_count ?? 0}
                       onSelect={selectChannel}
@@ -365,18 +508,30 @@ export function Sidebar() {
                   ))}
                 </ul>
               ) : null}
+
+              {/*
+                Une categorie repliee reste une cible.
+
+                On replie ce qui ne sert pas tous les jours — donc exactement ce
+                dans quoi on range. Sans cette ligne, la seule facon d'y mettre
+                un salon serait de la deplier d'abord, et le glisser est deja
+                commence : on ne peut plus cliquer.
+              */}
+              {collapsed && vise ? (
+                <p className="sidebar__depot">Deposer dans {category.name}</p>
+              ) : null}
             </section>
           );
         })}
 
-        <button
-          type="button"
-          className="sidebar__add"
-          onClick={() => openModal({ kind: 'create-channel', spaceId: space.id })}
-        >
-          <Icon name="plus" size={14} />
-          Nouveau salon
-        </button>
+        {/*
+          Plus de bouton « Nouveau salon » au bas de la liste.
+
+          Il doublait le clic droit sur le fond de la liste, qui offre la meme
+          chose — et deux chemins pour un geste occupent de la place au bas
+          d'une colonne ou l'on defile deja. Le clic droit reste, avec la
+          creation de categorie a cote.
+        */}
       </div>
 
       <UserBar />
@@ -489,12 +644,22 @@ function ChannelItem({
         // Sans `preventDefault`, le navigateur refuse le depot : c'est lui qui
         // decide, et son defaut est de tout refuser.
         event.preventDefault();
+
+        /*
+         * Et sans `stopPropagation`, la categorie qui entoure ce salon
+         * recevrait le meme evenement une fraction de seconde plus tard : elle
+         * est zone de depot elle aussi. Le rang precis qu'on vise ici serait
+         * remplace par « a la fin de la categorie », c'est-a-dire par le geste
+         * qu'on n'a pas fait.
+         */
+        event.stopPropagation();
         event.dataTransfer.dropEffect = 'move';
         onDragOver?.(channel.id);
       }}
       onDrop={(event) => {
         if (!canManage) return;
         event.preventDefault();
+        event.stopPropagation();
 
         const membre = event.dataTransfer.getData(TRANSFERT_MEMBRE);
         if (membre) {
