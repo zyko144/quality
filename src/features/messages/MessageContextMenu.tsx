@@ -2,6 +2,7 @@ import { ContextMenu, type MenuEntry, type MenuPosition } from '@/components/Con
 import { Icon } from '@/components/Icon';
 import { QUICK_REACTIONS } from '@/constants';
 import type { Message, UUID } from '@/types/db';
+import { lienInterne } from '@/lib/adressePublique';
 
 /**
  * Actions sur un message, au clic droit.
@@ -105,7 +106,7 @@ export function MessageContextMenu({
     label: 'Copier le lien du message',
     icon: <Icon name="link" size={15} />,
     onSelect: () => {
-      const lien = `${window.location.origin}/#/message/${message.id}`;
+      const lien = lienInterne('message', message.id);
       void navigator.clipboard.writeText(lien);
     },
   });

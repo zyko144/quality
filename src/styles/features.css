@@ -3346,3 +3346,165 @@ li:has(.mention-list__item--globale) + li:not(:has(.mention-list__item--globale)
   object-fit: cover;
   flex-shrink: 0;
 }
+
+/* -------------------------------------------------------------------------- */
+/* La carte d'une invitation                                                   */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Elle sert aux deux bouts du lien : sous un message, et a l'arrivee.
+ *
+ * Meme composant, donc meme carte — la question posee est la meme des deux
+ * cotes, et y repondre de deux facons differentes serait deroutant.
+ */
+.invitation {
+  display: grid;
+  gap: var(--space-3);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+/*
+ * La banniere n'a pas de hauteur reservee.
+ *
+ * Un serveur sans banniere garde une carte entiere ; lui laisser la place
+ * ferait un vide en haut qu'on prendrait pour une image qui n'a pas charge.
+ */
+.invitation__banniere {
+  width: 100%;
+  height: 84px;
+  object-fit: cover;
+  display: block;
+}
+
+.invitation__corps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+}
+
+.invitation__banniere + .invitation__corps {
+  /* La banniere apporte deja l'espace au-dessus. */
+  margin-top: calc(var(--space-3) * -1);
+}
+
+.invitation__icone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+}
+
+.invitation__icone img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.invitation__initiale {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--text-secondary);
+}
+
+.invitation__texte {
+  display: grid;
+  min-width: 0;
+}
+
+.invitation__sur {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.invitation__nom {
+  font-size: var(--text-md);
+}
+
+.invitation__membres {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.invitation__entree {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.invitation__note {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.invitation--attente,
+.invitation--morte {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.invitation__squelette {
+  width: 100%;
+  height: 44px;
+  border-radius: var(--radius-md);
+}
+
+/* -------------------------------------------------------------------------- */
+/* La case « je ne suis pas un robot »                                         */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Ce qui est verifie n'est pas la case mais le geste : voir `CaseHumaine`.
+ * Elle doit donc se cocher aussi facilement que n'importe quelle case — la
+ * rendre penible ne filtrerait que des gens.
+ */
+.casehumaine {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.casehumaine__case {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text-on-accent);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.casehumaine.is-cochee .casehumaine__case {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.casehumaine input:focus-visible + .casehumaine__case {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

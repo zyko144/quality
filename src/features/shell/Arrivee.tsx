@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import { journal } from '@/lib/journal';
 import { arriveeDuDepart, oublierArrivee } from '@/lib/lienDArrivee';
+import { Modal } from '@/components/Modal';
+import { CarteInvitation } from '@/features/spaces/CarteInvitation';
 
 /**
  * Ce qui se passe quand on ouvre l'application par un lien.
@@ -24,6 +26,19 @@ import { arriveeDuDepart, oublierArrivee } from '@/lib/lienDArrivee';
  */
 export function Arrivee() {
   const ready = useChat((state) => state.ready);
+
+  /*
+   * Une invitation ne se consomme plus toute seule.
+   *
+   * Elle le faisait : on ouvrait le lien, on etait dans le serveur, et l'on
+   * decouvrait lequel une fois dedans. Ce n'est pas un detail de confort —
+   * c'est un lien recu de quelqu'un, souvent transmis, et le seul moment ou
+   * l'on peut refuser est AVANT.
+   *
+   * On montre donc la carte du serveur, et l'on attend un geste. La case a
+   * cocher vit dedans : voir `CaseHumaine`, et ce qu'elle mesure vraiment.
+   */
+  const [invitation, setInvitation] = useState<string | null>(null);
 
   /*
    * Une seule fois, meme si l'application se remonte.
@@ -53,32 +68,10 @@ export function Arrivee() {
       if (arrivee.genre === 'invitation') {
         journal.info('interface', 'Arrivee par invitation', { code: arrivee.code });
 
-        const espace = await chat.joinSpace(arrivee.code);
+        // L'adresse est oubliee tout de suite : la carte porte le code
+        // desormais, et recharger la page ne doit pas rejouer l'arrivee.
         oublierArrivee();
-
-        if (!espace) {
-          // `joinSpace` a deja pose le message d'erreur ; on n'en ajoute pas un
-          // second qui dirait la meme chose autrement.
-          journal.alerte('interface', 'Invitation refusee', { code: arrivee.code });
-          return;
-        }
-
-        /*
-         * On ouvre l'espace rejoint, et son premier salon.
-         *
-         * Rejoindre sans y aller laisserait la personne devant l'espace
-         * precedent, en se demandant si le lien a fonctionne — ce qui est
-         * exactement le doute qu'on essaie de lever.
-         */
-        const ui = useUI.getState();
-        ui.selectSpace(espace.id);
-
-        const premier = useChat
-          .getState()
-          .channels.filter((salon) => salon.space_id === espace.id && salon.kind === 'text')
-          .sort((a, b) => a.position - b.position)[0];
-
-        if (premier) ui.selectChannel(premier.id);
+        setInvitation(arrivee.code);
         return;
       }
 
@@ -110,5 +103,50 @@ export function Arrivee() {
     })();
   }, [ready]);
 
-  return null;
+  /**
+   * Rejoint pour de bon, puis ouvre le serveur et son premier salon.
+   *
+   * Rejoindre sans y aller laisserait la personne devant l'espace precedent,
+   * en se demandant si le lien a fonctionne — exactement le doute qu'on essaie
+   * de lever.
+   */
+  const rejoindre = async (code: string) => {
+    const espace = await useChat.getState().joinSpace(code);
+
+    if (!espace) {
+      // `joinSpace` a deja pose le message d'erreur ; on n'en ajoute pas un
+      // second qui dirait la meme chose autrement.
+      journal.alerte('interface', 'Invitation refusee', { code });
+      return;
+    }
+
+    setInvitation(null);
+
+    const ui = useUI.getState();
+    ui.selectSpace(espace.id);
+
+    const premier = useChat
+      .getState()
+      .channels.filter((salon) => salon.space_id === espace.id && salon.kind === 'text')
+      .sort((a, b) => a.position - b.position)[0];
+
+    if (premier) ui.selectChannel(premier.id);
+  };
+
+  return (
+    <Modal
+      open={invitation !== null}
+      title="Vous etes invite"
+      description="Voici le serveur qui vous attend."
+      onClose={() => setInvitation(null)}
+      width={460}
+      footer={
+        <button type="button" className="btn" onClick={() => setInvitation(null)}>
+          Plus tard
+        </button>
+      }
+    >
+      {invitation ? <CarteInvitation code={invitation} onRejoindre={rejoindre} /> : null}
+    </Modal>
+  );
 }

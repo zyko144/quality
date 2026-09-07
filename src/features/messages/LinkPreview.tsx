@@ -1,7 +1,10 @@
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { marqueDe, teinteDe } from '@/lib/marques';
+import { useChat } from '@/store/chat';
+import { useUI } from '@/store/ui';
+import { CarteInvitation } from '@/features/spaces/CarteInvitation';
 
 /**
  * Apercus de liens.
@@ -28,11 +31,37 @@ interface Parsed {
 }
 
 type Preview =
+  | { kind: 'invitation'; link: Parsed; code: string }
   | { kind: 'image'; link: Parsed }
   | { kind: 'video'; link: Parsed; embed: string; provider: string }
   | { kind: 'link'; link: Parsed };
 
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$/i;
+
+/**
+ * Le code d'une invitation, quand l'adresse est une des NOTRES.
+ *
+ * Le chemin ne suffit pas : n'importe quel site peut avoir un `/invite/`, et
+ * y accrocher notre carte annoncerait un serveur Echow devant un lien qui n'en
+ * est pas un.
+ *
+ * `tauri.localhost` et `localhost` figurent dans la liste, et c'est
+ * deliberé : les liens copies avant la correction de l'adresse portent cette
+ * origine. Ils ne s'ouvrent toujours pas — rien ne peut les reparer — mais ils
+ * montrent au moins de quel serveur il s'agissait, au lieu d'une adresse nue
+ * que personne ne comprend.
+ */
+const HOTES = /^(echowebplayer\.vercel\.app|echow\.[a-z]+|tauri\.localhost|localhost|127\.0\.0\.1)$/i;
+
+function codeDInvitation(url: URL): string | null {
+  if (!HOTES.test(url.hostname)) return null;
+
+  const morceaux = url.pathname.split('/').filter(Boolean);
+  if (morceaux[0] !== 'invite' || !morceaux[1]) return null;
+
+  const code = morceaux[1].trim();
+  return /^[a-z0-9-]{4,32}$/i.test(code) ? code.toLowerCase() : null;
+}
 
 /** Identifiant d'une video YouTube, quelle que soit la forme de l'adresse. */
 function youtubeId(url: URL): string | null {
@@ -78,6 +107,19 @@ export function previewsFor(content: string, limit = 3): Preview[] {
       path: url.pathname === '/' ? '' : url.pathname,
     };
 
+    /*
+     * L'invitation passe avant tout le reste.
+     *
+     * Elle n'a ni extension d'image ni forme de video, donc l'ordre n'a pas
+     * d'importance aujourd'hui. Il en aurait le jour ou un code ressemblerait
+     * a autre chose, et une invitation vaut mieux qu'une carte generique.
+     */
+    const invitation = codeDInvitation(url);
+    if (invitation) {
+      previews.push({ kind: 'invitation', link, code: invitation });
+      continue;
+    }
+
     const youtube = youtubeId(url);
     if (youtube) {
       previews.push({
@@ -121,13 +163,30 @@ export function LinkPreviews({
   limite?: number;
 }) {
   const previews = useMemo(() => previewsFor(content, limite), [content, limite]);
+
+  /*
+   * Rejoindre depuis la carte, sans quitter la conversation.
+   *
+   * Le lien reste cliquable — il mene au meme endroit — mais cliquer ouvrirait
+   * un navigateur pour revenir dans l'application qu'on a deja sous les yeux.
+   */
+  const rejoindre = useCallback(
+    async (code: string) => {
+      const espace = await useChat.getState().joinSpace(code);
+      if (espace) useUI.getState().selectSpace(espace.id);
+    },
+    [],
+  );
+
   if (previews.length === 0) return null;
 
   return (
     <ul className="previews">
       {previews.map((preview) => (
         <li key={preview.link.url}>
-          {preview.kind === 'image' ? (
+          {preview.kind === 'invitation' ? (
+            <CarteInvitation code={preview.code} onRejoindre={rejoindre} />
+          ) : preview.kind === 'image' ? (
             <ImagePreview link={preview.link} />
           ) : preview.kind === 'video' ? (
             <VideoPreview link={preview.link} embed={preview.embed} provider={preview.provider} />

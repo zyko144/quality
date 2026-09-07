@@ -4,6 +4,7 @@ import { supabase, errorMessage, isSessionFailure } from '@/lib/supabase';
 import type { Profile, PresenceStatus } from '@/types/db';
 import { setNePasDeranger as setSonsSilencieux } from '@/lib/sounds';
 import { setNePasDeranger as setNotificationsSilencieuses } from '@/lib/notify';
+import { origineePublique } from '@/lib/adressePublique';
 
 /**
  * L'adresse de l'application web.
@@ -15,7 +16,7 @@ import { setNePasDeranger as setNotificationsSilencieuses } from '@/lib/notify';
  * Google y renvoyait donc sur la page de presentation, sans session et sans
  * moyen d'en sortir, quelle que soit la configuration de Supabase.
  */
-const APPLICATION_WEB = 'https://echowebplayer.vercel.app';
+
 
 /* -------------------------------------------------------------------------- */
 /* Preferences d'affichage                                                     */
@@ -529,14 +530,9 @@ export const useSession = create<SessionState>((set, get) => ({
   signInWithGoogle: async () => {
     set({ error: null });
 
-    const origin =
-      typeof window !== 'undefined' &&
-      window.location.origin &&
-      !window.location.origin.includes('tauri')
-        ? window.location.origin
-        : APPLICATION_WEB;
-
-    const targetRedirect = `${origin.replace(/\/$/, '')}/app`;
+    // Meme calcul que pour les liens qu'on donne a quelqu'un : voir
+    // `adressePublique.ts`. Il vivait ici, pour ce seul cas.
+    const targetRedirect = `${origineePublique()}/app`;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

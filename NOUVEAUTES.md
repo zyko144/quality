@@ -34,10 +34,16 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.10.1
+
+- Les liens d'invitation fonctionnent enfin.
+- Un lien d'invitation montre le serveur : son image, sa banniere, son nom, ses membres.
+- Une case a cocher avant de rejoindre un serveur.
+- Le pseudo peut etre cache sur sa fiche.
+
 ## 9.10.0
 
 - Les nouveautes vont droit au but, et ne montrent plus de bouts de phrases.
-- Le pseudo peut etre cache sur sa fiche, quand il repete le nom.
 
 ## 9.9.9
 

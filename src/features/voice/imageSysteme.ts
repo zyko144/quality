@@ -186,10 +186,20 @@ export async function capturerSource(
    */
   window.setTimeout(() => {
     void (async () => {
-      let natif: { arrivees?: number; gardees?: number; abandonnees?: number } | null = null;
+      let natif: {
+        arrivees?: number;
+        gardees?: number;
+        abandonnees?: number;
+        non_servies?: number;
+      } | null = null;
 
       try {
-        natif = await invoke<{ arrivees: number; gardees: number; abandonnees: number }>(
+        natif = await invoke<{
+          arrivees: number;
+          gardees: number;
+          abandonnees: number;
+          non_servies: number;
+        }>(
           'diagnostic_image',
         );
       } catch {
@@ -219,6 +229,9 @@ export async function capturerSource(
         arrivees: natif?.arrivees ?? -1,
         gardees: natif?.gardees ?? -1,
         abandonnees: natif?.abandonnees ?? -1,
+        // La seconde file, celle de l'envoi. C'est elle qui debordait sans que
+        // rien ne le dise : « abandonnees 0, recues 31 sur 164 gardees ».
+        nonServies: natif?.non_servies ?? -1,
       });
     })();
   }, 5000);

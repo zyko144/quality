@@ -190,9 +190,15 @@ test.describe('Parametres', () => {
     await expect(editeur).toBeVisible();
     await expect(fiche).toBeHidden();
 
-    // Le pseudo se change ici : il etait annonce comme fixe alors que la
-    // fonction existait deja.
-    await expect(editeur.getByLabel('Pseudo')).toBeVisible();
+    /*
+     * Le pseudo se change ici : il etait annonce comme fixe alors que la
+     * fonction existait deja.
+     *
+     * `exact` designe le CHAMP, et non tout ce qui parle de pseudo :
+     * l'interrupteur « Cacher mon pseudo sur ma fiche » porte le mot lui
+     * aussi, et un libelle approximatif en attrapait deux.
+     */
+    await expect(editeur.getByLabel('Pseudo', { exact: true })).toBeVisible();
     await expect(
       editeur.getByRole('button', { name: 'Changer la banniere', exact: true }),
     ).toBeVisible();

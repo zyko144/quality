@@ -17,6 +17,7 @@ import { useFriends } from '@/store/friends';
 import { supabase } from '@/lib/supabase';
 import type { UUID } from '@/types/db';
 import { LIMITS } from '@/constants';
+import { lienDInvitation } from '@/lib/adressePublique';
 
 /** Point d'entree unique : affiche la boite de dialogue demandee par l'etat. */
 export function Modals() {
@@ -384,7 +385,7 @@ function InviteModal({
     }
   }, [open, space?.invite_code]);
 
-  const inviteLink = code ? `${window.location.origin}/invite/${code}` : '';
+  const inviteLink = code ? lienDInvitation(code) : '';
 
   const copy = async (text: string, isLink: boolean) => {
     if (!text) return;

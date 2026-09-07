@@ -88,8 +88,27 @@ static INTERVALLE_NS: AtomicU64 = AtomicU64::new(0);
  */
 static ARRIVEES: AtomicU64 = AtomicU64::new(0);
 static GARDEES: AtomicU64 = AtomicU64::new(0);
-/// Images lues puis abandonnees faute de place dans la file.
+/// Images lues puis abandonnees faute de place dans la PREMIERE file.
 static ABANDONNEES: AtomicU64 = AtomicU64::new(0);
+
+/*
+ * Et celles perdues dans la SECONDE.
+ *
+ * Il y a deux files sur le chemin, et une seule etait comptee. Les traces d'un
+ * partage en 3440x1440 le montrent sans ambiguite :
+ *
+ *     arrivees 166 · gardees 164 · abandonnees 0 · recues 31
+ *
+ * Cent trente-trois images disparaissent entre ce qu'on rapatrie et ce qui
+ * atteint la piste, et le seul compteur qui existait disait « zero perdue ».
+ * Il disait vrai : elles ne se perdaient pas la.
+ *
+ * Une image de cette definition pese 19,8 megaoctets. La file d'envoi n'en
+ * garde qu'une, et le fil qui la vide ecrit dans une connexion locale que
+ * l'interface lit a son rythme : quand elle ne suit pas, `try_send` echoue et
+ * l'image est abandonnee — silencieusement, jusqu'ici.
+ */
+static NON_SERVIES: AtomicU64 = AtomicU64::new(0);
 
 /// Regle la cadence de capture sans rouvrir la source.
 ///
@@ -326,6 +345,7 @@ fn ouvrir(source: GraphicsCaptureItem, images: u32) -> ResultatWin<Capture> {
     ARRIVEES.store(0, Ordering::Relaxed);
     GARDEES.store(0, Ordering::Relaxed);
     ABANDONNEES.store(0, Ordering::Relaxed);
+    NON_SERVIES.store(0, Ordering::Relaxed);
 
     /*
      * Le temps est compte depuis l'ouverture, en nanosecondes.
@@ -676,7 +696,9 @@ pub fn demarrer_image(source: String, images: u32) -> Result<FluxImage, String> 
              *
              * On envoie donc le tampon tel quel, sans le dupliquer.
              */
-            let _ = expediteur.try_send(image.paquet);
+            if expediteur.try_send(image.paquet).is_err() {
+                NON_SERVIES.fetch_add(1, Ordering::Relaxed);
+            }
         }
     });
 
@@ -800,8 +822,10 @@ pub struct DiagnosticImage {
     pub arrivees: u64,
     /// Images retenues par la cadence, puis rapatriees en memoire centrale.
     pub gardees: u64,
-    /// Images rapatriees puis abandonnees faute de place dans la file.
+    /// Images rapatriees puis abandonnees faute de place dans la premiere file.
     pub abandonnees: u64,
+    /// Images abandonnees a l'envoi, faute de place dans la seconde.
+    pub non_servies: u64,
 }
 
 /// Rend ces comptes. Sans effet de bord.
@@ -826,6 +850,7 @@ pub fn diagnostic_image() -> DiagnosticImage {
         arrivees: ARRIVEES.load(Ordering::Relaxed),
         gardees: GARDEES.load(Ordering::Relaxed),
         abandonnees: ABANDONNEES.load(Ordering::Relaxed),
+        non_servies: NON_SERVIES.load(Ordering::Relaxed),
     }
 }
 

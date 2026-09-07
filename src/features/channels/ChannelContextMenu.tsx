@@ -3,6 +3,7 @@ import { Icon } from '@/components/Icon';
 import { useChat } from '@/store/chat';
 import { useUI } from '@/store/ui';
 import type { Channel } from '@/types/db';
+import { lienInterne } from '@/lib/adressePublique';
 
 /**
  * Actions sur un salon, au clic droit.
@@ -58,7 +59,7 @@ export function ChannelContextMenu({
       icon: <Icon name="link" size={15} />,
       onSelect: () => {
         void navigator.clipboard.writeText(
-          `${window.location.origin}/#/salon/${channel.id}`,
+          lienInterne('salon', channel.id),
         );
       },
     },
