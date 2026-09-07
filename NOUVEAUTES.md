@@ -34,6 +34,10 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.10.4
+
+- La fiche de profil est plus grande.
+
 ## 9.10.3
 
 - Un badge qui se donne a la main ne figure plus au catalogue.

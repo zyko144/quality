@@ -1251,7 +1251,15 @@
  */
 .profile__grid {
   display: grid;
-  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  /*
+   * La colonne de gauche grandit un peu, le reste va a droite.
+   *
+   * Elle porte une photo, un nom et un bouton : au-dela de quatre cents
+   * pixels, elle n'aurait plus qu'a s'etaler. Ce qui gagne a la largeur, c'est
+   * la colonne de droite — celle qui porte la biographie, les comptes lies et
+   * les onglets.
+   */
+  grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
 
   /*
    * Plus haute, et avec un plancher.
@@ -1265,8 +1273,8 @@
    * `86vh` monte a `92vh` : sur un ecran ordinaire, cela rend une centaine de
    * pixels a la colonne de droite, celle qui se lit.
    */
-  min-height: min(620px, 78vh);
-  max-height: min(920px, 92vh);
+  min-height: min(680px, 80vh);
+  max-height: min(980px, 92vh);
   position: relative;
   z-index: 1;
 }

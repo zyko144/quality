@@ -952,6 +952,18 @@
   overflow: hidden;
 }
 
+/*
+ * La fiche de profil se donne toute la hauteur qu'elle demande.
+ *
+ * Sa grille est reglee pour monter jusqu'a 92vh — voir `.profile__grid` — et
+ * le plafond ordinaire des boites l'arretait a 85. La carte etait donc rabotee
+ * de sept pour cent de l'ecran, sans que rien ne le dise : on voyait une
+ * colonne de droite un peu courte, pas une regle qui se contredisait.
+ */
+.modal--profil .modal__panel {
+  max-height: 94vh;
+}
+
 .modal__header {
   display: flex;
   align-items: flex-start;

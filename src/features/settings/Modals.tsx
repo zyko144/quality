@@ -581,15 +581,25 @@ function ProfileModal({
   // que la banniere touche le bord et que la carte reste l'objet principal.
   return (
     /*
-      Plus etroite, et plus haute.
+      Plus large qu'elle ne l'a ete, et pour une autre raison qu'avant.
 
-      Neuf cents pixels de large etalaient trois lignes de biographie sur toute
-      la largeur d'un ecran : l'oeil traversait le vide entre l'avatar et le
-      texte, et les onglets paraissaient perdus au milieu. Une fiche de profil
-      se lit de haut en bas — un visage, un nom, ce qu'on en sait — et non de
-      gauche a droite.
+      Neuf cents pixels avaient ete abandonnes du temps ou la fiche etait d'un
+      seul tenant : la biographie s'y etalait sur toute la largeur, l'oeil
+      traversait le vide entre l'avatar et le texte. La fiche a depuis DEUX
+      colonnes — la carte a gauche, ce qu'on lit a droite — et la largeur ne se
+      paie plus de la meme facon : elle va au panneau de droite, qui en manque.
+
+      La hauteur suit dans `modal--profil` : la carte se donne jusqu'a 92vh,
+      que le plafond ordinaire des boites — 85vh — rabotait sans rien dire.
     */
-    <Modal open={open} title="Profil" onClose={onClose} width={880} bare>
+    <Modal
+      open={open}
+      title="Profil"
+      onClose={onClose}
+      width={1120}
+      classe="modal--profil"
+      bare
+    >
       {userId ? <ProfileCard userId={userId} /> : null}
     </Modal>
   );
