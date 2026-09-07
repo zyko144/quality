@@ -67,7 +67,31 @@ export const useMajEtat = create<{
  * Exposee hors du composant : les reglages en ont besoin, et la dupliquer
  * ferait exister deux facons de redemarrer qui pourraient diverger.
  */
+let relanceDemandee = false;
+
+/** Meme verrou pour l'installation. Voir `relancerApplication`. */
+let installationDemandee = false;
+
 export async function relancerApplication(): Promise<void> {
+  /*
+   * Une seule relance, quoi qu'il arrive.
+   *
+   * Le defaut rapporte : « les maj sont bug, ca me relance plein de fois Echow
+   * et apres ca bug, je dois fermer dans la barre des taches ».
+   *
+   * Rien n'empechait ce bouton de partir deux fois. Un verrou pose dans l'etat
+   * de React n'y aurait rien change : `setState` est differe, et deux clics
+   * rapides passent tous les deux avant le rendu suivant. Le drapeau vit donc
+   * hors de React, et il est leve AVANT le premier `await` — c'est la seule
+   * position ou un second appel ne peut pas se glisser.
+   *
+   * Il ne se rabaisse jamais : apres une relance reussie, ce module n'existe
+   * plus. S'il existe encore, c'est que la relance a echoue, et la rejouer ne
+   * ferait qu'ajouter un processus a ceux qui trainent deja.
+   */
+  if (relanceDemandee) return;
+  relanceDemandee = true;
+
   const { relaunch } = await import('@tauri-apps/plugin-process');
   await relaunch();
 }
@@ -254,6 +278,18 @@ export function MiseAJour() {
           version: mise.version,
           notes: mise.body ?? '',
           installer: async () => {
+            /*
+             * Une seule installation, pour la meme raison que la relance.
+             *
+             * Le bouton se desactive bien sur `installation === 'cours'`, mais
+             * c'est un etat React : deux clics rapides passent tous les deux
+             * avant que le rendu ne les arrete. Sur Windows, chaque appel
+             * lance l'installateur — et deux installateurs sur le meme binaire
+             * en cours d'execution, c'est exactement le desordre decrit.
+             */
+            if (installationDemandee) return;
+            installationDemandee = true;
+
             setInstallation('cours');
             await mise.downloadAndInstall();
 
@@ -308,7 +344,20 @@ export function MiseAJour() {
     };
   }, []);
 
-  const relancer = () => void relancerApplication();
+  /*
+   * Le bouton se ferme sur lui-meme des le clic.
+   *
+   * Le verrou de `relancerApplication` suffit a empecher deux relances ; celui
+   * -ci sert a le MONTRER. Un bouton qui reste actif apres un clic qui ne
+   * produit rien de visible invite a recliquer — et c'est precisement ce
+   * qu'on essaie d'eviter.
+   */
+  const [relanceEnCours, setRelanceEnCours] = useState(false);
+
+  const relancer = () => {
+    setRelanceEnCours(true);
+    void relancerApplication();
+  };
 
   return (
     <>
@@ -351,8 +400,14 @@ export function MiseAJour() {
 
           {installation === 'prete' ? (
             <>
-              <button type="button" className="btn btn--sm btn--primary" onClick={relancer}>
-                Relancer
+              <button
+                type="button"
+                className="btn btn--sm btn--primary"
+                disabled={relanceEnCours}
+                onClick={relancer}
+              >
+                {relanceEnCours ? <span className="spinner" /> : null}
+                {relanceEnCours ? 'Relance…' : 'Relancer'}
               </button>
               <button
                 type="button"

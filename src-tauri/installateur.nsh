@@ -58,3 +58,34 @@
   !insertmacro DesinstallerAncien "Quality"
   !insertmacro DesinstallerAncien "Orbit"
 !macroend
+
+; Windows garde l'ancienne icone en memoire, et il faut le lui dire.
+;
+; Le probleme
+; -----------
+; « Force le logo, car la je l'ai pas dans ma barre des taches. »
+;
+; L'icone est bien dans le binaire — elle est compilee dedans — mais Windows
+; ne la relit pas. Il tient un cache d'icones par chemin de fichier, et une
+; mise a jour remplace l'executable SANS changer son chemin : le cache reste
+; donc valable a ses yeux, et le raccourci epingle continue d'afficher
+; l'ancienne image. Parfois pendant des semaines, jusqu'a ce qu'une session
+; se termine.
+;
+; C'est d'autant plus deroutant que l'icone est correcte partout ailleurs —
+; dans l'explorateur, au menu Demarrer — et fausse au seul endroit qu'on
+; regarde tous les jours.
+;
+; Ce qu'on fait
+; -------------
+; `ie4uinit.exe -show` demande a l'interpreteur de commandes de reconstruire
+; son cache d'icones. C'est l'outil que Windows fournit pour cela, present sur
+; toutes les versions prises en charge, et il ne touche a rien d'autre.
+;
+; L'echec est ignore : une icone qui met un jour a se rafraichir n'est pas une
+; raison d'interrompre une installation qui, elle, a reussi.
+!macro NSIS_HOOK_POSTINSTALL
+  ClearErrors
+  ExecWait '"$SYSDIR\ie4uinit.exe" -show'
+  ClearErrors
+!macroend

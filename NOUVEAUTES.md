@@ -34,6 +34,12 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.11.1
+
+- Le salon vocal ne se reconstruit plus tout seul toutes les quarante-six secondes.
+- Les mises a jour ne relancent plus l'application plusieurs fois.
+- Les coins du logo sont arrondis, et l'icone de la barre des taches se rafraichit.
+
 ## 9.11.0
 
 - Nouveau logo, partout : Windows, l'ecran de chargement, le site et l'application.

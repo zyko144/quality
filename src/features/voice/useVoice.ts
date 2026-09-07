@@ -34,6 +34,7 @@ import {
 } from './relance';
 import { PALIERS, prochainPalier } from './allegement';
 import { serveursIce, comporteUnRelais } from './reseau';
+import { presumeMort } from './sante';
 import type { UUID, VoiceParticipant, VoiceSignal } from '@/types/db';
 
 /**
@@ -848,6 +849,28 @@ export const useVoice = create<VoiceState>((set, get) => {
         ),
       ]);
 
+      /*
+       * Le serveur a repondu : le canal est vivant.
+       *
+       * C'est le correctif d'une boucle qui rebatissait le canal toutes les
+       * quarante-six secondes, sur toutes les machines. La surveillance ne
+       * prenait pour signe de vie que le fait de SE VOIR dans la presence — ce
+       * qui n'arrive que dans le rappel `sync`, lequel ne se declenche que si
+       * l'etat CHANGE.
+       *
+       * Or on se republie a l'identique toutes les vingt-cinq secondes. Dans
+       * un salon calme, plus rien ne bougeait apres la premiere
+       * synchronisation, et le canal — parfaitement sain — etait demonte puis
+       * remonte indefiniment. Les traces le disent sans ambiguite : `rebati`
+       * arrive AVANT `CLOSED`, donc le serveur ne fermait rien.
+       *
+       * `track` attend la reponse du serveur. Qu'elle revienne prouve le canal
+       * aussi surement que de s'y voir — et cette preuve-la ne depend pas de
+       * ce que les autres font. Voir `sante.ts`.
+       */
+      derniereFoisVu = Date.now();
+      reconstructionsDeSuite = 0;
+
       // La serie d'echecs est finie : on le dit une fois, puis on oublie.
       if (echecsPublication > 0) {
         journal.info('vocal', 'Presence republiee', { perdues: echecsPublication });
@@ -1222,16 +1245,11 @@ let echecsPublication = 0;
  * publication qui n'aboutit pas, un jeton perime — et continuer a fermer un
  * canal toutes les douze secondes empeche justement celui-ci de s'etablir.
  *
- * L'attente double a chaque essai, jusqu'a deux minutes. Le compteur repart des
- * qu'on se revoit dans la presence, c'est-a-dire des que ca marche.
+ * L'attente double a chaque essai, jusqu'a deux minutes — voir `sante.ts`. Le
+ * compteur repart des qu'un signe de vie revient : une presence ou l'on se
+ * voit, ou une publication acquittee par le serveur.
  */
 let reconstructionsDeSuite = 0;
-
-const ATTENTE_MAX = 120_000;
-
-function attenteAvantReconstruction(): number {
-  return Math.min(SILENCE_CANAL * 2 ** reconstructionsDeSuite, ATTENTE_MAX);
-}
 
 /** Retire les ecouteurs de reveil. Meme mecanique que la minuterie ci-dessus. */
 let arretReveil: (() => void) | null = null;
@@ -1247,21 +1265,6 @@ let derniereFoisVu = 0;
 /** Un canal se rebatit a la fois. */
 let reconstructionEnCours = false;
 
-/**
- * Silence au-dela duquel on considere le canal perdu.
- *
- * Cette borne doit rester bien AU-DESSUS de la cadence a laquelle on se
- * re-annonce, sans quoi elle mesure notre propre retenue et non la sante du
- * canal. A douze secondes pour une republication toutes les vingt, elle
- * declencherait une reconstruction a chaque tour — la boucle d'avant, avec une
- * autre cause.
- *
- * Quarante-cinq secondes : plus du double de la republication, de quoi laisser
- * passer un envoi perdu et le suivant, et assez court pour qu'un canal
- * reellement mort soit repris avant qu'on ait fini de se demander pourquoi
- * plus personne ne repond.
- */
-const SILENCE_CANAL = 45_000;
 
 /**
  * Definition et cause de limitation du dernier releve, pour ce partage.
@@ -2985,7 +2988,7 @@ let cadenceCapture = 0;
          * ne le ressuscitera tout seul.
          */
         const moi = get().userId;
-        if (moi && Date.now() - derniereFoisVu > attenteAvantReconstruction()) {
+        if (moi && presumeMort(derniereFoisVu, Date.now(), reconstructionsDeSuite)) {
           void reconstruireCanal(salon, moi);
         }
 
