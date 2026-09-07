@@ -571,7 +571,44 @@ export async function capturerSonSysteme(
         // Version plus ancienne du binaire : on journalise ce qu'on a.
       }
 
+      /*
+       * Qui fait du bruit, nomme.
+       *
+       * « Y a encore l'echo quand on met tout le son de l'ordi. » Deux
+       * explications ont ete avancees et refutees par ces memes traces : pas de
+       * routeur audio virtuel chez les personnes concernees, et l'exclusion de
+       * notre arborescence bien active — `sansNosVoix: true` partout.
+       *
+       * Deviner une troisieme fois ne vaudrait rien. Ce releve dit quels
+       * programmes produisent du son pendant le partage, avec leur niveau et
+       * s'ils sont des notres. La prochaine fois, le journal nommera la source.
+       */
+      interface Session {
+        programme: string;
+        niveau: number;
+        a_nous: boolean;
+      }
+
+      let sessions: Session[] = [];
+
+      try {
+        sessions = await invoke<Session[]>('sessions_sonores');
+      } catch {
+        // Idem : une version plus ancienne ne connait pas cette commande.
+      }
+
       journal.info('partage', 'Trajet du son', {
+        /*
+         * Les programmes qui jouaient quelque chose pendant la capture.
+         *
+         * En une chaine plutot qu'en objets : le journal range un detail plat,
+         * et une liste lisible d'un coup d'oeil vaut mieux qu'une structure
+         * qu'il faudrait deplier. Le point d'exclamation marque ce qui est a
+         * NOUS — donc ce que Windows aurait du ecarter.
+         */
+        sessions: sessions
+          .map((s) => `${s.a_nous ? '!' : ''}${s.programme}:${s.niveau}`)
+          .join(' '),
         natifPaquets: natif?.paquets ?? -1,
         natifTrames: natif?.trames ?? -1,
         natifSommet: natif?.sommet ?? -1,

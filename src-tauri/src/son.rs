@@ -168,6 +168,109 @@ pub struct DiagnosticSon {
     pub mode: String,
 }
 
+/// Un programme qui produit du son, et ce qu'il produit.
+#[derive(serde::Serialize)]
+pub struct SessionSonore {
+    /// Le nom de l'executable, ou `pid:N` si on ne le retrouve pas.
+    pub programme: String,
+    /// Le niveau instantane, en millieme de la pleine echelle.
+    pub niveau: u32,
+    /// Vrai si ce programme appartient a notre propre arborescence.
+    pub a_nous: bool,
+}
+
+/// Qui fait du bruit, en ce moment, sur la sortie par defaut.
+///
+/// Pourquoi ce releve existe
+/// -------------------------
+/// « Y a encore l'echo quand on met tout le son de l'ordi. » Deux explications
+/// ont ete avancees et REFUTEES par les traces, ce qui est la seule raison
+/// d'ecrire ceci plutot qu'une troisieme.
+///
+/// La premiere : un routeur audio virtuel rejouerait notre son depuis son
+/// propre processus, que Windows capterait alors a bon droit. Faux ici — les
+/// personnes concernees n'en ont pas.
+///
+/// La seconde : notre exclusion ne prendrait pas, parce que le son de
+/// l'application sortirait d'un processus hors de notre arborescence. Faux
+/// aussi : le journal dit `sansNosVoix: true` et `mode: sauf-nous` sur toutes
+/// les machines, et l'arborescence de WebView2 est bien fille de la notre.
+///
+/// Deviner une troisieme fois ne vaut rien. Ce releve nomme les programmes qui
+/// produisent du son pendant un partage, avec leur niveau : la prochaine fois,
+/// le journal dira d'ou vient l'echo au lieu qu'on le cherche.
+///
+/// Il lit les sessions audio de la sortie par defaut. C'est une lecture, sans
+/// aucun effet : rien n'est ouvert, rien n'est modifie.
+#[cfg(windows)]
+#[tauri::command]
+pub fn sessions_sonores() -> Vec<SessionSonore> {
+    unsafe { lire_sessions().unwrap_or_default() }
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+pub fn sessions_sonores() -> Vec<SessionSonore> {
+    Vec::new()
+}
+
+#[cfg(windows)]
+unsafe fn lire_sessions() -> Option<Vec<SessionSonore>> {
+    use windows::Win32::Media::Audio::Endpoints::IAudioMeterInformation;
+    use windows::Win32::Media::Audio::{IAudioSessionControl2, IAudioSessionManager2};
+    use windows::Win32::System::Com::CLSCTX_ALL;
+
+    let enumerateur: IMMDeviceEnumerator =
+        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
+
+    let sortie = enumerateur.GetDefaultAudioEndpoint(eRender, eConsole).ok()?;
+    let gestionnaire: IAudioSessionManager2 = sortie.Activate(CLSCTX_ALL, None).ok()?;
+    let liste = gestionnaire.GetSessionEnumerator().ok()?;
+
+    let combien = liste.GetCount().ok()?;
+    let nous = crate::son::notre_arborescence();
+
+    let mut sessions = Vec::new();
+
+    for index in 0..combien {
+        let Ok(controle) = liste.GetSession(index) else {
+            continue;
+        };
+
+        let Ok(detail) = controle.cast::<IAudioSessionControl2>() else {
+            continue;
+        };
+
+        let pid = detail.GetProcessId().unwrap_or(0);
+
+        // Le niveau se lit sur la session elle-meme : c'est ce qui distingue un
+        // programme ouvert mais muet d'un programme qui joue vraiment.
+        let niveau = controle
+            .cast::<IAudioMeterInformation>()
+            .ok()
+            .and_then(|metre| metre.GetPeakValue().ok())
+            .unwrap_or(0.0);
+
+        // Ce qui ne fait aucun bruit n'apprend rien : on l'ecarte pour que le
+        // releve reste lisible.
+        if niveau < 0.001 {
+            continue;
+        }
+
+        sessions.push(SessionSonore {
+            programme: nom_du_processus(pid).unwrap_or_else(|| format!("pid:{pid}")),
+            niveau: (niveau * 1000.0) as u32,
+            a_nous: nous.contains(&pid),
+        });
+    }
+
+    // Le plus fort en premier : c'est celui-la qu'on soupconne.
+    sessions.sort_by(|a, b| b.niveau.cmp(&a.niveau));
+    sessions.truncate(8);
+
+    Some(sessions)
+}
+
 /// Rend ce que la capture a vu. Sans effet de bord.
 ///
 /// L'interface l'appelle quelques secondes apres le debut d'un partage et le
@@ -528,6 +631,104 @@ fn pid_reel_dune_fenetre_hebergee(
 /// Rend le pid de depart des que quelque chose manque. Le pire cas est le
 /// comportement d'avant.
 #[cfg(windows)]
+/// Tous les processus vivants : identifiant, parent, nom d'executable.
+///
+/// Une seule photographie, prise en une fois. Interroger les processus un a un
+/// couterait un appel systeme par question, et la liste changerait entre deux.
+#[cfg(windows)]
+fn photographie_des_processus() -> Vec<(u32, u32, String)> {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+
+    let mut tous = Vec::new();
+
+    let Ok(instantane) = (unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }) else {
+        return tous;
+    };
+
+    let mut entree = PROCESSENTRY32W {
+        dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+        ..Default::default()
+    };
+
+    if unsafe { Process32FirstW(instantane, &mut entree) }.is_ok() {
+        loop {
+            let fin = entree
+                .szExeFile
+                .iter()
+                .position(|caractere| *caractere == 0)
+                .unwrap_or(entree.szExeFile.len());
+
+            tous.push((
+                entree.th32ProcessID,
+                entree.th32ParentProcessID,
+                String::from_utf16_lossy(&entree.szExeFile[..fin]),
+            ));
+
+            if unsafe { Process32NextW(instantane, &mut entree) }.is_err() {
+                break;
+            }
+        }
+    }
+
+    let _ = unsafe { CloseHandle(instantane) };
+    tous
+}
+
+/// Le nom de l'executable d'un processus, s'il vit encore.
+#[cfg(windows)]
+fn nom_du_processus(pid: u32) -> Option<String> {
+    if pid == 0 {
+        return None;
+    }
+
+    photographie_des_processus()
+        .into_iter()
+        .find(|(identifiant, _, _)| *identifiant == pid)
+        .map(|(_, _, nom)| nom)
+}
+
+/// Notre processus et tous ses descendants.
+///
+/// C'est exactement l'ensemble que Windows exclut de la capture quand on lui
+/// demande « tout, sauf nous ». Le rendre ici permet au releve de dire, pour
+/// chaque programme qui fait du bruit, s'il aurait du etre ecarte — et donc de
+/// distinguer « l'exclusion ne marche pas » de « le son vient d'ailleurs ».
+#[cfg(windows)]
+fn notre_arborescence() -> std::collections::HashSet<u32> {
+    use windows::Win32::System::Threading::GetCurrentProcessId;
+
+    let tous = photographie_des_processus();
+    let mut dedans = std::collections::HashSet::new();
+    dedans.insert(unsafe { GetCurrentProcessId() });
+
+    /*
+     * On repasse jusqu'a ce que plus rien ne s'ajoute.
+     *
+     * Un enfant peut figurer avant son parent dans la photographie : une seule
+     * passe manquerait les petits-enfants, c'est-a-dire justement les
+     * processus de WebView2 qui jouent le son.
+     */
+    loop {
+        let avant = dedans.len();
+
+        for (pid, parent, _) in &tous {
+            if dedans.contains(parent) {
+                dedans.insert(*pid);
+            }
+        }
+
+        if dedans.len() == avant {
+            break;
+        }
+    }
+
+    dedans
+}
+
 fn racine_applicative(depart: u32) -> u32 {
     use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::Diagnostics::ToolHelp::{

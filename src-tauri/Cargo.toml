@@ -51,6 +51,9 @@ windows = { version = "0.58", features = [
   "Win32_Storage_FileSystem",
   # Capture du son du systeme : WASAPI en mode bouclage. Voir `son.rs`.
   "Win32_Media_Audio",
+  # `IAudioMeterInformation` : le niveau d'une session, pour nommer qui
+  # produit du son pendant un partage.
+  "Win32_Media_Audio_Endpoints",
   "Win32_System_Com",
   "Win32_System_Variant",
   "Win32_Media_KernelStreaming",

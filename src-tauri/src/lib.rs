@@ -237,6 +237,7 @@ pub fn run() {
             son::arreter_son_systeme,
             son::lister_sorties_audio,
             son::diagnostic_son,
+            son::sessions_sonores,
             image::demarrer_image,
             image::arreter_image,
             image::cadence_image,

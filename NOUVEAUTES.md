@@ -34,6 +34,10 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.10.7
+
+- Le journal nomme desormais les programmes qui font du son pendant un partage.
+
 ## 9.10.6
 
 - Le clic droit sur un partage repond de nouveau : couper le son, plein ecran, quitter.
