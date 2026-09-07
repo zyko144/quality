@@ -147,6 +147,23 @@ export function journaliser(
 
 /** Raccourcis, parce qu'un journal qu'on trouve verbeux ne s'ecrit pas. */
 export const journal = {
+  /*
+   * Envoie tout de suite ce qui attend.
+   *
+   * Le regroupement de deux secondes rend le journal abordable, et le rend
+   * aveugle a une seule chose : ce qui se passe juste avant que le processus
+   * ne meure. Un plantage emporte le lot en attente, si bien que les lignes
+   * les plus utiles — les dernieres — sont precisement celles qu'on n'a
+   * jamais.
+   *
+   * C'est ce qui a rendu « quand il coupe son stream ca crash » indiagnosticable
+   * : aucune trace, jamais, alors que le partage en ecrit plusieurs.
+   *
+   * A n'appeler qu'avant une operation dont on redoute qu'elle ne revienne
+   * pas. Systematiquement, on paierait un aller-retour par ligne.
+   */
+  vider: () => vider(),
+
   trace: (domaine: string, message: string, detail?: Detail) =>
     journaliser('trace', domaine, message, detail),
   info: (domaine: string, message: string, detail?: Detail) =>

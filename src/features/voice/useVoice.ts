@@ -1550,9 +1550,29 @@ let cadenceCapture = 0;
     arreterDecoupe?.();
     arreterDecoupe = null;
 
+    /*
+     * On pose une trace AVANT de demonter, et on l'envoie tout de suite.
+     *
+     * Le demontage touche a la carte graphique et a l'interface audio de
+     * Windows : c'est le seul endroit du partage ou l'application puisse
+     * mourir sans un mot. Et si elle meurt, le lot en attente meurt avec elle
+     * — d'ou un plantage rapporte depuis des jours sans une seule ligne pour
+     * le situer.
+     *
+     * Cette ligne-ci part immediatement. Si la suivante n'arrive jamais, on
+     * saura que c'est ici, et non ailleurs.
+     */
+    journal.info('partage', 'Arret du partage demande', {
+      son: sonNatif !== null,
+      image: captureNative !== null,
+    });
+    void journal.vider();
+
     couperSonNatif();
     couperCaptureNative();
     stopStats();
+
+    journal.info('partage', 'Partage arrete', {});
 
     set((etat) => {
       const moi = etat.userId;

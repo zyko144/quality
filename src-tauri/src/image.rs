@@ -227,14 +227,53 @@ pub struct Capture {
 }
 
 impl Capture {
-    /// L'image suivante, ou `None` si la capture s'est arretee.
+    /// L'image suivante, ou `None` si rien n'est venu avant l'echeance.
     ///
-    /// Bloque jusqu'a la prochaine image. La source n'en produit pas quand rien
-    /// ne change a l'ecran — une fenetre immobile n'a rien de neuf a dire — et
-    /// c'est voulu : reemettre une image identique couterait un encodage pour
-    /// rien.
+    /// **Elle attend, mais pas indefiniment**, et c'est le point qui compte.
+    ///
+    /// Elle bloquait sans limite : `recv()` ne rend la main qu'a l'arrivee
+    /// d'une image ou a la fermeture du canal. Or la source ne produit RIEN
+    /// quand rien ne bouge — une fenetre immobile n'a rien de neuf a dire, et
+    /// c'est voulu.
+    ///
+    /// Arreter un partage ne faisait qu'incrementer un compteur, que le fil de
+    /// lecture ne relit qu'entre deux images. Devant une source immobile, il
+    /// restait donc bloque pour toujours : la capture n'etait jamais fermee, la
+    /// session, la reserve, l'appareil Direct3D et le reducteur video
+    /// continuaient d'exister. Rouvrir un partage en ouvrait un SECOND
+    /// par-dessus.
+    ///
+    /// Deux cent cinquante millisecondes : assez court pour que l'arret soit
+    /// immediat a l'oeil, assez long pour ne pas reveiller le fil pour rien
+    /// pendant qu'un partage tourne.
     pub fn suivante(&self) -> Option<Image> {
-        self.images.recv().ok()
+        self.images
+            .recv_timeout(std::time::Duration::from_millis(250))
+            .ok()
+    }
+
+    /// Ferme la capture, explicitement et dans l'ordre.
+    ///
+    /// Elle ne l'etait pas : on laissait `Drop` s'en charger, dans l'ordre des
+    /// champs et au moment ou le fil de lecture se terminait — c'est-a-dire a
+    /// un instant qu'on ne choisissait pas, depuis un fil qu'on ne choisissait
+    /// pas non plus.
+    ///
+    /// Le rappel `FrameArrived` tourne sur un fil du systeme et tient l'appareil
+    /// Direct3D, les textures d'attente et le processeur video. Detruire la
+    /// reserve pendant qu'il travaille libere sous ses pieds des objets qu'il
+    /// est en train d'utiliser. C'est le genre de course qui ne se produit que
+    /// sur certaines machines — celles dont le pilote rend la main plus
+    /// lentement — et qui ressemble alors a « chez lui ca plante, chez moi
+    /// non ».
+    ///
+    /// `Close()` sur la session arrete l'emission ; `Close()` sur la reserve
+    /// attend que le rappel ait fini avant de rendre la main. L'ordre n'est pas
+    /// indifferent : l'inverse fermerait la reserve pendant que la session lui
+    /// envoie encore des images.
+    pub fn arreter(&self) {
+        let _ = self._session.Close();
+        let _ = self._reserve.Close();
     }
 
     /// L'image suivante si elle est deja la, sans attendre.
@@ -1010,8 +1049,17 @@ pub fn demarrer_image(source: String, images: u32) -> Result<FluxImage, String> 
 
     std::thread::spawn(move || {
         while GENERATION.load(Ordering::SeqCst) == generation {
+            /*
+             * Rien n'est venu avant l'echeance : on remonte relire la
+             * generation.
+             *
+             * C'est le seul chemin par lequel un partage d'une source immobile
+             * s'arrete. `continue` et non `break` : une source qui ne bouge pas
+             * n'est pas une source finie, et sortir ici couperait le partage
+             * d'une fenetre qu'on regarde sans y toucher.
+             */
             let Some(image) = capture.suivante() else {
-                break;
+                continue;
             };
 
             /*
@@ -1029,6 +1077,17 @@ pub fn demarrer_image(source: String, images: u32) -> Result<FluxImage, String> 
                 NON_SERVIES.fetch_add(1, Ordering::Relaxed);
             }
         }
+
+        /*
+         * On ferme ici, sur le fil qui possede la capture.
+         *
+         * `Drop` s'en serait charge, mais dans l'ordre des champs et sans
+         * attendre que le rappel d'arrivee ait fini son travail. `arreter`
+         * ferme la session puis la reserve, et cette seconde fermeture attend
+         * le rappel — c'est elle qui evite de liberer sous ses pieds des objets
+         * qu'il utilise encore.
+         */
+        capture.arreter();
     });
 
     std::thread::spawn(move || {

@@ -34,6 +34,11 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.12.2
+
+- Arreter un partage ne peut plus faire planter l'application.
+- Un partage arrete l'est vraiment, meme si la fenetre partagee ne bougeait plus.
+
 ## 9.12.0
 
 - Des webhooks : un programme externe peut ecrire dans un salon par une adresse secrete.
