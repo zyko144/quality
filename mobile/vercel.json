@@ -4,7 +4,8 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
+  "comment_rewrites": "Toute adresse inconnue rend l'application. C'est ce qui fait exister /app et /invite/<code> : ce sont des chemins que le navigateur demande au serveur, et aucun fichier ne porte ce nom. Sans cela, revenir de Google ou de Discord tombait sur le 404 de Vercel. La forme precedente excluait /api/ par une anticipation negative — il n'y a aucune route serveur dans ce projet, et cette subtilite ne servait qu'a rendre la regle fragile.",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "headers": [
     {
       "source": "/(.*)",
