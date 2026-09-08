@@ -23,11 +23,11 @@
   "rewrites": [
     {
       "source": "/invite/:code",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/app",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ]
 }
