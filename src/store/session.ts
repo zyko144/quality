@@ -5,6 +5,7 @@ import type { Profile, PresenceStatus } from '@/types/db';
 import { setNePasDeranger as setSonsSilencieux } from '@/lib/sounds';
 import { setNePasDeranger as setNotificationsSilencieuses } from '@/lib/notify';
 import { origineePublique } from '@/lib/adressePublique';
+import { reprendreLeProfilDiscord } from '@/features/auth/discord';
 
 /**
  * L'adresse de l'application web.
@@ -332,6 +333,7 @@ interface SessionState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithDiscord: () => Promise<void>;
   signOut: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<boolean>;
   updatePassword: (password: string) => Promise<boolean>;
@@ -444,6 +446,16 @@ export const useSession = create<SessionState>((set, get) => ({
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       set({ session, loading: false });
 
+      /*
+       * Le jeton de Discord ne passe qu'ici.
+       *
+       * Il accompagne la session au retour de l'autorisation et n'est jamais
+       * conserve : au rendu suivant, il n'existe plus. Le rapatriement de la
+       * banniere doit donc partir de cet evenement, sans quoi il n'aurait plus
+       * de quoi interroger Discord.
+       */
+      if (event === 'SIGNED_IN') void reprendreLeProfilDiscord(session);
+
       if (event === 'SIGNED_OUT') {
         set({ profile: null, recovering: false });
         return;
@@ -527,6 +539,35 @@ export const useSession = create<SessionState>((set, get) => ({
    * et ouvre la session. Il n'y a donc rien a attendre ici : soit la
    * redirection part, soit elle echoue et l'on affiche pourquoi.
    */
+  /**
+   * Connexion par Discord.
+   *
+   * Meme chemin que Google, a une chose pres : les autorisations demandees.
+   * `identify` donne le pseudo et la photo ; sans lui, Discord ne rend qu'un
+   * identifiant numerique, et le compte arriverait sans nom ni image. `email`
+   * evite d'avoir a en redemander une — Supabase en exige une par compte.
+   *
+   * La banniere ne s'obtient pas ici : voir `features/auth/discord.ts`.
+   */
+  signInWithDiscord: async () => {
+    set({ error: null });
+
+    const targetRedirect = `${origineePublique()}/app`;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: {
+        redirectTo: targetRedirect,
+        scopes: 'identify email',
+      },
+    });
+
+    if (error) {
+      set({ error: errorMessage(error) });
+      throw error;
+    }
+  },
+
   signInWithGoogle: async () => {
     set({ error: null });
 

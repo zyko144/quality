@@ -34,6 +34,11 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.14.0
+
+- Connexion par Discord.
+- Le compte Discord amene sa photo, sa banniere et son nom.
+
 ## 9.13.1
 
 - Nouvelle base de donnees : les comptes et les serveurs sont a recreer.

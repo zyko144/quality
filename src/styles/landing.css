@@ -608,10 +608,29 @@
    Connexion par un fournisseur tiers
    -------------------------------------------------------------------------- */
 
-.auth__google {
+.auth__google,
+.auth__discord {
   gap: var(--space-3);
   min-height: 46px;
   font-weight: var(--weight-medium);
+}
+
+/*
+ * Le bouton Discord porte la couleur de la marque.
+ *
+ * Google impose un bouton neutre par ses regles d'usage ; Discord non, et un
+ * second bouton gris sous le premier se lit comme la meme chose repetee. La
+ * couleur dit d'un coup d'oeil qu'il s'agit d'un autre chemin.
+ */
+.auth__discord {
+  margin-top: var(--space-2);
+  border-color: transparent;
+  background: #5865f2;
+  color: #fff;
+}
+
+.auth__discord:hover:not(:disabled) {
+  background: #4752c4;
 }
 
 /* Separateur avec libelle : un trait seul laisserait croire a une simple

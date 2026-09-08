@@ -3,6 +3,7 @@ import { useSession } from '@/store/session';
 import { Icon } from '@/components/Icon';
 import { QualityLogo } from '@/components/QualityLogo';
 import { navigate } from '@/lib/router';
+import { DiscordMark } from '@/components/DiscordMark';
 import { GoogleMark } from '@/components/GoogleMark';
 import { AntiRobot } from '@/features/onboarding/AntiRobot';
 
@@ -17,9 +18,10 @@ export function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const { signIn, signUp, signInWithGoogle, requestPasswordReset, error, clearError } =
+  const { signIn, signUp, signInWithGoogle, signInWithDiscord, requestPasswordReset, error, clearError } =
     useSession();
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [discordBusy, setDiscordBusy] = useState(false);
   const [robotOk, setRobotOk] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -120,7 +122,7 @@ export function AuthScreen() {
             d'application entre le lancement et la connexion.
           */}
           <span
-            className={'auth__mark' + (busy || googleBusy ? ' is-occupe' : '')}
+            className={'auth__mark' + (busy || googleBusy || discordBusy ? ' is-occupe' : '')}
             aria-hidden="true"
           >
             <QualityLogo size={54} />
@@ -175,6 +177,28 @@ export function AuthScreen() {
               >
                 {googleBusy ? <span className="spinner" /> : <GoogleMark size={18} />}
                 Continuer avec Google
+              </button>
+
+              {/*
+                Discord sous Google, et non l'inverse.
+
+                Ce n'est pas un classement : le compte Discord reprend la photo,
+                la banniere et le nom, ce que Google ne fait pas. Mais changer
+                l'ordre d'un ecran de connexion fait cliquer a cote ceux qui
+                le connaissent — et ils sont deja passes par Google.
+              */}
+              <button
+                type="button"
+                className="btn btn--block auth__discord"
+                disabled={discordBusy}
+                onClick={() => {
+                  setDiscordBusy(true);
+                  clearError();
+                  void signInWithDiscord().catch(() => setDiscordBusy(false));
+                }}
+              >
+                {discordBusy ? <span className="spinner" /> : <DiscordMark size={18} />}
+                Continuer avec Discord
               </button>
 
               <div className="auth__separator">
