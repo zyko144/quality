@@ -34,6 +34,11 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.13.1
+
+- Nouvelle base de donnees : les comptes et les serveurs sont a recreer.
+- Les images ne se retelechargent plus a chaque fois qu'on les regarde.
+
 ## 9.13.0
 
 - On peut glisser un salon dans une categorie, directement dans la barre laterale.
