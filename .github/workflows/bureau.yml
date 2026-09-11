@@ -301,3 +301,35 @@ jobs:
           cp "$paquet" Quality-setup.exe
           etiquette=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           gh release upload "$etiquette" Echow-setup.exe Quality-setup.exe --clobber
+
+      # ----------------------------------------------------------------------
+      # Prevenir les applications ouvertes.
+      #
+      # Elles ne cherchaient une version qu'au demarrage puis tous les quarts
+      # d'heure : une correction publiee attendait jusqu'a quinze minutes avant
+      # de s'annoncer. On leur diffuse un signal ici, une fois la publication
+      # complete — archive, `latest.json` et copie au nom fixe deposes — et
+      # chacune cherche aussitot.
+      #
+      # La cle publiable suffit : le signal ne porte aucun droit, il reveille.
+      # C'est GitHub qui dit ce qui est publie, et la signature qui autorise
+      # l'installation ; un faux signal ne couterait qu'une recherche pour rien.
+      #
+      # `continue-on-error` : une application prevenue en retard retrouvera la
+      # version par sa recherche ordinaire. Un signal perdu ne vaut pas de
+      # marquer en echec une publication reussie.
+      # ----------------------------------------------------------------------
+      - name: Prevenir les applications
+        if: steps.version.outputs.publier == 'oui' && matrix.nom == 'Windows'
+        continue-on-error: true
+        shell: bash
+        env:
+          URL: ${{ secrets.VITE_SUPABASE_URL }}
+          PUB: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          curl -fsS -X POST "$URL/realtime/v1/api/broadcast" \
+            -H "apikey: $PUB" \
+            -H "Content-Type: application/json" \
+            -d "{\"messages\":[{\"topic\":\"mises-a-jour\",\"event\":\"publiee\",\"payload\":{\"version\":\"$VERSION\"}}]}"
+          echo "Applications prevenues : $VERSION"

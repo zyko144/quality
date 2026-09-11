@@ -34,6 +34,12 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.14.4
+
+- Les sons d'arrivee et de depart en vocal sont instantanes, et on les entend des deux cotes.
+- Quand quelqu'un quitte un salon, les autres le voient et l'entendent partir tout de suite.
+- Une mise a jour s'annonce des qu'elle est publiee.
+
 ## 9.14.3
 
 - Les photos de profil Discord s'affichent a nouveau dans l'application de bureau.

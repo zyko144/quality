@@ -5,6 +5,7 @@ import { Modal } from '@/components/Modal';
 import { lireLesNotes } from './notes';
 import { notesManquees, resumerCumul, type Notes } from './cumul';
 import { journal } from '@/lib/journal';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Mises a jour, sans reinstaller.
@@ -359,9 +360,67 @@ export function MiseAJour() {
       void chercher();
     }, INTERVALLE_RECHERCHE);
 
+    /*
+     * Prevenu des la fin de la construction, sans attendre le prochain tour.
+     *
+     * Le quart d'heure ci-dessus faisait attendre jusqu'a quinze minutes une
+     * version deja publiee. L'atelier de publication diffuse maintenant un
+     * signal a la fin de sa construction, et chaque application ouverte cherche
+     * aussitot.
+     *
+     * Le signal ne fait que reveiller : c'est toujours GitHub qui dit ce qui est
+     * publie, et la signature de l'archive qui dit si on peut l'installer. Un
+     * faux signal ne couterait qu'une recherche pour rien.
+     *
+     * Plusieurs essais, parce que le fichier que lit la recherche peut mettre
+     * quelques secondes a etre servi a jour apres la publication : chercher une
+     * seule fois, trop tot, aurait conclu « a jour » et l'on en serait reste la.
+     */
+    let relances: number[] = [];
+
+    const signal = supabase
+      .channel('mises-a-jour')
+      .on('broadcast', { event: 'publiee' }, ({ payload }) => {
+        const annoncee =
+          payload && typeof (payload as { version?: unknown }).version === 'string'
+            ? (payload as { version: string }).version
+            : null;
+
+        for (const relance of relances) window.clearTimeout(relance);
+
+        relances = [0, 5_000, 20_000, 60_000].map((attente) =>
+          window.setTimeout(() => {
+            if (annule) return;
+            // Deja trouvee : les essais suivants n'apprendraient rien.
+            if (annoncee !== null && useMajEtat.getState().version === annoncee) return;
+            void chercher();
+          }, attente),
+        );
+      })
+      .subscribe();
+
+    /*
+     * Et au retour devant la fenetre.
+     *
+     * Une application qui dormait — ordinateur en veille, reseau coupe — a pu
+     * manquer le signal. Revenir devant elle est le moment ou l'on regarde :
+     * c'est la qu'une version en attente doit s'annoncer. Une fois par minute
+     * au plus, pour ne pas chercher a chaque changement de fenetre.
+     */
+    const auRetour = () => {
+      if (document.visibilityState !== 'visible') return;
+      const derniere = useMajEtat.getState().verifie ?? 0;
+      if (Date.now() - derniere < 60_000) return;
+      void chercher();
+    };
+    document.addEventListener('visibilitychange', auRetour);
+
     return () => {
       annule = true;
       window.clearInterval(minuterie);
+      for (const relance of relances) window.clearTimeout(relance);
+      document.removeEventListener('visibilitychange', auRetour);
+      void supabase.removeChannel(signal);
     };
   }, []);
 

@@ -23,6 +23,7 @@ import { capturerSonSysteme, type SonSysteme } from './sonSysteme';
 import { sourceDuSon } from './sonPartage';
 import { journal } from '@/lib/journal';
 import { decider, etatPairsVide } from './pairs';
+import { arriveesASignaler, departASignaler, etatSignauxVide } from './signaux';
 import { noter, etatMartelementVide } from './martelement';
 import { ajuster } from './cadence';
 import { attenteAvantAnnonce, retenirAnnonce, REPUBLICATION_PRESENCE } from './annonces';
@@ -108,6 +109,22 @@ interface Deplacement {
 }
 
 /**
+ * « Je m'en vais. »
+ *
+ * Envoye a tout le salon par qui clique sur « Quitter », juste avant de retirer
+ * sa presence. Sans lui, les autres n'apprenaient le depart qu'en constatant
+ * l'absence — cinq secondes de marge, pendant lesquelles la tuile restait, la
+ * connexion aussi, et le son de depart attendait. La marge reste pour les
+ * departs que personne n'annonce : une fenetre fermee, un plantage.
+ *
+ * Sans destinataire : il vaut pour tous.
+ */
+interface Depart {
+  kind: 'depart';
+  from: UUID;
+}
+
+/**
  * « Je t'attends, renvoie-moi une offre. »
  *
  * Emise par celui qui REGARDE, pas par celui qui partage — lui seul sait qu'il
@@ -151,7 +168,8 @@ type VoiceMessage =
   | Refus
   | Deplacement
   | Reoffre
-  | Allegement;
+  | Allegement
+  | Depart;
 
 /**
  * Salons vocaux en WebRTC maille.
@@ -510,6 +528,14 @@ let salonEnJonction: UUID | null = null;
 
 /** Ce que la decision sur les pairs retient d'une synchronisation a l'autre. */
 const etatPairs = etatPairsVide();
+
+/*
+ * Ce que les sons d'arrivee et de depart retiennent d'un instantane a l'autre.
+ * Voir `signaux.ts`. Remis a neuf en entrant dans un salon et en le quittant —
+ * pas quand le canal est reconstruit : son premier instantane decrirait alors
+ * les memes personnes comme autant d'arrivees.
+ */
+let etatSignaux = etatSignauxVide();
 
 const streamPurposes = new Map<string, StreamPurpose>();
 /** Pistes recues avant leur annonce, a reclasser une fois celle-ci arrivee. */
@@ -2576,6 +2602,9 @@ let cadenceCapture = 0;
         return;
       }
 
+      // Un depart est traite avant d'arriver ici ; ce test le dit au typage,
+      // et rien d'autre ne passe par la que des candidats.
+      if (signal.kind !== 'ice') return;
       await connection.addIceCandidate(signal.candidate);
     } catch {
       // Un candidat arrive avant sa description distante est sans consequence :
@@ -2670,6 +2699,25 @@ let cadenceCapture = 0;
       room
         .on('broadcast', { event: 'voice-signal' }, ({ payload }) => {
         const message = payload as VoiceMessage;
+
+        /*
+         * Un depart annonce vaut pour tout le salon : il n'a pas de
+         * destinataire, et passe donc avant le tri qui suit.
+         *
+         * Le son joue et la connexion tombe tout de suite. Attendre la fin de
+         * la marge ne servait qu'a garder cinq secondes une tuile, une
+         * connexion et un silence pour quelqu'un qui avait deja raccroche.
+         */
+        if ('kind' in message && message.kind === 'depart') {
+          if (message.from === userId) return;
+          if (departASignaler(etatSignaux, message.from)) playCue('peer-leave');
+
+          etatPairs.absences.delete(message.from);
+          etatPairs.attentes.delete(message.from);
+          if (peers.has(message.from)) dropPeer(message.from);
+          return;
+        }
+
         if (message.to !== userId) return;
 
         if ('kind' in message && message.kind === 'deconnexion') {
@@ -2722,6 +2770,25 @@ let cadenceCapture = 0;
         set((state) => ({
           participantsByChannel: { ...state.participantsByChannel, [channelId]: participants },
         }));
+
+        /*
+         * Le son d'arrivee part au premier instantane qui montre la personne.
+         *
+         * Il etait joue a l'ouverture de la connexion, ce que seul le cote au
+         * plus petit identifiant fait : pour la moitie des paires, on
+         * n'entendait jamais l'autre arriver. Voir `signaux.ts`.
+         *
+         * Un seul son pour plusieurs arrivees simultanees, et il se coupe par
+         * serveur : precieux a trois, penible a deux cents.
+         */
+        const arrivees = arriveesASignaler(
+          userId,
+          participants.map((participant) => participant.user_id),
+          etatSignaux,
+          Date.now(),
+        );
+        if (arrivees.length > 0 && sonVocalActif(channelId)) playCue('peer-join');
+
         syncPeers(participants);
 
         // La presence vient de parler : un flux qu'on ne savait pas classer
@@ -2845,13 +2912,12 @@ let cadenceCapture = 0;
     for (const pair of decision.retirer) {
       journal.info('vocal', 'Pair retire apres absence confirmee', { pair });
       dropPeer(pair);
-      playCue('peer-leave');
+      // En secours seulement : un depart annonce a deja joue son son.
+      if (departASignaler(etatSignaux, pair)) playCue('peer-leave');
     }
 
+    // Plus de son ici : l'arrivee se signale sur la presence, des deux cotes.
     for (const pair of decision.ouvrir) {
-      // Le signal d'arrivee se coupe par serveur : precieux a trois, penible
-      // a deux cents.
-      if (sonVocalActif(get().channelId)) playCue('peer-join');
       createPeer(pair, localStream);
     }
 
@@ -3148,6 +3214,10 @@ let cadenceCapture = 0;
         if (Date.now() - dernierEnvoiPresence >= REPUBLICATION_PRESENCE) publishState();
       }, 3000);
 
+      // Un salon neuf : son premier instantane decrit les gens deja la, pas
+      // des arrivees a saluer.
+      etatSignaux = etatSignauxVide();
+
       // Le canal, ses ecouteurs et sa reprise vivent dans `ouvrirCanal` : il
       // faut pouvoir le refaire sans refaire le micro ni les connexions.
       if (!(await ouvrirCanal(channelId, userId))) return;
@@ -3203,6 +3273,7 @@ let cadenceCapture = 0;
       allegementApplique.clear();
       etatPairs.absences.clear();
       etatPairs.attentes.clear();
+      etatSignaux = etatSignauxVide();
 
       relacherMicro();
       couperSonNatif();
@@ -3224,10 +3295,20 @@ let cadenceCapture = 0;
        */
       if (room) {
         const ferme = room;
+        const moi = get().userId;
         room = null;
 
         void (async () => {
           try {
+            // L'annonce d'abord : c'est elle qui fait partir le son et tomber
+            // la connexion chez les autres, sans attendre la fin de leur marge.
+            if (moi) {
+              await ferme.send({
+                type: 'broadcast',
+                event: 'voice-signal',
+                payload: { kind: 'depart', from: moi } satisfies Depart,
+              });
+            }
             await ferme.untrack();
             await supabase.removeChannel(ferme);
           } catch {
