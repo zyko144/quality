@@ -106,6 +106,14 @@ function translate(message: string): string {
     'Unsupported provider: provider is not enabled':
       'La connexion Google n’est pas encore activee sur ce projet. ' +
       'Activez-la dans Authentication puis Providers, cote Supabase.',
+    // Le service d'envoi integre a Supabase est tres limite : quelques
+    // e-mails par heure, parfois pour les seules adresses de l'equipe. Sans
+    // traduction, ces refus s'affichaient en anglais, sous le formulaire.
+    'Error sending confirmation email':
+      'Le mail de confirmation n’a pas pu etre envoye : le service d’envoi du ' +
+      'projet refuse cette adresse ou a atteint sa limite. Reessayez plus tard.',
+    'email rate limit exceeded':
+      'Le projet a envoye trop d’e-mails en peu de temps. Reessayez dans une heure.',
     'For security purposes, you can only request this after 60 seconds.':
       'Pour des raisons de securite, reessayez dans une minute.',
   };
@@ -116,6 +124,12 @@ function translate(message: string): string {
   // aussi les cas courants par fragment, faute de quoi une reformulation cote
   // Supabase reviendrait a afficher de l'anglais technique.
   const lowered = message.toLowerCase();
+  if (lowered.includes('not authorized') && lowered.includes('email')) {
+    return (
+      'Cette adresse n’est pas acceptee par le service d’envoi du projet : le ' +
+      'mail de confirmation ne peut pas lui etre envoye.'
+    );
+  }
   if (lowered.includes('provider is not enabled') || lowered.includes('unsupported provider')) {
     return (
       'La connexion Google n’est pas activee sur ce projet Supabase. ' +

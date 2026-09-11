@@ -4,6 +4,7 @@ import { Icon } from '@/components/Icon';
 import { QualityLogo } from '@/components/QualityLogo';
 import { navigate } from '@/lib/router';
 import { DiscordMark } from '@/components/DiscordMark';
+import { messageInscription } from './inscription';
 import { GoogleMark } from '@/components/GoogleMark';
 import { AntiRobot } from '@/features/onboarding/AntiRobot';
 
@@ -46,12 +47,17 @@ export function AuthScreen() {
       } else if (mode === 'signin') {
         await signIn(email.trim(), password);
       } else {
-        await signUp(email.trim(), password, username.trim());
-        setNotice(
-          'Compte cree. Si la confirmation par e-mail est active sur le projet, ' +
-            'validez le lien recu avant de vous connecter.',
-        );
-        setMode('signin');
+        const adresse = email.trim();
+        const issue = await signUp(adresse, password, username.trim());
+        const message = messageInscription(issue, adresse);
+
+        // Session ouverte : l'ecouteur de session fait entrer, il n'y a rien a
+        // dire. Sinon on dit ce qui s'est passe, et l'on passe a la connexion,
+        // qui est la prochaine chose a faire.
+        if (message) {
+          setNotice(message);
+          setMode('signin');
+        }
       }
     } catch {
       // Le message est deja dans le store, affiche plus bas.

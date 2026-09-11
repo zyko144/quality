@@ -34,6 +34,10 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.14.5
+
+- Creer un compte dit clairement ce qui se passe : e-mail envoye, adresse deja inscrite, ou envoi refuse.
+
 ## 9.14.4
 
 - Les sons d'arrivee et de depart en vocal sont instantanes, et on les entend des deux cotes.

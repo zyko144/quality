@@ -6,6 +6,8 @@ import { setNePasDeranger as setSonsSilencieux } from '@/lib/sounds';
 import { setNePasDeranger as setNotificationsSilencieuses } from '@/lib/notify';
 import { reprendreLeProfilDiscord } from '@/features/auth/discord';
 import { retourApresFournisseur } from '@/lib/retourBureau';
+import { journal } from '@/lib/journal';
+import { issueInscription, type IssueInscription } from '@/features/auth/inscription';
 
 /**
  * L'adresse de l'application web.
@@ -331,7 +333,8 @@ interface SessionState {
 
   initialize: () => () => void;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string) => Promise<void>;
+  /** Rend ce que Supabase a fait de l'inscription : voir `inscription.ts`. */
+  signUp: (email: string, password: string, username: string) => Promise<IssueInscription>;
   signInWithGoogle: () => Promise<void>;
   signInWithDiscord: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -483,17 +486,31 @@ export const useSession = create<SessionState>((set, get) => ({
 
   signUp: async (email, password, username) => {
     set({ error: null });
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       // Le declencheur `handle_new_user` lit ces metadonnees pour creer le
       // profil et l'espace de demarrage.
       options: { data: { username: username.toLowerCase(), display_name: username } },
     });
+
+    /*
+     * L'issue est journalisee, sans l'adresse.
+     *
+     * « La creation de compte ne fait rien » ne se tranchait pas depuis la
+     * console : l'inscription n'y laissait aucune trace, reussie ou non. Une
+     * ligne suffit a distinguer un e-mail parti, une adresse deja inscrite et
+     * un envoi refuse — l'adresse elle-meme n'y apprendrait rien de plus.
+     */
     if (error) {
+      journal.alerte('session', 'Inscription refusee', { cause: error.message });
       set({ error: errorMessage(error) });
       throw error;
     }
+
+    const issue = issueInscription(data);
+    journal.info('session', 'Inscription', { issue });
+    return issue;
   },
 
   /**
