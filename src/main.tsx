@@ -27,6 +27,8 @@ import { useSession } from '@/store/session';
 import { suivreLesLiens } from './lib/liens';
 import { installerJournal, journalAuteur } from './lib/journal';
 import { useChat } from './store/chat';
+import { supabase } from './lib/supabase';
+import { adresseDeRetour, afficheLeSite, origineLocale } from './lib/retourBureau';
 
 // Le volume des signaux est lu au demarrage : sans cela, le reglage
 // enregistre ne prendrait effet qu'apres avoir rouvert les parametres.
@@ -111,6 +113,31 @@ suivreLesLiens();
  */
 installerJournal();
 
+/*
+ * Un morceau de l'application introuvable : on recharge, une fois.
+ *
+ * Les morceaux charges a la demande changent de nom a chaque version. Une page
+ * ouverte avant un deploiement reclame ceux de la precedente, que le serveur
+ * ne sert plus — « Failed to fetch dynamically imported module », a
+ * l'ouverture du partage d'ecran, d'un reglage, de tout ce qui n'est pas
+ * charge au demarrage. Recharger apporte les bons noms.
+ *
+ * Une fois par minute au plus : si le morceau manque vraiment, recharger en
+ * boucle n'y changerait rien et rendrait la page inutilisable.
+ */
+window.addEventListener('vite:preloadError', (evenement) => {
+  try {
+    const derniere = Number(sessionStorage.getItem('echow:rechargement-module') ?? 0);
+    if (Date.now() - derniere < 60_000) return;
+    sessionStorage.setItem('echow:rechargement-module', String(Date.now()));
+  } catch {
+    return;
+  }
+
+  evenement.preventDefault();
+  window.location.reload();
+});
+
 // On supprime les service workers s'ils existent (pour forcer la mise a jour de l'app bureau)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -129,7 +156,35 @@ if ('serviceWorker' in navigator) {
  */
 useSession.subscribe((etat) => journalAuteur(etat.profile?.id ?? null));
 
-void root().then((screen) => {
+/*
+ * La fenetre de bureau ne tourne jamais depuis le site.
+ *
+ * Apres Google ou Discord, Supabase pouvait la renvoyer sur
+ * `echowebplayer.vercel.app` : la version web, chargee depuis Internet, dans
+ * la fenetre de bureau. Tauri y refuse tout ce qui depend du bureau — les
+ * boutons de la fenetre, le partage d'ecran, la touche du micro, la recherche
+ * de mise a jour. Voir `retourBureau.ts`.
+ *
+ * On ne rend donc rien : on renvoie la fenetre a l'application locale en lui
+ * passant la session, et le voile de chargement tient pendant ce temps.
+ * Rendre d'abord montrerait une interface dont la moitie refuse de marcher, le
+ * temps d'une seconde qui suffit a cliquer dedans.
+ *
+ * `getSession` attend que le client ait lu le retour du fournisseur dans
+ * l'adresse : la session existe donc deja quand on la transmet.
+ */
+const surLeSite = afficheLeSite(window.location.protocol, '__TAURI_INTERNALS__' in window);
+
+if (surLeSite) {
+  const origine = origineLocale(navigator.userAgent);
+
+  void supabase.auth
+    .getSession()
+    .then(({ data }) => window.location.replace(adresseDeRetour(origine, data.session)))
+    .catch(() => window.location.replace(adresseDeRetour(origine, null)));
+}
+
+if (!surLeSite) void root().then((screen) => {
   createRoot(container).render(
     <StrictMode>
       {screen}

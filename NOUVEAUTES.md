@@ -34,6 +34,10 @@ morceaux de phrase — « tenir. », « se donnent. ». Le decoupage recolle
 desormais les lignes d'une meme puce, mais une puce assez courte pour tenir
 sur une ligne n'a de toute facon pas ce probleme.
 
+## 9.14.2
+
+- Apres une connexion Google ou Discord, le partage d'ecran, le micro et les boutons de la fenetre marchent a nouveau.
+
 ## 9.14.1
 
 - Reduire, agrandir et fermer marchent a nouveau, sur tous les ecrans.

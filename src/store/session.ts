@@ -4,8 +4,8 @@ import { supabase, errorMessage, isSessionFailure } from '@/lib/supabase';
 import type { Profile, PresenceStatus } from '@/types/db';
 import { setNePasDeranger as setSonsSilencieux } from '@/lib/sounds';
 import { setNePasDeranger as setNotificationsSilencieuses } from '@/lib/notify';
-import { origineePublique } from '@/lib/adressePublique';
 import { reprendreLeProfilDiscord } from '@/features/auth/discord';
+import { retourApresFournisseur } from '@/lib/retourBureau';
 
 /**
  * L'adresse de l'application web.
@@ -552,7 +552,7 @@ export const useSession = create<SessionState>((set, get) => ({
   signInWithDiscord: async () => {
     set({ error: null });
 
-    const targetRedirect = `${origineePublique()}/app`;
+    const targetRedirect = retourApresFournisseur();
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
@@ -571,9 +571,10 @@ export const useSession = create<SessionState>((set, get) => ({
   signInWithGoogle: async () => {
     set({ error: null });
 
-    // Meme calcul que pour les liens qu'on donne a quelqu'un : voir
-    // `adressePublique.ts`. Il vivait ici, pour ce seul cas.
-    const targetRedirect = `${origineePublique()}/app`;
+    // Chez soi sur le bureau, l'adresse publique ailleurs : voir
+    // `retourApresFournisseur`. Revenir sur l'adresse publique faisait
+    // afficher le SITE dans la fenetre de bureau.
+    const targetRedirect = retourApresFournisseur();
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
