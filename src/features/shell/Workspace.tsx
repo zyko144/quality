@@ -9,7 +9,6 @@ import { SpaceRail } from './SpaceRail';
 import { Sidebar } from './Sidebar';
 import { SidePanel } from './SidePanel';
 import { ChannelHeader } from '@/features/channels/ChannelHeader';
-import { WindowControls } from '@/components/WindowControls';
 import { MiseAJour } from './MiseAJour';
 import { SortieAudio } from '@/features/voice/SortieAudio';
 import { Sonnerie } from '@/features/voice/Sonnerie';
@@ -433,12 +432,6 @@ export function Workspace() {
     >
       {/* Sans rendu : il observe ce qui joue et l'annonce, si le reglage le veut. */}
       <SuiviEcoute />
-
-      {/* Reduire, agrandir, fermer — la barre du systeme est desactivee, ces
-          commandes vivent maintenant dans l'application. Posees une seule fois
-          et en position fixe : elles doivent rester atteignables quelle que
-          soit la vue, y compris quand aucun salon n'est ouvert. */}
-      <WindowControls />
 
       {/* La bannière de mise a jour flotte au-dessus de tout, sans deplacer
           quoi que ce soit : elle propose, elle n'interrompt pas. */}

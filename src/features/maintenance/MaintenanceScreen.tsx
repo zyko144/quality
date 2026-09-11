@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { WindowControls } from '@/components/WindowControls';
 import { MiseAJour } from '@/features/shell/MiseAJour';
 import { navigate } from '@/lib/router';
 import { marquerMaintenanceVue } from './retour';
@@ -47,7 +46,6 @@ export function MaintenanceScreen() {
           <span className="maintenance-header__version">v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.7.8'}</span>
         </div>
 
-        <WindowControls />
       </header>
 
       {/* Contenu central */}

@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { WindowControls } from '@/components/WindowControls';
 import { MiseAJour } from '@/features/shell/MiseAJour';
 import '@/styles/maintenance.css';
 
@@ -59,7 +58,6 @@ export function RetourScreen({ onEntrer }: { onEntrer: () => void }) {
           </span>
         </div>
 
-        <WindowControls />
       </header>
 
       <main className="maintenance-main">

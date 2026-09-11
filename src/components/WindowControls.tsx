@@ -5,12 +5,27 @@ import { useEffect, useState } from 'react';
  *
  * La barre de titre du systeme est desactivee (`decorations: false`) : elle
  * imposait un bandeau gris au-dessus d'une interface sombre, avec ses propres
- * coins carres par-dessus les notres. On la redessine donc ici, dans l'en-tete,
- * avec le reste.
+ * coins carres par-dessus les notres. On la redessine donc ici.
  *
  * En echange, deux choses reviennent a notre charge :
- *  - deplacer la fenetre, confie a `data-tauri-drag-region` sur l'en-tete ;
+ *  - deplacer la fenetre, confie a `data-tauri-drag-region` sur les en-tetes ;
  *  - les boutons ci-dessous.
+ *
+ * Ou ils sont montes, et pourquoi a deux endroits
+ * -----------------------------------------------
+ * Une fois a la racine, hors de tout ecran (`main.tsx`). Ils etaient montes par
+ * trois ecrans — l'espace de travail et les deux ecrans de maintenance — et
+ * absents de tous les autres : la connexion, le choix du pseudo, la reprise du
+ * mot de passe, et les regles a accepter, que l'espace de travail rend A LA
+ * PLACE de lui-meme. Ce sont exactement les ecrans qu'un compte neuf traverse ;
+ * apres le changement de base, tout le monde en etait un, et la fenetre ne se
+ * fermait plus que par la barre des taches.
+ *
+ * Une seconde fois dans chaque boite de dialogue ouverte (`Modal`). Une boite
+ * ouverte par `showModal()` passe dans la couche superieure du navigateur, que
+ * nul `z-index` ne depasse, et rend tout le reste du document inerte : les
+ * boutons de la racine y restent visibles sous le voile, et ne repondent plus.
+ * Seul un element de la boite elle-meme echappe a cette inertie.
  *
  * Le composant ne rend rien hors du bureau : sur le web, la fenetre appartient
  * au navigateur.
@@ -29,7 +44,12 @@ const DANS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in win
 const SUR_MAC =
   typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
-export function WindowControls() {
+export function WindowControls({
+  dansUneFenetre = false,
+}: {
+  /** Vrai pour le jeu pose dans une boite de dialogue ouverte. */
+  dansUneFenetre?: boolean;
+} = {}) {
   const [agrandie, setAgrandie] = useState(false);
 
   useEffect(() => {
@@ -106,7 +126,12 @@ export function WindowControls() {
    * gris et fantome qu'on obtient en visant les bords entiers.
    */
   return (
-    <div className="window-controls">
+    <div
+      className={
+        'window-controls ' +
+        (dansUneFenetre ? 'window-controls--fenetre' : 'window-controls--socle')
+      }
+    >
       <button
         type="button"
         className="window-control window-control--reduire"

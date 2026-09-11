@@ -1695,18 +1695,35 @@
  * Posees au-dessus de tout, dans le coin. La barre du systeme etant retiree,
  * ce sont les seules commandes pour reduire, agrandir et fermer : elles ne
  * doivent jamais passer sous un panneau.
+ *
+ * Neuf cents ne suffisait pas. Les regles a accepter couvrent la fenetre
+ * entiere a mille, et l'ecran de maintenance a 9999 : la valeur doit depasser
+ * la plus haute des couches pleine fenetre, pas seulement celles qui
+ * existaient le jour ou elle a ete choisie.
  */
 .window-controls {
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 900;
+  z-index: 10000;
   display: flex;
   align-items: center;
   gap: var(--space-1);
   height: 34px;
   padding: 0 var(--space-4);
   -webkit-app-region: no-drag;
+}
+
+/*
+ * Sous une boite de dialogue ouverte, celles de la racine s'effacent.
+ *
+ * La boite porte les siennes, au meme endroit — voir `WindowControls`. Celles
+ * du dessous, inertes, transparaissaient a travers les interstices du jeu du
+ * dessus, floutees par le voile : un double trait fantome autour de chaque
+ * icone.
+ */
+:root:has(dialog.modal[open]) .window-controls--socle {
+  visibility: hidden;
 }
 
 /*

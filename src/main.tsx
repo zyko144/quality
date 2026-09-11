@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { WindowControls } from './components/WindowControls';
 import { useDevices } from './store/devices';
 import { setCueVolume } from './lib/sounds';
 import './styles/tokens.css';
@@ -129,7 +130,16 @@ if ('serviceWorker' in navigator) {
 useSession.subscribe((etat) => journalAuteur(etat.profile?.id ?? null));
 
 void root().then((screen) => {
-  createRoot(container).render(<StrictMode>{screen}</StrictMode>);
+  createRoot(container).render(
+    <StrictMode>
+      {screen}
+      {/*
+        Hors de l'ecran, et non dedans : chaque ecran qui les oubliait laissait
+        une fenetre sans bouton pour la fermer. Voir `WindowControls`.
+      */}
+      <WindowControls />
+    </StrictMode>,
+  );
 
   /*
    * Le voile tient jusqu'a ce que la session soit connue.

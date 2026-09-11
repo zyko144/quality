@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Icon } from './Icon';
+import { WindowControls } from './WindowControls';
 
 interface ModalProps {
   open: boolean;
@@ -152,6 +153,27 @@ export function Modal({
 
         {footer ? <footer className="modal__footer">{footer}</footer> : null}
       </div>
+
+      {/*
+        Les commandes de fenetre, dans la boite elle-meme.
+
+        `showModal()` rend inerte tout ce qui n'est pas dans la boite : celles
+        de la racine ne repondent plus tant qu'une boite est ouverte. Voir
+        `WindowControls`.
+
+        Enfant direct du `<dialog>`, pas du panneau : le panneau porte une
+        animation et un `backdrop-filter`, qui feraient de lui la reference de
+        leur `position: fixed` — elles s'afficheraient dans son coin, et non
+        dans celui de la fenetre.
+
+        APRES le panneau : `showModal()` donne le focus au premier element
+        focalisable qu'il trouve. Place devant, « Reduire » l'aurait pris a la
+        place du contenu de la boite.
+
+        Seulement boite ouverte : les boites fermees restent montees, et
+        chacune aurait tenu son propre ecouteur de redimensionnement.
+      */}
+      {open ? <WindowControls dansUneFenetre /> : null}
     </dialog>
   );
 }
