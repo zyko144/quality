@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { hueFor, initialsFor } from '@/constants';
 import { AnimatedImage, isAnimatable } from '@/components/AnimatedImage';
 import { useSession } from '@/store/session';
@@ -45,6 +46,24 @@ export function Avatar({ profile, size = 38, status, showStatus = false }: Avata
   const seed = profile?.id ?? name;
 
   /*
+   * L'adresse qui a echoue, et elle seule.
+   *
+   * Une photo que le moteur refuse de charger — adresse morte, hote que la
+   * politique de securite de l'application n'autorise pas — laissait une
+   * balise d'image vide dans un rond sombre : un trou noir a la place d'un
+   * visage. C'est ce qu'ont vu tous les comptes Discord a leur retour dans
+   * l'application de bureau, dont la politique n'autorisait pas encore
+   * `cdn.discordapp.com`.
+   *
+   * On retombe alors sur les initiales, comme pour un profil sans photo.
+   * L'echec est retenu PAR ADRESSE : une nouvelle photo est retentee d'elle-
+   * meme, sans rien a effacer.
+   */
+  const [adresseEnEchec, setAdresseEnEchec] = useState<string | null>(null);
+  const photo =
+    profile?.avatar_url && profile.avatar_url !== adresseEnEchec ? profile.avatar_url : null;
+
+  /*
    * La pastille dit ce qui est mesure, pas ce qui a ete declare.
    *
    * « En ligne » etait pose a la connexion et retire par une requete envoyee
@@ -76,18 +95,25 @@ export function Avatar({ profile, size = 38, status, showStatus = false }: Avata
         maxHeight: size,
       }}
     >
-      {profile?.avatar_url ? (
+      {photo ? (
         // Le composant anime ne sert que pour un format qui peut l'etre :
         // pour un PNG il ajouterait un canevas et un rendu pour rien.
-        isAnimatable(profile.avatar_url) ? (
+        isAnimatable(photo) ? (
           <AnimatedImage
             className="avatar__image"
-            src={profile.avatar_url}
+            src={photo}
             alt=""
             mode={animate}
+            onError={() => setAdresseEnEchec(photo)}
           />
         ) : (
-          <img className="avatar__image" src={profile.avatar_url} alt="" loading="lazy" />
+          <img
+            className="avatar__image"
+            src={photo}
+            alt=""
+            loading="lazy"
+            onError={() => setAdresseEnEchec(photo)}
+          />
         )
       ) : (
         <span

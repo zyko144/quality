@@ -11,9 +11,11 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
  * Le canevas remplace l'image tant qu'on ne survole pas. Au survol, l'image
  * revient et repart de sa premiere trame.
  *
- * Si quoi que ce soit echoue — image d'un autre domaine sans en-tetes CORS,
- * canevas indisponible — on laisse simplement l'image animee. Mieux vaut une
- * animation non desiree qu'un avatar absent.
+ * Si le figeage echoue — image d'un autre domaine sans en-tetes CORS, canevas
+ * indisponible — on laisse simplement l'image animee. Mieux vaut une animation
+ * non desiree qu'un avatar absent. Si c'est l'image elle-meme qui ne se charge
+ * pas, `onError` le dit a l'appelant : c'est a lui de savoir quoi montrer a la
+ * place.
  */
 
 /** Formats susceptibles d'etre animes. Les autres n'ont rien a figer. */
@@ -31,12 +33,15 @@ export function AnimatedImage({
   mode,
   /** Cadrage, quand l'image est une banniere. Voir `profile/cadrage.ts`. */
   style,
+  /** Appelee quand l'image ne se charge pas. */
+  onError,
 }: {
   src: string;
   alt: string;
   className?: string;
   mode: 'always' | 'hover' | 'never';
   style?: CSSProperties;
+  onError?: () => void;
 }) {
   const [frozen, setFrozen] = useState<string | null>(null);
   const [hovered, setHovered] = useState(false);
@@ -92,6 +97,7 @@ export function AnimatedImage({
       alt={alt}
       loading="lazy"
       draggable={false}
+      onError={onError}
       onMouseEnter={mode === 'hover' ? () => setHovered(true) : undefined}
       onMouseLeave={mode === 'hover' ? () => setHovered(false) : undefined}
       // Le clavier aussi : sans cela, l'animation ne serait accessible qu'a la
